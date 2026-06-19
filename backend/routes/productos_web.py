@@ -1,6 +1,6 @@
 """
-Rutas FastAPI para PRODUCTOS_WEB — /backoffice y /tienda.
-Fase: FRONTEND_FASE_2B_FASTAPI_READONLY_PRODUCTOS_WEB
+Rutas FastAPI para PRODUCTOS_WEB — /backoffice, /tienda y /productos-web.
+Fase: FRONTEND_FASE_2B_FASTAPI_READONLY_PRODUCTOS_WEB + FASE_1H_F
 """
 import sys
 from pathlib import Path
@@ -13,6 +13,7 @@ if str(_BACKEND) not in sys.path:
 from services.productos_web_service import (
     listar_backoffice, obtener_backoffice,
     listar_tienda, obtener_tienda_por_slug,
+    listar_productos_web_publico,
 )
 
 router = APIRouter(prefix="/api", tags=["productos-web"])
@@ -65,6 +66,17 @@ async def tienda_detalle_por_slug(slug: str):
     if not producto:
         raise HTTPException(status_code=404, detail="Producto no encontrado o no disponible")
     return producto
+
+
+# ── PRODUCTOS-WEB PÚBLICO (FASE_1H_F) ──
+
+@router.get("/productos-web")
+async def productos_web_publico():
+    """Catálogo público con fallback PRODUCTOS → PRODUCTOS_WEB.
+    Filtros: gate de publicación + precio anómalo (excluido).
+    Retorna productos, excluidos y anomalías detectadas."""
+    resultado = listar_productos_web_publico()
+    return resultado
 
 
 # ── SCHEMA (debug) ──

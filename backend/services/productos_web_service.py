@@ -220,3 +220,224 @@ def obtener_tienda_por_slug(slug: str) -> Optional[dict]:
         if fields.get("SEO_SLUG_WEB") == slug and _pasa_gate(fields):
             return _build_tienda_detalle(r)
     return None
+
+
+# ── FASE_1H_F: /api/productos-web con fallback PRODUCTOS ──
+
+PRECIO_ANOMALO_RATIO = 5.0  # ratio PRECIO_PUBLICITADO_WEB / PRECIO_WEB > 5 → anomalía
+
+
+def _es_precio_confiable(fields: dict) -> tuple[bool, Optional[str]]:
+    """Detecta precio anómalo comparando PRECIO_PUBLICITADO_WEB vs PRECIO_WEB.
+    Retorna (confiable, motivo)."""
+    pw = fields.get("PRECIO_WEB")
+    ppw = fields.get("PRECIO_PUBLICITADO_WEB")
+    if pw is None or ppw is None:
+        return True, None  # sin ambos precios, no hay anomalía detectable
+    try:
+        pw_val = float(pw)
+        ppw_val = float(ppw)
+    except (ValueError, TypeError):
+        return True, None
+    if pw_val <= 0 or ppw_val <= 0:
+        return True, None
+    ratio = max(pw_val, ppw_val) / min(pw_val, ppw_val)
+    if ratio >= PRECIO_ANOMALO_RATIO:
+        return False, f"PRECIO_PUBLICITADO_WEB={ppw_val:.0f} vs PRECIO_WEB={pw_val:.0f} (ratio={ratio:.1f}x)"
+    return True, None
+
+
+def _resolver_productos_bulk(client: AirtableClient, pw_records: list[dict]) -> dict[str, dict]:
+    """Carga en lote los registros PRODUCTOS vinculados desde PRODUCTOS_WEB.
+    Retorna dict {producto_id: fields}."""
+    ids_set = set()
+    for r in pw_records:
+        pid_list = r.get("fields", {}).get("PRODUCTO")
+        if isinstance(pid_list, list):
+            ids_set.update(pid_list)
+
+    if not ids_set:
+        return {}
+
+    productos_map = {}
+    # Cargar uno por uno (Airtable Meta API no soporta multi-id fetch nativamente)
+    for pid in ids_set:
+        try:
+            rec = client.get_record("PRODUCTOS", pid)
+            productos_map[pid] = rec.get("fields", {})
+        except Exception:
+            productos_map[pid] = {}
+    return productos_map
+
+
+def _build_producto_web_publico(
+    pw_record: dict,
+    prod_fields: Optional[dict],
+) -> dict:
+    """Construye el objeto público con fallback PRODUCTOS → PRODUCTOS_WEB."""
+    fields = pw_record.get("fields", {})
+    rid = pw_record["id"]
+    prod = prod_fields or {}
+
+    # ── nombre_visible ──
+    nombre_web = fields.get("NOMBRE_PUBLICO_PRODUCTO") or ""
+    nombre_prod = prod.get("NOMBRE_PRODUCTO") or ""
+    nombre_visible = (nombre_web or nombre_prod or "Producto sin nombre").strip()
+    # humanizar: reemplazar underscores, capitalizar
+    nombre_visible = nombre_visible.replace("_", " ").strip()
+
+    # ── descripcion_visible ──
+    desc_aprobada = fields.get("TEXTO_PROMOCIONAL_APROBADO_WEB") or ""
+    desc_web = fields.get("DESCRIPCION_WEB") or ""
+    desc_prod = prod.get("DESCRIPCION_COMERCIAL") or ""
+    descripcion_visible = (desc_aprobada or desc_web or desc_prod or "").strip()
+    if not descripcion_visible:
+        descripcion_visible = f"Conocé más sobre {nombre_visible}"
+
+    # ── precio_visible (preferencia: oferta activa → precio web → precio PRODUCTOS) ──
+    precio_oferta = _parse_decimal(fields.get("PRECIO_PUBLICITADO_WEB"))
+    precio_web = _parse_decimal(fields.get("PRECIO_WEB"))
+    precio_prod = _parse_decimal(prod.get("PRECIO_VENTA"))
+
+    # Determinar si la oferta es un precio real (no una anomalía)
+    confiable, _motivo = _es_precio_confiable(fields)
+    precio_oferta_web = None
+
+    if confiable and precio_oferta is not None and precio_web is not None and precio_oferta != precio_web:
+        # Hay oferta diferenciada → usar precio_oferta como precio_visible, exponer precio_web como referencia
+        precio_visible = precio_oferta
+        precio_oferta_web = precio_oferta
+    elif precio_web is not None:
+        precio_visible = precio_web
+    elif precio_prod is not None:
+        precio_visible = precio_prod
+    else:
+        precio_visible = None
+
+    # ── categoria_publica ──
+    cat_aprobada = fields.get("CATEGORIA_WEB_APROBADA_MANUAL") or ""
+    cat_ia = _parse_select(fields.get("AGENTE_CATEGORIZACION_WEB_AI")) or ""
+    cat_prod = prod.get("CATEGORIA_PRODUCTO") or ""
+    categoria_publica = (cat_aprobada or cat_ia or cat_prod or "").strip()
+
+    # ── imagen_principal ──
+    imagen_web = _parse_image(fields.get("IMAGEN_PORTADA_WEB"))
+    imagen_prod = _parse_image(prod.get("FOTO_PRODUCTO"))
+    imagen_principal = imagen_web or imagen_prod or None
+
+    # ── alt_text ──
+    alt_text = fields.get("SEO_TITULO") or nombre_visible
+
+    # ── estado_web ──
+    estado_web = _parse_select(fields.get("ESTADO_WEB")) or "BORRADOR"
+
+    # ── destacado ──
+    destacado = bool(fields.get("PROMO_EN_DESTACADO"))
+
+    # ── cta ──
+    cta = fields.get("CTA_TEXTO") or f"Ver {nombre_visible}"
+
+    # ── slug ──
+    slug = fields.get("SEO_SLUG_WEB") or ""
+
+    return {
+        "id": rid,
+        "nombre_visible": nombre_visible,
+        "descripcion_visible": descripcion_visible,
+        "precio_visible": float(precio_visible) if precio_visible is not None else None,
+        "precio_oferta_web": float(precio_oferta_web) if precio_oferta_web is not None else None,
+        "categoria_publica": categoria_publica or None,
+        "imagen_principal": imagen_principal,
+        "alt_text": alt_text,
+        "estado_web": estado_web,
+        "destacado": destacado,
+        "cta": cta,
+        "slug": slug,
+    }
+
+
+def listar_productos_web_publico() -> dict:
+    """Endpoint público /api/productos-web con fallback PRODUCTOS.
+
+    Retorna:
+        {
+            "total": N,
+            "total_leidos": M,
+            "productos": [...],
+            "excluidos": [...],
+            "anomalias": [...]
+        }
+    """
+    client = _get_client()
+    pw_records = client.list_records(TABLE_NAME)
+    total_leidos = len(pw_records)
+
+    # Carga lote de PRODUCTOS vinculados
+    productos_map = _resolver_productos_bulk(client, pw_records)
+
+    productos = []
+    excluidos = []
+    anomalias = []
+
+    for r in pw_records:
+        fields = r.get("fields", {})
+        rid = r["id"]
+        nombre = fields.get("NOMBRE_PUBLICO_PRODUCTO") or rid
+
+        # 1. Gate de publicación
+        if not _pasa_gate(fields):
+            excluidos.append({
+                "id": rid,
+                "nombre": nombre,
+                "motivo": "no_pasa_gate_publicacion",
+                "detalle": {
+                    "APROBADO_USO_FRONTEND_IA": bool(fields.get("APROBADO_USO_FRONTEND_IA")),
+                    "ESTADO_REVISION_IA_WEB": _parse_select(fields.get("ESTADO_REVISION_IA_WEB")),
+                    "ESTADO_WEB": _parse_select(fields.get("ESTADO_WEB")),
+                    "VISIBILIDAD_WEB": _parse_select(fields.get("VISIBILIDAD_WEB")),
+                    "ACTIVO_EN_WEB": bool(fields.get("ACTIVO_EN_WEB")),
+                },
+            })
+            continue
+
+        # 2. Detección de precio anómalo
+        confiable, motivo_precio = _es_precio_confiable(fields)
+        if not confiable:
+            anomalias.append({
+                "id": rid,
+                "nombre": nombre,
+                "tipo": "precio_anomalo",
+                "detalle": motivo_precio,
+                "accion": "excluido_del_publico",
+            })
+            excluidos.append({
+                "id": rid,
+                "nombre": nombre,
+                "motivo": "precio_anomalo",
+                "detalle": motivo_precio,
+            })
+            continue
+
+        # 3. Construir respuesta pública con fallback
+        prod_ids = fields.get("PRODUCTO")
+        prod_id = prod_ids[0] if isinstance(prod_ids, list) and prod_ids else None
+        prod_fields = productos_map.get(prod_id) if prod_id else None
+
+        try:
+            item = _build_producto_web_publico(r, prod_fields)
+            productos.append(item)
+        except Exception as e:
+            excluidos.append({
+                "id": rid,
+                "nombre": nombre,
+                "motivo": "error_construccion",
+                "detalle": str(e),
+            })
+
+    return {
+        "total": len(productos),
+        "total_leidos": total_leidos,
+        "productos": productos,
+        "excluidos": excluidos,
+        "anomalias": anomalias,
+    }
