@@ -14,6 +14,7 @@ from fastapi import APIRouter, Cookie, HTTPException, Request, Response, status
 from pydantic import BaseModel, EmailStr
 
 from airtable_adapter import AirtableClient
+from .rate_limit import check_rate_limit
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +83,7 @@ def _set_cookie(response: Response, token: str):
 
 # ── POST /api/auth/login ─────────────────────
 @router.post("/login", response_model=LoginResponse)
-async def login(body: LoginRequest, response: Response):
+async def login(body: LoginRequest, response: Response, request: Request):
     """Verify credentials and set auth_token cookie."""
     from .security import verify_password, create_token, check_jwt_configured
 
@@ -93,6 +94,16 @@ async def login(body: LoginRequest, response: Response):
         )
 
     email = body.email.strip().lower()
+
+    # ── Rate-limit check ────────────────────────
+    client_ip = request.client.host if request.client else "unknown"
+    remaining = check_rate_limit(client_ip, email)
+    if remaining <= 0:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Demasiados intentos. Esperá 15 minutos.",
+        )
+
     client = AirtableClient()
 
     # ── Find user by email ──────────────────
