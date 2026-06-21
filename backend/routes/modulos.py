@@ -47,29 +47,106 @@ async def datos_marca_blanca():
             "modulos_activos": [],
             "faltantes": [],
         }
-        # CONFIGURACION_PUBLICA
+        # MARCAS (nueva tabla unificada de marca blanca)
         try:
-            config_records = client.list_records("CONFIGURACION_PUBLICA", by_name=True)
-            if config_records:
-                cf = config_records[0].get("fields", {})
-                for buscado, keys in [
-                    ("NOMBRE_SISTEMA", ["NOMBRE_SISTEMA", "Nombre_Sistema", "Name"]),
-                    ("NOMBRE_NEGOCIO", ["NOMBRE_NEGOCIO", "Nombre_Negocio"]),
-                    ("COLORES", ["COLORES", "Colores"]),
-                    ("LOGO", ["LOGO", "Logo"]),
-                    ("TEXTOS_PUBLICOS", ["TEXTOS_PUBLICOS", "Textos_Publicos"]),
-                    ("SECCIONES_VISIBLES", ["SECCIONES_VISIBLES", "Secciones_Visibles"]),
+            marca_records = client.list_records("MARCAS")
+            if marca_records:
+                mf = marca_records[0].get("fields", {})
+
+                # Nombre
+                result["nombre_sistema"] = mf.get("NOMBRE_MARCA")
+                result["nombre_negocio"] = mf.get("NOMBRE_COMERCIAL")
+
+                # Colores (objeto JSON)
+                result["colores"] = {
+                    "primario": mf.get("COLOR_PRIMARIO"),
+                    "secundario": mf.get("COLOR_SECUNDARIO"),
+                    "acento": mf.get("COLOR_ACENTO"),
+                    "fondo": mf.get("COLOR_FONDO"),
+                    "texto": mf.get("COLOR_TEXTO"),
+                    "texto_secundario": mf.get("COLOR_TEXTO_SECUNDARIO"),
+                    "tipografia_titulos": mf.get("TIPOGRAFIA_TITULOS"),
+                    "tipografia_cuerpo": mf.get("TIPOGRAFIA_CUERPO"),
+                    "preset": mf.get("THEME_PRESET"),
+                }
+
+                # Logo
+                result["logo"] = mf.get("LOGO_URL")
+                result["favicon"] = mf.get("FAVICON_URL")
+
+                # Textos públicos (objeto JSON)
+                result["textos_publicos"] = {
+                    "hero_badge": mf.get("HERO_BADGE"),
+                    "hero_titulo": mf.get("HERO_TITULO"),
+                    "hero_subtitulo": mf.get("HERO_SUBTITULO"),
+                    "hero_cta_primario": mf.get("HERO_CTA_PRIMARIO_TEXTO"),
+                    "hero_cta_primario_url": mf.get("HERO_CTA_PRIMARIO_URL"),
+                    "hero_cta_secundario": mf.get("HERO_CTA_SECUNDARIO_TEXTO"),
+                    "hero_cta_secundario_url": mf.get("HERO_CTA_SECUNDARIO_URL"),
+                    "hero_imagen_url": mf.get("HERO_IMAGEN_URL"),
+                    "banner_activo": mf.get("BANNER_ACTIVO"),
+                    "banner_titulo": mf.get("BANNER_TITULO"),
+                    "banner_mensaje": mf.get("BANNER_MENSAJE"),
+                    "banner_cta_texto": mf.get("BANNER_CTA_TEXTO"),
+                    "banner_cta_url": mf.get("BANNER_CTA_URL"),
+                    "reserva_titulo": mf.get("RESERVA_TITULO"),
+                    "reserva_subtitulo": mf.get("RESERVA_SUBTITULO"),
+                    "reserva_requiere_login": mf.get("RESERVA_REQUIERE_LOGIN"),
+                    "reserva_sin_horarios": mf.get("RESERVA_MENSAJE_SIN_HORARIOS"),
+                    "reserva_demo": mf.get("RESERVA_MENSAJE_DEMO"),
+                    "reserva_cta_texto": mf.get("RESERVA_CTA_TEXTO"),
+                    "contacto_telefono": mf.get("TELEFONO_PUBLICO"),
+                    "contacto_whatsapp": mf.get("WHATSAPP_PUBLICO"),
+                    "contacto_email": mf.get("EMAIL_PUBLICO"),
+                    "contacto_direccion": mf.get("DIRECCION_PUBLICA"),
+                    "redes_instagram": mf.get("INSTAGRAM_URL"),
+                    "redes_facebook": mf.get("FACEBOOK_URL"),
+                    "redes_tiktok": mf.get("TIKTOK_URL"),
+                    "redes_maps": mf.get("GOOGLE_MAPS_URL"),
+                }
+
+                # Secciones visibles
+                result["secciones_visibles"] = {
+                    "mostrar_servicios": mf.get("MOSTRAR_SERVICIOS"),
+                    "mostrar_productos": mf.get("MOSTRAR_PRODUCTOS"),
+                    "mostrar_sucursales": mf.get("MOSTRAR_SUCURSALES"),
+                    "mostrar_ofertas": mf.get("MOSTRAR_OFERTAS"),
+                    "mostrar_testimonios": mf.get("MOSTRAR_TESTIMONIOS"),
+                    "mostrar_como_funciona": mf.get("MOSTRAR_COMO_FUNCIONA"),
+                    "orden_secciones": mf.get("ORDEN_SECCIONES"),
+                }
+
+                # SEO / Legal
+                result["seo_title"] = mf.get("SEO_TITLE")
+                result["seo_description"] = mf.get("SEO_DESCRIPTION")
+                result["legal_aviso"] = mf.get("LEGAL_AVISO_PUBLICO")
+                result["privacy_url"] = mf.get("PRIVACY_URL")
+                result["terms_url"] = mf.get("TERMS_URL")
+
+                # Extras
+                result["marca_id"] = mf.get("MARCA_ID")
+                result["rubro"] = mf.get("RUBRO")
+                result["registro_activo"] = mf.get("REGISTRO_ACTIVO")
+                result["version_config"] = mf.get("VERSION_CONFIG")
+
+                # Faltantes: campos nulos en MARCAS
+                for target_field, marca_key in [
+                    ("COLOR_PRIMARIO", "COLOR_PRIMARIO"),
+                    ("COLOR_SECUNDARIO", "COLOR_SECUNDARIO"),
+                    ("COLOR_TEXTO", "COLOR_TEXTO"),
+                    ("HERO_TITULO", "HERO_TITULO"),
+                    ("HERO_CTA_PRIMARIO_TEXTO", "HERO_CTA_PRIMARIO_TEXTO"),
+                    ("BANNER_ACTIVO", "BANNER_ACTIVO"),
+                    ("RESERVA_TITULO", "RESERVA_TITULO"),
+                    ("RESERVA_REQUIERE_LOGIN", "RESERVA_REQUIERE_LOGIN"),
                 ]:
-                    val = None
-                    for k in keys:
-                        if k in cf:
-                            val = cf[k]
-                            break
-                    result[buscado.lower()] = val
-                    if val is None:
-                        result["faltantes"].append(f"CONFIGURACION_PUBLICA.{buscado}")
+                    if mf.get(marca_key) is None:
+                        result["faltantes"].append(f"MARCAS.{target_field}")
+
+            else:
+                result["faltantes"].append("MARCAS: sin registros")
         except Exception as e:
-            result["faltantes"].append(f"CONFIGURACION_PUBLICA (error): {str(e)}")
+            result["faltantes"].append(f"MARCAS (error): {str(e)}")
         # MODULOS
         try:
             modulos_records = client.list_records("MODULOS", by_name=True)
