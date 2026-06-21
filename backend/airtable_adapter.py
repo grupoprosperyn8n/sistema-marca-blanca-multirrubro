@@ -90,14 +90,14 @@ class AirtableTable:
 
 
 # ═══════════════════════════════════════════
-# Cliente Airtable — solo lectura
+# Cliente Airtable — lectura + patch controlado
 # ═══════════════════════════════════════════
 
 class AirtableClient:
-    """Cliente Airtable modo READ-ONLY.
+    """Cliente Airtable con PATCH para auth fields.
     
     El token se carga una sola vez desde el entorno.
-    No hay método para cambiar el token en caliente.
+    patch_record() solo para campos auth: INTENTOS_FALLIDOS, ULTIMO_LOGIN.
     """
 
     # Singleton — una sola instancia para toda la app
@@ -123,7 +123,7 @@ class AirtableClient:
         """GET request autenticado a Airtable Meta/Data API."""
         url = f"{self.config.api_url}/v0/{path}"
         if params:
-            url += "?" + urlencode(params)
+            url += "?" + urlencode(params, doseq=True)
 
         req = Request(url)
         req.add_header("Authorization", f"Bearer {self.config.api_token}")
@@ -139,6 +139,43 @@ class AirtableClient:
         except URLError as e:
             logger.error(f"Airtable connection error: {e.reason}")
             raise
+
+    def _patch_request(self, path: str, body: dict) -> dict:
+        """PATCH request autenticado a Airtable Data API."""
+        data = json.dumps(body).encode("utf-8")
+        url = f"{self.config.api_url}/v0/{path}"
+        req = Request(url, data=data, method="PATCH")
+        req.add_header("Authorization", f"Bearer {self.config.api_token}")
+        req.add_header("Content-Type", "application/json")
+        req.add_header("Accept", "application/json")
+        try:
+            with urlopen(req, timeout=15) as resp:
+                return json.loads(resp.read().decode())
+        except HTTPError as e:
+            body_text = e.read().decode() if e.fp else ""
+            logger.error(f"Airtable PATCH HTTP {e.code}: {body_text[:500]}")
+            raise
+        except URLError as e:
+            logger.error(f"Airtable PATCH connection error: {e.reason}")
+            raise
+
+    # ── Escritura controlada (solo auth fields) ──
+
+    def patch_record(
+        self,
+        table_name_or_id: str,
+        record_id: str,
+        fields: dict,
+    ) -> dict:
+        """Actualiza campos de un registro (uso controlado: solo auth)."""
+        table = self.get_table(table_name_or_id)
+        if not table:
+            raise ValueError(f"Tabla no encontrada: {table_name_or_id}")
+        return self._patch_request(
+            f"{self.config.base_id}/{table.id}/{record_id}",
+            {"fields": fields},
+        )
+
 
     def _paginate(self, path: str, params: Optional[dict] = None) -> list[dict]:
         """Recorre todas las páginas de un endpoint paginado."""

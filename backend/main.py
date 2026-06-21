@@ -1,6 +1,6 @@
 """
 FastAPI — PRODUCTOS_WEB read-only.
-Fase: FASE_1B_MICROCORRECCION_CONFIG_Y_SEED_DRYRUN
+Fase: FASE_2A_C_AUTH_BACKEND_CORE_CONTROLADO
 Uso:  backend/.venv/bin/python -m uvicorn main:app --reload
 """
 import sys, os
@@ -40,6 +40,7 @@ from routes.servicios import router as servicios_router
 from routes.servicios_web import router as servicios_web_router
 from routes.agenda_slots import router as agenda_slots_router
 from routes.citas import router as citas_router
+from auth.routes import router as auth_router
 
 app = FastAPI(
     title="SISTEMA MARCA BLANCA MULTIRRUBRO — API",
@@ -59,6 +60,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ── Root healthcheck (Railway) ──────────────────
+@app.get("/")
+async def root():
+    return {"status": "ok", "fase": "FASE_2A_D", "rutas_auth": True}
+
 # P0 core
 app.include_router(configuracion_publica_router)
 app.include_router(modulos_router)
@@ -71,6 +77,8 @@ app.include_router(agenda_slots_router)
 app.include_router(citas_router)
 # Técnico (no P0)
 app.include_router(productos_web_router)
+# Auth (FASE_2A_C)
+app.include_router(auth_router)
 
 
 @app.on_event("startup")
