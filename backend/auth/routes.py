@@ -56,12 +56,18 @@ def _resolve_rol(rol_field) -> str:
 
 def _format_user(record: dict) -> UserResponse:
     fields = record.get("fields", {})
+    # CLIENTE is a multipleRecordLinks → list; extract first ID or ""
+    cliente_raw = fields.get("CLIENTE", "")
+    cliente = (
+        cliente_raw[0] if isinstance(cliente_raw, list) and cliente_raw
+        else str(cliente_raw) if cliente_raw else ""
+    )
     return UserResponse(
         id=record["id"],
         email=fields.get("EMAIL_LOGIN", ""),
         nombre=fields.get("NOMBRE_USUARIO", ""),
         rol=_resolve_rol(fields.get("ROL", "")),
-        cliente=fields.get("CLIENTE", ""),
+        cliente=cliente,
     )
 
 

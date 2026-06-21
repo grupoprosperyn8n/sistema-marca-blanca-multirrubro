@@ -30,3 +30,5 @@ frontend/.vite/
 
 # Harness (no es parte del deploy)
 harness/
+# Local AI runtime state
+.atl/
