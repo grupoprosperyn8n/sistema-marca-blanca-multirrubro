@@ -1,0 +1,630 @@
+{
+  "project": "sistema-marca-blanca-multirrubro",
+  "harness_version": "3.7.2",
+  "last_updated": "2026-06-22T20:10:00Z",
+  "current_phase": "patch_recovery_password_estados_y_retest",
+  "project_domain": "https://bellezapro-demo.surge.sh",
+  "project_backend": "https://earnest-comfort-production-3d75.up.railway.app",
+  "architecture": "Vite/React frontend + FastAPI Railway backend + Airtable data",
+  "phases": {
+    "fase_1k_c_frontend_marca_blanca": {
+      "status": "completed",
+      "closed_at": "2026-06-20",
+      "description": "Frontend marca blanca con React + Vite + Tailwind, consumo de /api/marca-blanca, CSS variables dinámicas, placeholders {marca} resueltos, BrandConfigContext como única fuente de datos de marca",
+      "features": [
+        "Frontend Vite/React con Tailwind CSS",
+        "Endpoint /api/marca-blanca desde Railway (lee tabla MARCAS de Airtable)",
+        "BrandConfigContext.jsx: consumer único de /api/marca-blanca, fallback local",
+        "CSS variables dinámicas desde MARCAS.colores (8 campos)",
+        "Placeholder {marca} resuelto en 23 campos de texto",
+        "8 rutas públicas: /, /catalogo, /productos, /reserva, /login, /backoffice/*",
+        "5 roles mock: ADMINISTRADOR, GERENTE, EMPLEADO_GESTION, PROFESIONAL, SOLO_LECTURA",
+        "SPA fallback: 200.html = index.html (Surge.sh BrowserRouter)",
+        "Login mock con localStorage + rol selector"
+      ],
+      "outputs": [
+        "frontend/src/context/BrandConfigContext.jsx",
+        "frontend/src/App.jsx",
+        "frontend/src/pages/*.jsx",
+        "frontend/src/components/*.jsx"
+      ]
+    },
+    "salon_013_qa_funcional_completo": {
+      "status": "completed",
+      "closed_at": "2026-06-20",
+      "description": "QA funcional completo post MARCAS — 8 rutas, 5 roles, seguridad, responsive, consola",
+      "validations": {
+        "rutas": "8/8 funcionales",
+        "roles": "5 roles verificados (mock)",
+        "seguridad": "0 tokens en bundle, 0 Airtable directo, 0 PATCH/POST/DELETE",
+        "responsive": "CSS breakpoints 640/768/1024 verificados, overflow-x:hidden aplicado",
+        "consola": "0 errores, 0 warnings en todas las rutas",
+        "api": "/api/marca-blanca responde correctamente (Railway)"
+      },
+      "bugs_corregidos": [
+        "200.html SPA fallback roto → corregido",
+        "{marca} literal en hero y textos → resuelto con resolvePlaceholders()",
+        "PROFESIONAL accedía a /backoffice/clientes por URL → guard granular implementado",
+        "overflow-x no seteado → html/body con overflow-x:hidden + max-width:100vw"
+      ],
+      "static_api_js_status": {
+        "exists_locally": true,
+        "path": "static/api.js",
+        "deployed_to_surge": false,
+        "public_url_behavior": "https://bellezapro-demo.surge.sh/api.js devuelve HTML (SPA 200.html fallback), NO el archivo JS. Content-Type: text/html. Esto es seguro.",
+        "content": "Stub seguro (41 líneas) — documenta retiro del legacy, sin lógica, sin tokens, sin Airtable",
+        "references_in_frontend": 0,
+        "incident_doc": "docs/incidents/INCIDENT_STATIC_API_JS.md"
+      },
+      "output": "docs/qa/SALON-013_QA_FUNCIONAL_COMPLETO.md"
+    },
+    "microfix_salon_013_guards_rol_overflow": {
+      "status": "completed",
+      "closed_at": "2026-06-20",
+      "description": "Corrección de los 2 hallazgos restantes de SALON-013: guard granular por rol y overflow mobile preventivo",
+      "fixes": [
+        {
+          "id": "guard-granular-rol",
+          "archivo": "frontend/src/App.jsx",
+          "cambio": "Separación de rutas backoffice en 2 grupos con diferentes ProtectedRoute wrappers",
+          "detalle": "Grupo Gestión (clientes/servicios/sucursales) solo ADMIN/GERENTE/GESTION/SOLO_LECTURA. Grupo Operación (backoffice/agenda/citas) incluye PROFESIONAL. PROFESIONAL redirige a /profesional si intenta ruta de gestión."
+        },
+        {
+          "id": "overflow-mobile",
+          "archivos": [
+            "frontend/src/index.css",
+            "frontend/src/App.css"
+          ],
+          "cambio": "html/body: overflow-x:hidden + max-width:100vw. #root: width:100% (eliminado max-width:1280px)."
+        }
+      ],
+      "qa": {
+        "rutas_probadas": [
+          "/",
+          "/login",
+          "/backoffice",
+          "/backoffice/agenda",
+          "/backoffice/clientes",
+          "/profesional"
+        ],
+        "roles_probados": [
+          "ADMINISTRADOR",
+          "PROFESIONAL",
+          "CLIENTE (PUBLICO)",
+          "sin sesión"
+        ],
+        "consola": "0 errores, 0 warnings",
+        "seguridad": "verificada (sin regresión)"
+      }
+    },
+    "salon_014_auditoria_api_js": {
+      "status": "completed",
+      "closed_at": "2026-06-20",
+      "description": "Auditoría y remediación del incidente de eliminación accidental de static/api.js durante FASE_1H_G. El archivo contenía token Airtable global, base ID hardcodeada y proxy n8n. NO se reconstruye con lógica funcional — se crea stub seguro.",
+      "output": "docs/incidents/INCIDENT_STATIC_API_JS.md"
+    },
+    "fase_2a_auth_cliente_real_dry_run": {
+      "status": "completed",
+      "closed_at": "2026-06-21",
+      "description": "Diseño de auth real — Opción A elegida (FastAPI propia). Sin implementación.",
+      "entregables": [
+        "docs/auth/FASE_2A_AUTH_CLIENTE_REAL_DRY_RUN.md (625 líneas, 19K chars)"
+      ],
+      "recomendacion": "Auth propia FastAPI + JWT + bcrypt + HttpOnly cookies",
+      "next": "FASE_2A_B_AUTH_CLIENTE_REAL_IMPLEMENTACION_CONTROLADA",
+      "correccion_base_id": {
+        "activa": "appuns6zIUKaJG7r0",
+        "deprecated": "app93Vhy56KrxNhwe"
+      }
+    },
+    "microfix_frontend_brandconfig_safe": {
+      "status": "completed",
+      "closed_at": "2026-06-21",
+      "description": "Correcciones seguras en BrandConfigContext.jsx: fix registroActivo con fallback, mapeo googleMaps desde textos.redes_maps",
+      "archivos_modificados": [
+        "frontend/src/context/BrandConfigContext.jsx"
+      ],
+      "cambios": [
+        {
+          "id": "fix-registroActivo-fallback",
+          "detalle": "registroActivo ahora usa base.registroActivo como fallback cuando data.registro_activo es undefined o null",
+          "antes": "registroActivo: normalizeBool(data.registro_activo)",
+          "despues": "registroActivo: data.registro_activo !== undefined && data.registro_activo !== null ? normalizeBool(data.registro_activo) : base.registroActivo"
+        },
+        {
+          "id": "add-googleMaps-mapping",
+          "detalle": "googleMaps mapeado desde textos.redes_maps con fallback seguro a cadena vacía",
+          "fallback": "googleMaps: \"\" (agregado al FALLBACK)",
+          "transform": "googleMaps: normalizeText(textos.redes_maps) || base.googleMaps"
+        }
+      ],
+      "validaciones": {
+        "build": "npm run build OK — 69 módulos, 0 errores, 2.23s",
+        "seguridad": "0 referencias a airtable.com ni AIRTABLE_TOKEN en frontend/src/",
+        "rutas": "5/5 rutas impactadas usan useBrandConfig: /, /productos, /reserva, /login, /sucursales",
+        "deploy": "NO ejecutado (no autorizado en esta fase)",
+        "archivos_tocados": "SOLO BrandConfigContext.jsx"
+      },
+      "reglas_cumplidas": [
+        "No modificar backend",
+        "No tocar Airtable",
+        "No tocar .env ni CREDENCIALES.md",
+        "No deploy",
+        "No auth real"
+      ]
+    },
+    "deploy_frontend_surge_microfix_brandconfig": {
+      "status": "completed",
+      "closed_at": "2026-06-21T02:20:00Z",
+      "description": "Deploy del microfix BrandConfigContext.jsx a Surge.sh (bellezapro-demo.surge.sh) con SPA fallback corregido",
+      "actions": [
+        "npm run build -> 69 modulos, 0 errores, 1.84s",
+        "cp dist/index.html dist/200.html (bloqueador corregido)",
+        "surge --domain https://bellezapro-demo.surge.sh ./dist -> Success",
+        "Validacion HTTP 200: /, /productos, /reserva, /login, /sucursales (todas OK)",
+        "Verificacion 200.html: 0 refs a /src/main.jsx, assets hasheados",
+        "Auditoria seguridad: 0 credenciales en bundle"
+      ],
+      "validations": {
+        "build": "OK",
+        "200html": "CORREGIDO",
+        "deploy_surge": "OK",
+        "rutas": "5/5 HTTP 200",
+        "seguridad": "0 tokens"
+      },
+      "archivos_modificados": [
+        "dist/200.html"
+      ],
+      "dominio": "https://bellezapro-demo.surge.sh"
+    },
+    "salon_014_qa_visual_post_deploy_surge": {
+      "status": "completed",
+      "closed_at": "2026-06-21T02:45:00Z",
+      "description": "QA visual post-deploy Surge.sh — 5 rutas, 5 viewports, consola, seguridad, responsive CSS. Validación del microfix BrandConfigContext en producción.",
+      "validations": {
+        "rutas": "5/5 funcionales (/, /productos, /reserva, /login, /sucursales)",
+        "consola": "0 errores, 0 warnings en todas las rutas",
+        "responsive_css": "3 breakpoints (640/768/1024), grid-cols responsive, viewport meta OK",
+        "responsive_visual_mobile": "PENDIENTE — requiere dispositivo real/DevTools",
+        "seguridad": "0 tokens, 0 credenciales, 0 /src/main.jsx",
+        "read_only_reserva": "Sin botón submit, flujo visual únicamente",
+        "sin_auth_real_login": "Demo explícito, sin passwords, sin JWT",
+        "subruta_refresh": "/productos, /reserva, /login cargan correctamente con refresh directo"
+      },
+      "hallazgos": [
+        {
+          "ruta": "/sucursales",
+          "tipo": "INFO",
+          "descripcion": "Redirige a / (sin página dedicada). La sección sucursales existe dentro del home."
+        },
+        {
+          "ruta": "Todas",
+          "tipo": "INFO",
+          "descripcion": "Menú hamburguesa no detectado a 1280px (posiblemente renderiza solo mobile)."
+        }
+      ],
+      "output": "docs/qa/SALON-014_QA_VISUAL_POST_DEPLOY_SURGE.md",
+      "veredicto": "APROBADO — LISTO PARA CIERRE"
+    },
+    "patch_schema_controlado_auth_minimo": {
+      "status": "completed",
+      "closed_at": "2026-06-21T03:15:00Z",
+      "description": "Patch mínimo de schema Airtable para preparar auth real. Solo 3 campos creados (2 ya existían). Rehash bcrypt de 5 usuarios demo.",
+      "actions": {
+        "meta_api_audit": "GET /v0/meta/bases/appuns6zIUKaJG7r0/tables → 50 tablas, USUARIOS y CLIENTES identificados",
+        "campos_creados": [
+          {
+            "name": "BLOQUEADO_HASTA",
+            "type": "dateTime",
+            "id": "fldmHCpvZ4RP…"
+          },
+          {
+            "name": "EMAIL_VERIFICADO",
+            "type": "checkbox",
+            "id": "fldDgmcSYIdL…"
+          },
+          {
+            "name": "CLIENTE",
+            "type": "multipleRecordLinks → CLIENTES",
+            "id": "fldl2g1l1T8x…"
+          }
+        ],
+        "campos_ya_existentes": [
+          {
+            "name": "INTENTOS_FALLIDOS",
+            "type": "number",
+            "nota": "ya creado en fase previa"
+          },
+          {
+            "name": "ULTIMO_LOGIN",
+            "type": "date",
+            "nota": "date (no dateTime), mínimo cambio"
+          }
+        ],
+        "rehash_bcrypt": {
+          "usuarios": 5,
+          "rounds": 12,
+          "formato": "$2b$",
+          "hash_len": 60,
+          "errores": 0
+        },
+        "efecto_recíproco": "CLIENTES ahora tiene campo USUARIOS (auto-creado por Airtable al crear link CLIENTE)"
+      },
+      "reglas_cumplidas": [
+        "No modificar backend",
+        "No deployar Railway",
+        "No tocar .env",
+        "No modificar frontend",
+        "No crear endpoints auth",
+        "No mostrar passwords/hashes",
+        "Solo 3 campos creados (mínimo)",
+        "No borrar usuarios/clientes",
+        "No auth real implementado"
+      ],
+      "schema_final_usuario_campos": 20,
+      "schema_final_usuario_campos_seguridad": [
+        "INTENTOS_FALLIDOS",
+        "BLOQUEADO_HASTA",
+        "ULTIMO_LOGIN",
+        "EMAIL_VERIFICADO",
+        "CLIENTE"
+      ]
+    },
+    "fase_2a_c_auth_backend_core": {
+      "status": "completed_blocked_jwt_secret",
+      "closed_at": null,
+      "description": "Auth backend core en FastAPI: login/logout/me con bcrypt + JWT en cookie HttpOnly. Implementado y funcional pero bloqueado hasta que JWT_SECRET esté configurado en .env",
+      "blocker": "JWT_SECRET no configurado en .env. /login y /me devuelven 503. /logout funciona.",
+      "files_created": [
+        "backend/auth/__init__.py",
+        "backend/auth/security.py",
+        "backend/auth/dependencies.py",
+        "backend/auth/routes.py",
+        "backend/test_auth.py"
+      ],
+      "files_modified": [
+        "backend/airtable_adapter.py (agregado patch_record)",
+        "backend/main.py (include_router auth)"
+      ],
+      "endpoints": [
+        "POST /api/auth/login",
+        "GET /api/auth/me",
+        "POST /api/auth/logout"
+      ],
+      "smoke_test": {
+        "result": "all_passed",
+        "checks": 8,
+        "failures": 0,
+        "note": "JWT_SECRET missing — login test skipped, /login→503 verified"
+      },
+      "decisiones_tecnicas": {
+        "jwt_secret_source": "JWT_SECRET env var (NO AIRTABLE_API_TOKEN)",
+        "jwt_payload": "{sub, email, nombre, rol, cliente, exp}",
+        "jwt_expiry": "28800s (8h)",
+        "cookie_name": "auth_token",
+        "cookie_flags": "httponly=True, samesite=lax, secure=dinámico",
+        "bcrypt": "Usa hash en CONTRASENA_HASH ($2b$, 12 rounds)",
+        "intentos_fallidos": "+1 en fail, reset en éxito",
+        "bloqueado_hasta": "Rechaza login si fecha futura",
+        "ultimo_login": "YYYY-MM-DD (Airtable date field)",
+        "email_verificado": "false → rechaza; null → permite (demo)"
+      },
+      "para_desbloquear": "Agregar JWT_SECRET=<valor> a .env y reiniciar backend"
+    },
+    "smoke_auth_backend_core_con_jwt_secret": {
+      "status": "blocked_jwt_secret_missing",
+      "closed_at": null,
+      "description": "Smoke test con JWT_SECRET. Bloqueado: la variable no está en .env ni en el entorno.",
+      "blocker": "JWT_SECRET ausente en .env y os.environ. Sin ella, /login devuelve 503 y no se puede probar login real, cookie JWT, INTENTOS_FALLIDOS, BLOQUEADO_HASTA, ni /me autenticado.",
+      "verificaciones_ok": [
+        "JWT_SECRET no configurado → /login = 503 (correcto)",
+        "/me sin cookie → 401",
+        "/logout → 200",
+        "6 endpoints existentes → 200",
+        "Imports OK, cookie config OK, patch_record OK, Airtable OK"
+      ],
+      "verificaciones_pendientes": [
+        "Login exitoso con usuario demo",
+        "Cookie HttpOnly con JWT emitida",
+        "/me con cookie → 200 + datos",
+        "INTENTOS_FALLIDOS++ en login fallido",
+        "BLOQUEADO_HASTA rechaza login",
+        "ULTIMO_LOGIN se actualiza (YYYY-MM-DD)",
+        "EMAIL_VERIFICADO=false rechaza login"
+      ],
+      "para_desbloquear": "Agregar JWT_SECRET=<valor> a .env, reiniciar backend, re-ejecutar test_auth.py"
+    },
+    "smoke_auth_backend_login_exitoso": {
+      "status": "completed",
+      "closed_at": "2026-06-21",
+      "description": "Smoke test de login exitoso con credenciales demo locales: 21/21 checks OK — cookie HttpOnly, /me autenticado, logout, INTENTOS_FALLIDOS reset, ULTIMO_LOGIN actualizado",
+      "bugs_corregidos": [
+        "ROL en USUARIOS es Link → ROLES (array de IDs), _format_user() y get_current_user() esperaban str → 500. Fix: _resolve_rol() que consulta tabla ROLES y extrae NOMBRE_ROL.",
+        "Cookie Set-Cookie no visible en urlopen: usar cookiejar o curl -D para ver headers reales."
+      ],
+      "result": "21/21 checks passed",
+      "veredict": "AUTH_BACKEND listo para integración frontend",
+      "archivos_modificados": [
+        "backend/auth/routes.py — _resolve_rol(), _format_user, create_token",
+        "backend/auth/dependencies.py — get_current_user resuelve ROL"
+      ]
+    },
+    "cierre_fase_2a_d_auth_frontend_integracion_controlada": {
+      "status": "completed",
+      "closed_at": "2026-06-21T16:45:00Z",
+      "description": "Cierre formal FASE_2A_D — Auth frontend real. Login email/password, cookies HttpOnly sin localStorage, /me rehidrata sesion, logout real, guards por rol. Fix: ProtectedRoute loading spinner.",
+      "features": [
+        "Login real POST /api/auth/login (credentials:include)",
+        "Cookie HttpOnly auth_token: Max-Age=28800, Path=/api, SameSite=lax",
+        "CERO localStorage para JWT",
+        "/api/auth/me rehidrata sesion en refresh (useEffect AuthProvider)",
+        "Logout real POST /api/auth/logout",
+        "ProtectedRoute espera loading (spinner) antes de redirect",
+        "Mapeo backend: data.user -> setUsuario, user.rol -> setRole",
+        "Nombre real + avatar + role badge en topbar"
+      ],
+      "bugs_corregidos": [
+        "Race condition: ProtectedRoute redirigia antes de /me → loading fix",
+        "data.user no data.usuario en backend",
+        "campo nombre no nombre_usuario",
+        "BackofficeLayout undefined.charAt(0) por precedencia || vs ternario"
+      ],
+      "archivos_modificados": [
+        "vite.config.js",
+        "AuthContext.jsx",
+        "Login.jsx",
+        "BackofficeLayout.jsx",
+        "Navbar.jsx",
+        "App.jsx"
+      ],
+      "validaciones": {
+        "build": "OK 1.71s 69 modules",
+        "login": "OK POST 200 + cookie + redirect",
+        "me": "OK /me con cookie retorna user",
+        "refresh": "OK location.reload() mantiene sesion",
+        "logout": "OK limpia cookie + redirect /login",
+        "no_localstorage": "OK CERO refs",
+        "consola": "OK 0 errores",
+        "roles": {
+          "ADMINISTRADOR": "backoffice completo OK",
+          "PROFESIONAL": "backoffice basico OK, gestion NO OK",
+          "CLIENTE": "solo publicas OK"
+        },
+        "reserva": "read-only/public OK",
+        "sin_secretos": "OK cero tokens en bundle"
+      },
+      "riesgos": [
+        "JWT sin refresh token (expira 8h)",
+        "Sin rate-limiting en /login",
+        "Password demo debe rotarse antes de produccion"
+      ],
+      "recomendacion": "Listo para deploy condicional. NO automatico. Requiere aprobacion."
+    },
+    "pre_deploy_auth_railway_surge_coordinado": {
+      "status": "completed",
+      "closed_at": "2026-06-21T17:00:00Z",
+      "description": "DEPLOY FASE_2A_D COMPLETO. Backend Railway + Frontend Surge con auth real (JWT/bcrypt/cookie HttpOnly cross-site). 12/12 validaciones pasadas.",
+      "hallazgos": {
+        "railway_auth_endpoints": "200 — login/me/logout funcionales con cookie HttpOnly",
+        "cors": "OK — allow_origins=[surge.sh, localhost], allow_credentials=True",
+        "cookie_produccion": "HttpOnly=True, Secure=True, SameSite=True, Path/api=True ✓",
+        "cookie_cross_site": "Surge→Railway login exitoso, dashboard con datos reales",
+        "jwt_secret_railway": "Configurado (48 chars)",
+        "auth_cookie_samesite": "Corregido — estaba inválido, causaba 500 en login",
+        "auth_cookie_secure": "Configurado correctamente",
+        "vite_api_base_url": "Configurado en .env.production → Railway URL",
+        "bundle_railway_refs": 17,
+        "consola_produccion": "0 errores JS, 0 warnings en todo el flujo"
+      },
+      "microfixes": [
+        {
+          "id": "authcontext-api-prefix",
+          "archivo": "frontend/src/context/AuthContext.jsx",
+          "cambio": "fetch('/api/auth/*') → fetch(`${API}/api/auth/*`) con API=VITE_API_BASE_URL",
+          "razon": "En produccion Surge, /api/auth/me pegaba a surge.sh sin backend"
+        },
+        {
+          "id": "requirements-auth-deps",
+          "archivo": "backend/requirements.txt",
+          "cambio": "Agregados PyJWT>=2.7.0 y bcrypt>=3.2.0",
+          "razon": "Railway no instalaba deps de auth → rutas auth fallarian en import"
+        }
+      ],
+      "pendiente_railway": {
+        "env_vars": "JWT_SECRET ✓, AUTH_COOKIE_SAMESITE ✓, AUTH_COOKIE_SECURE ✓",
+        "deploy": "railway up + git push → Online (deployment 018a241a...)",
+        "verificar": "POST /api/auth/login → 200 ✓, GET /me → 200 ✓, POST /logout → 200 ✓"
+      },
+      "pendiente_surge": {
+        "build": "npm run build (OK, 1.71s)",
+        "deploy": "surge dist/ → bellezapro-demo.surge.sh ✓",
+        "verificar": "Login real ✓, logout ✓, guards ✓, refresh ✓, 0 errores consola ✓"
+      },
+      "orden_deploy": [
+        "1. Railway: setear JWT_SECRET + AUTH_COOKIE_SAMESITE + AUTH_COOKIE_SECURE",
+        "2. Railway: railway up",
+        "3. Railway: verificar POST /api/auth/login → 200",
+        "4. Surge: npm run build && surge dist/",
+        "5. Surge: probar flujo completo en produccion"
+      ],
+      "riesgos": [
+        "Railway cold-start → primer request puede tardar 30-60s",
+        "JWT sin refresh token (expiracion 8h)",
+        "Sin rate-limiting en /api/auth/login",
+        "Password demo debe rotarse antes de usuarios reales"
+      ],
+      "recomendacion": "FASE_2A_D COMPLETA. Auth real cross-site funcional. Próximo: FASE_2A_DRY_RUN (clientes reales, registro, escritura reservas).",
+      "bugs_resueltos": [
+        "backend/auth/ untracked en git → Railway no subía código auth (5 deploys fallidos). Fix: git add + push.",
+        "AUTH_COOKIE_SAMESITE inválido → AssertionError 500 en login. Fix: railway variables set.",
+        "Hash usuario demo no coincidía → reseedeado via Airtable API."
+      ]
+    },
+    "cierre_fase_2a_auth_real_publicada_y_hardening_minimo": {
+      "status": "completed",
+      "closed_at": "2026-06-21T23:00:00Z",
+      "description": "Cierre formal FASE_2A con auth real publicada + hardening mínimo (rate-limiting, verificación INTENTOS_FALLIDOS, rotación password demo). 6/6 pruebas pasadas. Railway redeploy exitoso.",
+      "hardening": [
+        "Rate-limiting POST /api/auth/login: 5 intentos/15min, IP+email, 429, en memoria sin deps externas",
+        "Verificación INTENTOS_FALLIDOS en Airtable (USUARIOS.INTENTOS_FALLIDOS)",
+        "Rotación password demo (script local → Airtable API, sin mostrar hash)"
+      ],
+      "pruebas": [
+        "Login válido → 200 + cookie HttpOnly/Secure/SameSite=None",
+        "Login inválido → 401 + incrementa INTENTOS_FALLIDOS",
+        "Rate-limit → 429 tras 5 fallos en 15 min",
+        "GET /api/auth/me con cookie → 200",
+        "POST /api/auth/logout → 200 + clear cookie",
+        "GET / y GET /api/marca-blanca → 200"
+      ],
+      "archivos_modificados": [
+        "backend/auth/rate_limit.py (NUEVO)",
+        "backend/auth/routes.py (import + decorador rate_limit)",
+        "progress/session-summary.md (cierre formal)",
+        "progress/tasks.json (fase completada)",
+        "progress/memory/decisions.md (6 decisiones finales)"
+      ],
+      "deploy_railway": "Sí — git push origin main → deploy automático → Online verificado",
+      "riesgos_remanentes": [
+        "Rate-limit en memoria se pierde en cold-start Railway",
+        "JWT sin refresh token (8h expiración)",
+        "Sin recuperación de contraseña",
+        "Password demo debe rotarse antes de usuarios reales"
+      ],
+      "proxima_fase": "FASE_2B_CLIENTES_REALES_REGISTRO — habilitar registro público de clientes con validación de email"
+    },
+    "patch_opcion_expirado_y_deploy_backend_recovery_railway": {
+      "status": "completed",
+      "closed_at": "2026-06-22T15:10:00Z",
+      "description": "Patch opción EXPIRADO (pendiente permiso schema) + deploy backend Railway con forgot-password que setea ESTADO_RECUPERACION_CLAVE y RESET_PASSWORD_URL_TEMPORAL. Automation RECUPERACION_PASSWORD_ENVIAR_EMAIL disparó exitosamente.",
+      "dependencies": [
+        "patch_schema_recovery_canonical_base_only"
+      ],
+      "actions": {
+        "opcion_expirando": "NO creada — token AIRTABLE_API_TOKEN sin permisos schema:write. Pendiente acción manual en UI Airtable.",
+        "deploy_backend": {
+          "commit": "ea181ae",
+          "deploy_id": "60dfd591-9950-43c8-a1a0-ccb7d8f0de91",
+          "status": "Online verificado"
+        },
+        "campos_seteados_por_forgot": [
+          "RESET_PASSWORD_TOKEN_HASH",
+          "RESET_PASSWORD_EXPIRA",
+          "RESET_PASSWORD_SOLICITADO_EN",
+          "RESET_PASSWORD_USADO_EN",
+          "ESTADO_RECUPERACION_CLAVE=RECUPERACION_SOLICITADA",
+          "RESET_PASSWORD_URL_TEMPORAL"
+        ],
+        "automation": {
+          "nombre": "RECUPERACION_PASSWORD_ENVIAR_EMAIL",
+          "disparo": "10s tras forgot-password",
+          "estado_final": "EMAIL_ENVIADO",
+          "fecha_envio": "2026-06-22T15:04:53.836Z"
+        }
+      },
+      "bloqueos": [
+        "EXPIRADO no creado (sin permisos schema token actual)"
+      ],
+      "next": "SALON-015b: reset-password (normal, vencido, reuso) — listo para ejecutar"
+    },
+    "salon_015b_qa_reset_password_completo": {
+      "status": "completed",
+      "started": "2026-06-22T15:15:00Z",
+      "completed": "2026-06-22T19:40:00Z",
+      "summary": "SALON-015b: QA reset-password completo. 6/6 pruebas. 3 bugs detectados (EXPIRADO no se setea, automation no re-dispara, solo alfanumerico).",
+      "results": {
+        "r1_options": "PASS (6/6)",
+        "r2_forgot_automation": "PASS",
+        "r3_reset_valid": "PASS (TOKEN_USADO)",
+        "r4a_login_new": "PASS",
+        "r4b_login_old_rejected": "PASS (401)",
+        "r5_token_reuse": "PASS (400)",
+        "r6_expired_rejected": "PASS (400)",
+        "r6_estado_expired": "PASS (EXPIRADO — fix aplicado en PATCH_RECOVERY)",
+        "r6_password_unchanged": "PASS",
+        "verdict": "RECOVERY COMPLETO CORREGIDO (2 bugs fixeados, re-test OK)"
+      },
+      "bugs": [
+        {
+          "id": 1,
+          "severity": "medium",
+          "desc": "ESTADO_RECUPERACION_CLAVE no transiciona a EXPIRADO al rechazar token vencido",
+          "status": "fixed",
+          "fix_commit": "5b436ff"
+        },
+        {
+          "id": 2,
+          "severity": "low-medium",
+          "desc": "Automation email no re-dispara en forgot-password consecutivos (posible EMAIL_ENVIADO_EN stale)",
+          "status": "fixed",
+          "fix_commit": "5b436ff"
+        },
+        {
+          "id": 3,
+          "severity": "low",
+          "desc": "Backend solo acepta passwords alfanumericos"
+        }
+      ]
+    },
+    "patch_recovery_password_estados_y_retest": {
+      "status": "completed",
+      "closed_at": "2026-06-22T20:10:00Z",
+      "description": "Corrección de BUG 1 (setear EXPIRADO en token vencido) y BUG 2 (limpiar EMAIL_ENVIADO_EN en forgot-password). Commit, deploy Railway, re-test post-deploy de ambos bugs.",
+      "dependencies": [
+        "salon_015b_qa_reset_password_completo"
+      ],
+      "commit": "5b436ff",
+      "deploy_id": "79eb5e0b-87f",
+      "archivo_modificado": "backend/auth/routes.py",
+      "cambios": [
+        {
+          "id": "fix_bug1_expired",
+          "linea": "562-575",
+          "desc": "En reset_password(), antes de levantar HTTPException 400 por token vencido, ejecutar client.patch_record(USUARIOS, user_id, {ESTADO_RECUPERACION_CLAVE: EXPIRADO})"
+        },
+        {
+          "id": "fix_bug2_clean_email_enviado",
+          "linea": "474",
+          "desc": "En forgot_password(), agregar RESET_PASSWORD_EMAIL_ENVIADO_EN: None al patch_record de recovery. El backend limpia el campo; automation lo sobreescribe con timestamp nuevo."
+        }
+      ],
+      "re_test": {
+        "bug1": {
+          "token_vencido_400": "PASS",
+          "estado_expired": "PASS",
+          "password_intacta_tempPW999": "PASS (200)",
+          "password_nueva_rechazada": "PASS (401)",
+          "overall": "PASS"
+        },
+        "bug2": {
+          "forgot_200": "PASS",
+          "automation_dispara": "PASS (EMAIL_ENVIADO)",
+          "email_enviado_en_limpio_backend": "PASS (se limpia a None antes de automation)",
+          "overall": "PASS"
+        }
+      },
+      "reglas_cumplidas": [
+        "No modificar fabrica madre ni plantillas externas",
+        "No crear campos nuevos",
+        "No modificar automatizaciones",
+        "No tocar bases deprecated",
+        "No modificar frontend",
+        "No deployar Surge",
+        "Solo modificar backend/auth/routes.py"
+      ]
+    }
+  },
+  "pendientes_no_bloqueantes": [
+    "Auth real: backend core (FASE_2A_B pendiente de aprobación)",
+    "QA mobile real en dispositivo o Chrome DevTools (verificar overflow y responsive visualmente)",
+    "Auth real (JWT/bcrypt/clientes reales) — planificar en FASE_2A_DRY_RUN",
+    "Registro real de clientes (tabla CLIENTES, PATCH/POST habilitados)",
+    "Escritura real de reservas (tabla RESERVAS, flujo completo)",
+    "Carrito de compras / pagos",
+    "Multi-tenant real por dominio/slug (selector de marca dinámico)",
+    "Banners, ofertas, media dinámicos avanzados",
+    "Menú hamburguer para mobile (<640px)",
+    "Eliminar campos DEPRECATED_* de Airtable (requiere UI manual)"
+  ],
+  "proxima_fase_recomendada": "FASE_2A_C_AUTH_BACKEND_CORE_CONTROLADO"
+}
