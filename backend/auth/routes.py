@@ -471,6 +471,7 @@ async def forgot_password(body: ForgotPasswordRequest, request: Request):
                     "RESET_PASSWORD_EXPIRA": expires_at.isoformat(),
                     "RESET_PASSWORD_SOLICITADO_EN": now_utc.isoformat(),
                     "RESET_PASSWORD_USADO_EN": None,
+                    "RESET_PASSWORD_EMAIL_ENVIADO_EN": None,
                     "ESTADO_RECUPERACION_CLAVE": "RECUPERACION_SOLICITADA",
                     "RESET_PASSWORD_URL_TEMPORAL": reset_url,
                 },
@@ -559,6 +560,15 @@ async def reset_password(body: ResetPasswordRequest, request: Request):
         try:
             expires_dt = _datetime.fromisoformat(expires_str.replace("Z", "+00:00"))
             if _datetime.now(_timezone.utc) > expires_dt:
+                # Token expired — set estado EXPIRADO
+                try:
+                    client.patch_record(
+                        "USUARIOS",
+                        user_id,
+                        {"ESTADO_RECUPERACION_CLAVE": "EXPIRADO"},
+                    )
+                except Exception as e:
+                    logger.error("Failed to set EXPIRADO for %s: %s", user_id, e)
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="Token inválido o vencido.",
