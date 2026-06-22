@@ -67,10 +67,23 @@ async def get_current_user(request: Request, auth_token: str = Cookie(default=No
     from .routes import _resolve_rol
     rol_resolved = _resolve_rol(fields.get("ROL", "")) or payload.get("rol", "")
 
+    cliente_raw = fields.get("CLIENTE", "")
     return {
         "id": record["id"],
         "email": fields.get("EMAIL_LOGIN", payload.get("email", "")),
         "nombre": fields.get("NOMBRE_USUARIO", payload.get("nombre", "")),
         "rol": rol_resolved,
-        "cliente": fields.get("CLIENTE", ""),
+        "cliente": (cliente_raw[0] if isinstance(cliente_raw, list) and cliente_raw
+                      else str(cliente_raw) if cliente_raw else ""),
     }
+
+async def verify_admin(request: Request, auth_token: str = Cookie(default=None)):
+    """FastAPI dependency. Verifies user is ADMINISTRADOR or ADMIN_SISTEMA."""
+    user = await get_current_user(request, auth_token)
+    rol = (user.get("rol") or "").upper()
+    if rol not in ("ADMINISTRADOR", "ADMIN_SISTEMA"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Acceso restringido a administradores.",
+        )
+    return user

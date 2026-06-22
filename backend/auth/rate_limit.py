@@ -56,3 +56,47 @@ def get_remaining(ip: str, email: str) -> int:
         if now - entry["window_start"] > _WINDOW_SECONDS:
             return _MAX_ATTEMPTS
         return max(_MAX_ATTEMPTS - entry["count"], 0)
+
+# ── Generic rate-limit helpers ────────────────
+def _check_limit(ip: str, bucket: str, max_attempts: int, window_seconds: int) -> int:
+    """Generic rate limit check. Returns remaining attempts."""
+    key = f"{bucket}:{ip}"
+    now = time.monotonic()
+
+    with _lock:
+        # Clean expired
+        expired = [k for k, v in _attempts.items()
+                   if now - v["window_start"] > window_seconds]
+        for k in expired:
+            del _attempts[k]
+
+        entry = _attempts.get(key)
+        if entry is None:
+            _attempts[key] = {"count": 1, "window_start": now}
+            return max_attempts - 1
+
+        elapsed = now - entry["window_start"]
+        if elapsed > window_seconds:
+            _attempts[key] = {"count": 1, "window_start": now}
+            return max_attempts - 1
+
+        if entry["count"] >= max_attempts:
+            return 0
+
+        entry["count"] += 1
+        return max(max_attempts - entry["count"], 0)
+
+
+def check_register_limit(ip: str) -> int:
+    """Rate limit for registration: 3 per 15 min per IP."""
+    return _check_limit(ip, "register", max_attempts=3, window_seconds=15*60)
+
+
+def check_forgot_password_limit(ip: str) -> int:
+    """Rate limit for forgot-password: 3 per 15 min per IP."""
+    return _check_limit(ip, "forgot-pw", max_attempts=3, window_seconds=15*60)
+
+
+def check_reset_password_limit(ip: str) -> int:
+    """Rate limit for reset-password: 5 per 15 min per IP."""
+    return _check_limit(ip, "reset-pw", max_attempts=5, window_seconds=15*60)

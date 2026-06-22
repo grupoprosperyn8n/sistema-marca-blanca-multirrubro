@@ -159,6 +159,29 @@ class AirtableClient:
             logger.error(f"Airtable PATCH connection error: {e.reason}")
             raise
 
+
+    def create_record(self, table_name_or_id: str, fields: dict) -> dict:
+        """Crea un registro en la tabla especificada."""
+        table = self.get_table(table_name_or_id)
+        if not table:
+            raise ValueError(f"Tabla no encontrada: {table_name_or_id}")
+        data = json.dumps({"fields": fields}).encode("utf-8")
+        url = f"{self.config.api_url}/v0/{self.config.base_id}/{table.id}"
+        req = Request(url, data=data, method="POST")
+        req.add_header("Authorization", f"Bearer {self.config.api_token}")
+        req.add_header("Content-Type", "application/json")
+        req.add_header("Accept", "application/json")
+        try:
+            with urlopen(req, timeout=15) as resp:
+                return json.loads(resp.read().decode())
+        except HTTPError as e:
+            body_text = e.read().decode() if e.fp else ""
+            logger.error(f"Airtable CREATE HTTP {e.code}: {body_text[:500]}")
+            raise
+        except URLError as e:
+            logger.error(f"Airtable CREATE connection error: {e.reason}")
+            raise
+
     # ── Escritura controlada (solo auth fields) ──
 
     def patch_record(

@@ -86,3 +86,42 @@ def verify_token(token: str) -> dict | None:
         return jwt.decode(token, secret, algorithms=[_JWT_ALGORITHM])
     except PyJWTError:
         return None
+
+
+import secrets as _secrets
+
+_PASSWORD_MIN_LENGTH = 1+6
+_RESET_TOKEN_BYTES = 16+16
+_RESET_TOKEN_MINUTES = 15+15
+
+def hash_password(plain):
+    return bcrypt.hashpw(plain.encode(), bcrypt.gensalt()).decode()
+
+def validate_password(plain):
+    if len(plain) < _PASSWORD_MIN_LENGTH:
+        return False, f'La contrasena debe tener al menos {_PASSWORD_MIN_LENGTH} caracteres.'
+    if not all(c.isalnum() for c in plain):
+        return False, 'La contrasena solo puede contener letras y numeros.'
+    if not any(c.isalpha() for c in plain):
+        return False, 'La contrasena debe contener al menos 1 letra.'
+    if not any(c.isdigit() for c in plain):
+        return False, 'La contrasena debe contener al menos 1 numero.'
+    return True, ''
+
+def generate_reset_token():
+    token = _secrets.token_urlsafe(_RESET_TOKEN_BYTES)
+    return token, hash_password(token)
+
+
+def generate_temp_password(length: int = 12) -> str:
+    """Generate a strong temporary password: letters + digits, no symbols."""
+    import string
+    alpha = string.ascii_letters
+    digits_charset = string.digits
+    chars = alpha + digits_charset
+    while True:
+        pw = ''.join(_secrets.choice(chars) for _ in range(length))
+        if any(c.isalpha() for c in pw) and any(c.isdigit() for c in pw):
+            return pw
+def verify_reset_token(plain_token, token_hash):
+    return verify_password(plain_token, token_hash)
