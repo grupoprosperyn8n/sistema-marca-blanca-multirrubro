@@ -8,6 +8,7 @@ Endpoints:
 """
 
 import logging
+import os
 from datetime import date, datetime, timezone
 
 from fastapi import APIRouter, Cookie, HTTPException, Request, Response, status
@@ -460,6 +461,8 @@ async def forgot_password(body: ForgotPasswordRequest, request: Request):
         expires_at = now_utc + _timedelta(minutes=_RESET_TOKEN_MINUTES)
 
         try:
+            app_public_url = os.getenv("APP_PUBLIC_URL", "https://sistema-multirrubro-demo.surge.sh")
+            reset_url = f"{app_public_url.rstrip('/')}/reset-password?token={plain_token}"
             client.patch_record(
                 "USUARIOS",
                 user["id"],
@@ -468,6 +471,8 @@ async def forgot_password(body: ForgotPasswordRequest, request: Request):
                     "RESET_PASSWORD_EXPIRA": expires_at.isoformat(),
                     "RESET_PASSWORD_SOLICITADO_EN": now_utc.isoformat(),
                     "RESET_PASSWORD_USADO_EN": None,
+                    "ESTADO_RECUPERACION_CLAVE": "RECUPERACION_SOLICITADA",
+                    "RESET_PASSWORD_URL_TEMPORAL": reset_url,
                 },
             )
             logger.info(
@@ -574,6 +579,7 @@ async def reset_password(body: ResetPasswordRequest, request: Request):
                 "BLOQUEADO_HASTA": None,
                 "RESET_PASSWORD_USADO_EN": now_utc.isoformat(),
                 "RESET_PASSWORD_TOKEN_HASH": None,
+                "ESTADO_RECUPERACION_CLAVE": "TOKEN_USADO",
             },
         )
         logger.info("Password reset successful for user %s", user_id)
