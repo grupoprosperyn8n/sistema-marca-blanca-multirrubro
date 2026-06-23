@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 
-const API = import.meta.env.VITE_API_URL || "/api";
+const API = import.meta.env.VITE_API_BASE_URL || "/api";
 
 /* ── campos seguros editables por el cliente ── */
 const EDITABLE_FIELDS = [
@@ -60,7 +60,7 @@ export default function PortalCliente() {
   const fetchWithCookie = useCallback(async (url, options = {}) => {
     const resp = await fetch(`${API}${url}`, {
       ...options,
-      credentials: "same-origin",
+      credentials: "include",
       headers: { "Content-Type": "application/json", ...(options.headers || {}) },
     });
     if (resp.status === 401) { logout(); throw new Error("Sesión expirada"); }

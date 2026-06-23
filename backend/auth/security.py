@@ -23,8 +23,8 @@ _JWT_EXPIRE_HOURS = 8
 
 # ── Cookie config (centralizada) ─────────────
 _COOKIE_NAME = "auth_token"
-_COOKIE_SAMESITE = os.getenv("AUTH_COOKIE_SAMESITE", "lax")  # lax | strict | none
-_COOKIE_SECURE = os.getenv("AUTH_COOKIE_SECURE", "false").lower() == "true"
+_COOKIE_SAMESITE = os.getenv("AUTH_COOKIE_SAMESITE", "none")  # lax | strict | none
+_COOKIE_SECURE = os.getenv("AUTH_COOKIE_SECURE", "true").lower() == "true"
 
 
 def get_jwt_secret() -> str:
