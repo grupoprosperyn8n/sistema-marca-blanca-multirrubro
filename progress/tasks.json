@@ -309,7 +309,7 @@
         "ultimo_login": "YYYY-MM-DD (Airtable date field)",
         "email_verificado": "false → rechaza; null → permite (demo)"
       },
-      "para_desbloquear": "Agregar JWT_SECRET=<valor> a .env y reiniciar backend"
+      "para_desbloquear": "Agregar JWT_SECRET=*** a .env y reiniciar backend"
     },
     "smoke_auth_backend_core_con_jwt_secret": {
       "status": "blocked_jwt_secret_missing",
@@ -332,7 +332,7 @@
         "ULTIMO_LOGIN se actualiza (YYYY-MM-DD)",
         "EMAIL_VERIFICADO=false rechaza login"
       ],
-      "para_desbloquear": "Agregar JWT_SECRET=<valor> a .env, reiniciar backend, re-ejecutar test_auth.py"
+      "para_desbloquear": "Agregar JWT_SECRET=*** a .env, reiniciar backend, re-ejecutar test_auth.py"
     },
     "smoke_auth_backend_login_exitoso": {
       "status": "completed",
@@ -613,6 +613,22 @@
         "Solo modificar backend/auth/routes.py"
       ]
     }
+
+  },
+  "salon_015d_documentar_resultados_qa_recovery": {
+    "status": "completed",
+    "closed_at": "2026-06-22T21:00:00Z",
+    "description": "SALON-015d: Documentar resultados QA recovery. Consolidación de session-summary.md + nuevo recovery-qa-report.md + actualización tasks.json.",
+    "outputs": [
+      "progress/session-summary.md (actualizado, 221 líneas, consolidado FASE SALON-015 a+b+c+d)",
+      "docs/qa/SALON-015_RECOVERY_PASSWORD_QA_REPORT.md (nuevo - reporte stakeholders, 9 secciones)"
+    ],
+    "reglas_cumplidas": [
+      "No mostrar tokens, passwords, hashes, JWT_SECRET, Airtable API token",
+      "No modificar backend, frontend, ni deployar",
+      "No tocar Airtable ni crear automatizaciones",
+      "Solo modificar documentación (session-summary.md + nuevo reporte)"
+    ]
   },
   "pendientes_no_bloqueantes": [
     "Auth real: backend core (FASE_2A_B pendiente de aprobación)",
