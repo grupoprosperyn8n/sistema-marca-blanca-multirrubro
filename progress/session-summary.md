@@ -97,9 +97,13 @@ PASS — 400 Token invalido o vencido
 
 ---
 
-## BUG 3 — Password solo alfanumerica
-Backend rechaza caracteres especiales. Solo letras y numeros.
-Severidad: Baja. No autorizado modificar en esta fase.
+## Regla de Validación — Password alfanumérica
+La validación de password aplica por decisión de producto:
+- mínimo 7 caracteres;
+- al menos 1 letra;
+- al menos 1 número;
+- solo caracteres alfanuméricos.
+Estado: Decisión de producto vigente. Relajar esta regla requeriría aprobación.
 
 ---
 
@@ -107,11 +111,11 @@ Severidad: Baja. No autorizado modificar en esta fase.
 
 | Automation | Rol en Recovery | Alcance QA |
 |------------|----------------|------------|
-| **ENVIAR_EMAIL** (RECUPERACION_PASSWORD) | Dispara tras forgot-password → envía email con reset link → setea EMAIL_ENVIADO | ✅ Verificado: disparo a ~10s, contenido funcional |
-| **ALERTA_ERROR** | Notificación de errores en flujos críticos (backup, recovery, auth) | ⬜ No verificado en esta fase (error handling general) |
-| **REVISION_SEMANAL** | Auditoría periódica de estados de recuperación y usuarios bloqueados | ⬜ No verificado en esta fase (cron semanal) |
+| **RECUPERACION_PASSWORD_ENVIAR_EMAIL** | Dispara tras forgot-password → envía email con reset link → setea EMAIL_ENVIADO | ✅ Verificado end-to-end: disparo a ~10s, contenido funcional |
+| **RECUPERACION_PASSWORD_ALERTA_ERROR** | Notificación de errores en flujos críticos (backup, recovery, auth) | ⚠️ Configurada y activa. Pendiente: prueba negativa controlada (forzar error y verificar notificación) |
+| **RECUPERACION_PASSWORD_REVISION_SEMANAL** | Auditoría periódica de estados de recuperación y usuarios bloqueados | ⚠️ Activa. Script probado manualmente. Ejecución semanal real depende del calendario Airtable |
 
-> ENVIAR_EMAIL es la única automation directamente probada. ALERTA_ERROR y REVISION_SEMANAL son automations generales del proyecto documentadas para referencia futura.
+> Todas las automations están configuradas y activas. ENVIAR_EMAIL es la única probada end-to-end. Las restantes se documentan con estado claro para referencia futura.
 
 ---
 
@@ -127,7 +131,7 @@ Severidad: Baja. No autorizado modificar en esta fase.
 | CORS configurado (allow_credentials=True) | ✅ |
 | Cookie HttpOnly/Secure/SameSite | ✅ |
 | No exposición de secretos en respuestas | ✅ |
-| Password nueva validación (alfanumérica >= 6 chars) | ⚠️ BUG 3 — baja severidad |
+| **Validación** | Password mín. 7 caracteres, al menos 1 letra + 1 número, solo alfanumérico | ⚠️ Símbolos no permitidos por decisión de producto |
 
 ---
 
@@ -153,13 +157,13 @@ Ambos bugs de SALON-015b corregidos, re-testeados y desplegados (commit 5b436ff,
 
 | Riesgo | Severidad | Mitigación |
 |--------|-----------|------------|
-| Password solo alfanumérica | Baja | Relajar validación en fase futura |
+| Validación de password alfanumérica (regla de producto) | 🟢 Baja | UX: usuarios no pueden usar símbolos en passwords | Evaluar relajar validación si producto lo aprueba |
 | Rate-limit en memoria (se pierde en cold-start) | Media | Implementar rate-limit persistente (Redis o Airtable) |
 | Sin refresh token JWT (8h expiración) | Media | Planificar en FASE_2B |
 | Password demo rotada pero público conocido | Baja | Rotar antes de usuarios reales |
 
 ## Pendientes
 - SALON-015d: documentacion ✅ COMPLETED
-- BUG 3: evaluar si relajar validacion de password (baja prioridad)
+- Validación de password alfanumérica: evaluar si relajar regla (decisión de producto, baja prioridad)
 
 SALON-015 (a+b+c+d): ✅ COMPLETED

@@ -133,10 +133,14 @@ Se implementó y verificó el flujo completo de recuperación de contraseña par
 - **Archivo:** `backend/auth/routes.py` (línea 474)
 - **Commit:** 5b436ff
 
-### BUG 3 — [BAJA] Validación de password solo alfanumérica
-- **Síntoma:** El backend rechaza passwords con caracteres especiales.
-- **Severidad:** Baja — no bloquea el flujo de recovery.
-- **Estado:** No corregido (requiere decisión de producto sobre política de passwords).
+### Regla de Validación — Validación de password alfanumérica
+- **Descripción:** La validación de password en el backend aplica las siguientes reglas:
+  - mínimo 7 caracteres;
+  - al menos 1 letra;
+  - al menos 1 número;
+  - solo caracteres alfanuméricos.
+- **Impacto:** Los símbolos y caracteres especiales son rechazados por diseño.
+- **Estado:** Decisión de producto vigente. Relajar esta regla requeriría aprobación de producto.
 
 ---
 
@@ -144,9 +148,9 @@ Se implementó y verificó el flujo completo de recuperación de contraseña par
 
 | Nombre | Tipo | Trigger | Acción | Estado QA |
 |--------|------|---------|--------|-----------|
-| **ENVIAR_EMAIL** (RECUPERACION_PASSWORD) | Automation nativa Airtable | Cambio en USUARIOS (ESTADO_RECUPERACION_CLAVE = RECUPERACION_SOLICITADA) | Envía email con link de reset, setea EMAIL_ENVIADO_EN | ✅ Verificado |
-| **ALERTA_ERROR** | Automation nativa Airtable | Errores en flujos críticos | Notifica al administrador | ⬜ No verificado |
-| **REVISION_SEMANAL** | Cron semanal | Schedule | Auditoría de tokens no usados, usuarios bloqueados | ⬜ No verificado |
+| **RECUPERACION_PASSWORD_ENVIAR_EMAIL** | Automation nativa Airtable | Cambio en USUARIOS (ESTADO_RECUPERACION_CLAVE = RECUPERACION_SOLICITADA) | Envía email con link de reset, setea EMAIL_ENVIADO_EN | ✅ Verificado end-to-end |
+| **RECUPERACION_PASSWORD_ALERTA_ERROR** | Automation nativa Airtable | Errores en flujos críticos (backup, recovery, auth) | Notifica al administrador | ⚠️ Configurada y activa. Pendiente: prueba negativa controlada (forzar error y verificar notificación) |
+| **RECUPERACION_PASSWORD_REVISION_SEMANAL** | Cron semanal | Schedule | Auditoría de tokens no usados, usuarios bloqueados | ⚠️ Activa. Script probado manualmente. Ejecución semanal real depende del calendario Airtable |
 
 ---
 
@@ -162,7 +166,7 @@ Se implementó y verificó el flujo completo de recuperación de contraseña par
 | **Red** | CORS configurado (allow_credentials=True) | ✅ |
 | **Red** | Cookie HttpOnly/Secure/SameSite | ✅ |
 | **Red** | Sin exposición de secretos en respuestas API | ✅ |
-| **Validación** | Password mín. 6 caracteres alfanuméricos | ⚠️ Símbolos no permitidos (BUG 3) |
+| **Validación** | Password mín. 7 caracteres, al menos 1 letra + 1 número, solo alfanumérico | ⚠️ Símbolos no permitidos por decisión de producto |
 
 ---
 
@@ -180,7 +184,7 @@ Se implementó y verificó el flujo completo de recuperación de contraseña par
 
 | Riesgo | Severidad | Impacto | Mitigación |
 |--------|-----------|---------|------------|
-| Password solo alfanumérica | 🟢 Baja | UX: usuarios no pueden usar símbolos en passwords | Relajar validación en fase futura |
+| Validación de password alfanumérica (regla de producto) | 🟢 Baja | UX: usuarios no pueden usar símbolos en passwords | Evaluar relajar validación si producto lo aprueba |
 | Rate-limit en memoria (pérdida en cold-start) | 🟡 Media | Usuario puede exceder intentos si Railway hace cold-start | Implementar rate-limit persistente (Redis) |
 | Sin refresh token JWT | 🟡 Media | Sesión expira a las 8h sin renovación posible | Planificar en FASE_2B |
 | Password demo público conocida | 🟢 Baja | Usuario demo con password conocida | Rotar antes de usuarios reales |
@@ -194,12 +198,12 @@ Se implementó y verificó el flujo completo de recuperación de contraseña par
 
 El flujo de recuperación de contraseña funciona end-to-end en producción. Todos los casos de prueba (válido, vencido, reuso, seguridad) fueron verificados exitosamente. Los 2 bugs detectados fueron corregidos, re-testeados y desplegados.
 
-**Recomendación:** Proceder sin bloqueo a las siguientes fases. BUG 3 (password solo alfanumérica) debe evaluarse como mejora de UX en fase de hardening.
+**Recomendación:** Proceder sin bloqueo a las siguientes fases. La validación de password alfanumérica es una decisión de producto, no un bug. Puede evaluarse como mejora de UX en fase de hardening si producto lo aprueba.
 
 ### Próximos Pasos Sugeridos
 1. Implementar refresh token JWT (sesión > 8h)
 2. Rate-limit persistente (Redis)
-3. Relajar validación de password (permitir símbolos)
+3. Evaluar relajar validación de password (permitir símbolos) si producto lo aprueba
 4. Registro de auditoría de recovery
 
 ---
