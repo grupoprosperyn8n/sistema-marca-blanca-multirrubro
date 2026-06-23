@@ -2,7 +2,8 @@
   "project": "sistema-marca-blanca-multirrubro",
   "harness_version": "3.7.2",
   "last_updated": "2026-06-23T23:30:00Z",
-  "current_phase": "fase_3a_registro_publico_clientes",
+  "current_phase": "smoke_prod_login_3_modos_y_cierre",
+  "last_smoke": "2026-06-23T23:59:00Z",
   "project_domain": "https://bellezapro-demo.surge.sh",
   "project_backend": "https://earnest-comfort-production-3d75.up.railway.app",
   "architecture": "Vite/React frontend + FastAPI Railway backend + Airtable data",
@@ -711,6 +712,28 @@
       "Solo modificar documentación (session-summary.md + nuevo reporte)"
     ]
   },
+  "smoke_prod_login_3_modos_y_cierre": {
+    "status": "completed",
+    "closed_at": "2026-06-23T23:59:00Z",
+    "description": "Smoke mínimo en producción (Surge + Railway) — validar PATCH_LOGIN_3_MODOS sin QA exhaustivo ni rate-limit",
+    "checks": [
+      "UI 3 tabs visibles en dominio canónico",
+      "Forgot password en Soy cliente y Acceso autorizado",
+      "Login ADMIN → /backoffice",
+      "Backoffice cargado con menú completo",
+      "Logout → /login",
+      "Registro cliente nuevo → éxito → redirige a login",
+      "Dominio secundario bellezapro-demo.surge.sh con 3 tabs",
+      "Consola JS sin errores (todas las pantallas)",
+      "Sin secretos expuestos"
+    ],
+    "requests_railway": 2,
+    "rate_limit_hits": 0,
+    "dominio_canonico": "https://sistema-multirrubro-demo.surge.sh",
+    "dominio_secundario": "https://bellezapro-demo.surge.sh",
+    "commits_relacionados": ["80b72e2"],
+    "veredicto": "PATCH_LOGIN_3_MODOS_CERRADO — login 3 modos funcional en producción, ambos dominios OK, 0 errores"
+  },
   "pendientes_no_bloqueantes": [
     "QA mobile real en dispositivo o Chrome DevTools (verificar overflow y responsive visualmente)",
     "Registro real de clientes (tabla CLIENTES, PATCH/POST habilitados)",
@@ -722,5 +745,5 @@
     "Eliminar campos DEPRECATED_* de Airtable (requiere UI manual)",
     "HN-013R-01: /api/auth/refresh — mejora futura no bloqueante"
   ],
-  "proxima_fase_recomendada": "FASE_3B_REGISTRO_FRONTEND_PUBLICO_PORTAL"
+  "proxima_fase_recomendada": "FASE_3B_PORTAL_CLIENTE_RESERVAS_PERFIL_HISTORIAL"
 }

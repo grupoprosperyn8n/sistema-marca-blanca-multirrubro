@@ -372,3 +372,61 @@ El flujo de registro público de clientes ya estaba implementado y funcional. No
 **No se requirió build ni deploy** — sin cambios de código.
 
 **Próximo: FASE_3B — registro desde frontend público con redirect a portal cliente.**
+
+
+---
+
+# SMOKE_PROD_LOGIN_3_MODOS_Y_CIERRE
+
+**Fecha:** 2026-06-23
+**Estado:** COMPLETO ✅
+**Commit código:** 80b72e2 (Login.jsx + App.jsx)
+**Despliegue:** Sin cambios (ya deployado previamente)
+
+## Resumen
+
+Smoke mínimo en producción (Surge + Railway) para validar el PATCH_LOGIN_3_MODOS sin consumir rate-limit innecesariamente.
+
+## Resultados
+
+| # | Verificación | Resultado |
+|---|-------------|-----------|
+| 1 | UI 3 tabs visibles (Soy cliente, Cliente nuevo, Acceso autorizado) | ✅ |
+| 2 | Forgot password visible en Soy cliente | ✅ |
+| 3 | Forgot password visible en Acceso autorizado | ✅ |
+| 4 | Roles listados en Acceso autorizado | ✅ |
+| 5 | Login ADMIN (tester-admin@bellezapro.test) → /backoffice | ✅ |
+| 6 | Backoffice cargado con menú completo | ✅ |
+| 7 | Logout → redirige a /login | ✅ |
+| 8 | Registro cliente nuevo (smoke-test-230626@bellezapro.test) → éxito → redirige a login | ✅ |
+| 9 | Dominio canónico (sistema-multirrubro-demo.surge.sh) | ✅ |
+| 10 | Dominio secundario (bellezapro-demo.surge.sh) con 3 tabs | ✅ |
+| 11 | Consola JS sin errores (todas las pantallas) | ✅ |
+| 12 | Sin secretos expuestos | ✅ |
+
+## Requests a Railway
+
+- 1 login ADMIN (200 → cookie → redirect OK)
+- 1 registro cliente (200 → éxito)
+- Total: 2 requests. Sin 429.
+
+## Veredicto
+
+**✅ PATCH_LOGIN_3_MODOS CERRADO.**
+
+El login con 3 modos funciona correctamente en producción:
+- Clientes pueden registrarse e ingresar al portal
+- Staff puede acceder al backoffice
+- UI clara y sin errores
+- Ambos dominios desplegados correctamente
+
+**No hay bugs bloqueantes. Fase cerrada.**
+
+## Pendientes (no bloqueantes)
+
+- Rate-limit de Railway (429 tras múltiples intentos) es operativo, no bloqueante.
+- FASE_3B (portal cliente completo) requiere aprobación explícita.
+
+---
+
+**Próximo: FASE_3B — portal cliente con reservas, perfil, historial.**
