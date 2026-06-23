@@ -1,8 +1,8 @@
 {
   "project": "sistema-marca-blanca-multirrubro",
   "harness_version": "3.7.2",
-  "last_updated": "2026-06-22T20:10:00Z",
-  "current_phase": "patch_recovery_password_estados_y_retest",
+  "last_updated": "2026-06-23T22:00:00Z",
+  "current_phase": "cierre_final_salon_013r_y_preparacion_fase_3",
   "project_domain": "https://bellezapro-demo.surge.sh",
   "project_backend": "https://earnest-comfort-production-3d75.up.railway.app",
   "architecture": "Vite/React frontend + FastAPI Railway backend + Airtable data",
@@ -612,8 +612,22 @@
         "No deployar Surge",
         "Solo modificar backend/auth/routes.py"
       ]
+    },
+    "salon_013r_patch_sucursales_guard": {
+      "status": "completed",
+      "closed_at": "2026-06-23T22:00:00Z",
+      "label": "PATCH_013R_GUARD_SUCURSALES_EMPLEADO_GESTION",
+      "description": "Corregir bug menor: EMPLEADO_GESTION accedía a /backoffice/sucursales por URL directa. Se agregó ROLES_SUCURSALES en App.jsx y se separó la ruta Sucursales de Clientes/Servicios.",
+      "bug": "BUG-013R-01",
+      "severity": "MENOR",
+      "fix": "ROLES_SUCURSALES = [ADMIN, GERENTE, SOLO_LECTURA] sin EMPLEADO_GESTION",
+      "archivo_modificado": "frontend/src/App.jsx",
+      "commit": "1a6b060",
+      "deploy": "Surge — sistema-multirrubro-demo.surge.sh",
+      "build": "OK 76 módulos",
+      "validacion_bundle": "Ax = [ADMIN, GERENTE, SOLO_LECTURA] protege ruta Sucursales",
+      "no_bloqueante": "HN-013R-01 /api/auth/refresh (backlog)"
     }
-
   },
   "salon_015d_documentar_resultados_qa_recovery": {
     "status": "completed",
@@ -631,16 +645,15 @@
     ]
   },
   "pendientes_no_bloqueantes": [
-    "Auth real: backend core (FASE_2A_B pendiente de aprobación)",
     "QA mobile real en dispositivo o Chrome DevTools (verificar overflow y responsive visualmente)",
-    "Auth real (JWT/bcrypt/clientes reales) — planificar en FASE_2A_DRY_RUN",
     "Registro real de clientes (tabla CLIENTES, PATCH/POST habilitados)",
     "Escritura real de reservas (tabla RESERVAS, flujo completo)",
     "Carrito de compras / pagos",
     "Multi-tenant real por dominio/slug (selector de marca dinámico)",
     "Banners, ofertas, media dinámicos avanzados",
     "Menú hamburguer para mobile (<640px)",
-    "Eliminar campos DEPRECATED_* de Airtable (requiere UI manual)"
+    "Eliminar campos DEPRECATED_* de Airtable (requiere UI manual)",
+    "HN-013R-01: /api/auth/refresh — mejora futura no bloqueante"
   ],
-  "proxima_fase_recomendada": "FASE_2A_C_AUTH_BACKEND_CORE_CONTROLADO"
+  "proxima_fase_recomendada": "FASE_3_RESERVAS_CLIENTES_REALES"
 }

@@ -167,3 +167,126 @@ Ambos bugs de SALON-015b corregidos, re-testeados y desplegados (commit 5b436ff,
 - Validación de password alfanumérica: evaluar si relajar regla (decisión de producto, baja prioridad)
 
 SALON-015 (a+b+c+d): ✅ COMPLETED
+
+---
+
+# SALON-013R — QA Frontend de Roles en Surge
+
+**Fecha**: 2026-06-23 | **Fase**: SALON-013R_QA_FRONTEND_ROLES_SURGE
+**Frontend**: https://sistema-multirrubro-demo.surge.sh
+**Backend**: https://earnest-comfort-production-3d75.up.railway.app
+
+## Tabla de Resultados por Rol
+
+| Rol | Login | Redirect | Secciones | Bloqueos | Logout | Refresh | Consola |
+|-----|-------|----------|-----------|----------|--------|---------|---------|
+| ADMINISTRADOR | OK | Dashboard | 8/8 (todas) | N/A | OK | OK | limpia |
+| GERENTE | OK | Dashboard | 6/8 (-Config, -Usuarios) | OK Usuarios, Config | OK | OK | limpia |
+| EMPLEADO_GESTION | OK | Dashboard | 5/8 (-Suc, -Conf, -Usuarios) | OK Config, Usuarios; BUG Sucursales | OK | OK | limpia |
+| PROFESIONAL | OK | Portal Profesional | Agenda + Citas | OK Backoffice | OK | OK | limpia |
+| CLIENTE | OK | Mi Portal | Perfil + Servicios + Reservar | OK Backoffice | OK | OK | limpia |
+| SOLO_LECTURA | OK | Dashboard | 7/8 (-Usuarios) | OK Usuarios; sin editar | OK | OK | limpia |
+
+## Hallazgos
+
+### BUG MENOR - EMPLEADO_GESTION accede a Sucursales por URL
+- Ruta /backoffice/sucursales accesible por URL directa
+- Esperado: bloqueado (permiso verSucursales: false en AuthContext)
+- Causa: el route guard no verifica permisos por vista, solo autenticacion + rol
+- Nav sidebar: oculta correctamente Sucursales
+- Impacto: bajo - el usuario no ve el link pero puede adivinar la URL
+- Fix sugerido: agregar check de permisos.verSucursales en el route guard
+
+### NO BLOQUEANTE - /api/auth/refresh no existe
+- El endpoint /api/auth/refresh devuelve 404
+- El frontend NO llama a este endpoint actualmente
+- Sesiones expiran a las 8h sin renovacion automatica
+
+## Validaciones
+
+- 6/6 roles pueden iniciar sesion
+- Cada rol llega a su destino esperado
+- Rutas no autorizadas bloqueadas (excepto BUG MENOR)
+- Logout funciona en todos los roles
+- Refresh mantiene sesion (cookie HttpOnly)
+- Consola 100% limpia: sin errores JS, sin secretos
+- SOLO_LECTURA no puede editar (sin botones de accion)
+- CLIENTE solo accede a Portal (no backoffice)
+- PROFESIONAL solo accede a Portal Profesional
+- ADMINISTRADOR accede a Usuarios y Configuracion
+
+## Veredicto
+
+**SALON-013R: APROBADO**
+
+6/6 roles validados | 1 bug menor | 1 mejora futura | 0 bloqueantes
+
+## Recomendacion de Cierre
+
+Cerrar SALON-013R y avanzar a FASE_3 cuando se apruebe.
+Fix del bug menor puede incluirse en proximo sprint.
+
+---
+
+# PATCH_013R — Fix Guard Sucursales para EMPLEADO_GESTION
+
+**Fecha**: 2026-06-23 | **Fase**: PATCH_013R_GUARD_SUCURSALES_EMPLEADO_GESTION
+
+## Objetivo
+Corregir BUG-013R-01: EMPLEADO_GESTION accedía a Sucursales por URL directa aunque no debía.
+
+## Cambios
+- **Archivo**: `frontend/src/App.jsx`
+- Se agregó constante `ROLES_SUCURSALES = [ADMINISTRADOR, GERENTE, SOLO_LECTURA]` (sin EMPLEADO_GESTION)
+- La ruta `/backoffice/sucursales` ahora usa `ROLES_SUCURSALES` en vez de `ROLES_GESTION`
+- Clientes/Servicios mantienen `ROLES_GESTION` (EMPLEADO_GESTION sigue accediendo)
+
+## Verificación
+- Bundle Surge contiene `Ax = [ADMINISTRADOR, GERENTE, SOLO_LECTURA]` protegiendo ruta Sucursales
+- EMPLEADO_GESTION: sin Sucursales en nav, protegido por route guard
+- ADMINISTRADOR, GERENTE, SOLO_LECTURA: acceso a Sucursales intacto
+
+## Deploy
+- **Commit**: `1a6b060` → `fix: enforce sucursales route guard for gestion role`
+- **Push**: `main` → GitHub
+- **Surge**: redeploy exitoso a `sistema-multirrubro-demo.surge.sh`
+
+## Estado: ✅ COMPLETADO
+
+
+---
+
+# CIERRE_FINAL_SALON_013R — Documentación Formal
+
+**Fecha**: 2026-06-23 | **Commit**: `1a6b060` | **Estado**: CERRADO ✅
+
+## Bugs
+
+| ID | Severidad | Descripción | Estado |
+|----|-----------|-------------|--------|
+| BUG-013R-01 | MENOR | EMPLEADO_GESTION accedía a /backoffice/sucursales por URL directa | CORREGIDO ✅ |
+
+## Fix Aplicado
+
+- **Archivo**: `frontend/src/App.jsx` (1 archivo modificado)
+- **Cambio**: Agregado `ROLES_SUCURSALES = [ADMINISTRADOR, GERENTE, SOLO_LECTURA]` y ruta Sucursales separada de Clientes/Servicios
+- **Build**: OK — `npm run build` 76 módulos, 0 errores
+- **Deploy Surge**: OK — `sistema-multirrubro-demo.surge.sh`
+- **Validación bundle**: `Ax = [ADMIN, GERENTE, SOLO_LECTURA]` protege la ruta Sucursales
+- **Commit**: `1a6b060` → `fix: enforce sucursales route guard for gestion role`
+- **Push**: `main` → `github.com/grupoprosperyn8n/sistema-marca-blanca-multirrubro`
+
+## No Bloqueantes
+
+| ID | Descripción | Plan |
+|----|-------------|------|
+| HN-013R-01 | `/api/auth/refresh` no existe (404) | Backlog — mejora futura no bloqueante |
+
+## Estado Final SALON-013R
+
+- **Bugs activos**: 0
+- **Veredicto**: APROBADO — CERRADO
+- **Roles validados**: 6/6 (ADMIN, GERENTE, EMPLEADO_GESTION, PROFESIONAL, CLIENTE, SOLO_LECTURA)
+- **Consola**: 0 errores, 0 warnings
+- **Secretos expuestos**: 0
+- **Listo para FASE_3**: ✅
