@@ -290,3 +290,85 @@ Corregir BUG-013R-01: EMPLEADO_GESTION accedía a Sucursales por URL directa aun
 - **Consola**: 0 errores, 0 warnings
 - **Secretos expuestos**: 0
 - **Listo para FASE_3**: ✅
+
+
+---
+
+# FASE_3A — Registro Público de Clientes (Preflight + Validación)
+
+**Fecha:** 2026-06-23
+**Estado:** COMPLETO ✅ — CERO cambios de código. Infraestructura ya implementada.
+
+## Objetivo
+
+Validar que el flujo de registro público de clientes reales funciona end-to-end: rol CLIENTE, bcrypt en registro, endpoint backend, validaciones de password, guards frontend.
+
+## Preflight
+
+| Check | Resultado |
+|-------|-----------|
+| Rol CLIENTE existe en ROLES | ✅ `recTJFfeiWzjliBGd` (nivel=1, activo, no sistema) |
+| Backend usa bcrypt | ✅ `security.py:hash_password()` → `bcrypt.hashpw()` con `$2b$`, 12 rounds |
+| Endpoint `/api/auth/register-client` | ✅ Completo: crea CLIENTES + USUARIOS con link bidireccional, hash bcrypt, validaciones |
+| Frontend `Register.jsx` | ✅ Activo: formulario público, POST a `/api/auth/register-client`, redirect a `/login?registered=1` |
+| AuthContext CLIENTE | ✅ `permisos.portal=true`, `permisos.backoffice=false`, navlinks=Portal+Catálogo+Reserva |
+
+## Smoke Test — Resultados (8/8)
+
+| # | Test | Resultado |
+|---|------|-----------|
+| 1 | Registrar cliente demo | ✅ 200 — crea USUARIO + CLIENTE con link ROL |
+| 2 | Email duplicado rechazado | ✅ 409 |
+| 3 | Login cliente | ✅ 200 — rol=CLIENTE en payload |
+| 4 | /me autenticado | ✅ 200 — retorna rol CLIENTE |
+| 5 | Portal accesible (frontend) | ✅ App.jsx: `role===CLIENTE → /portal` |
+| 6 | Backoffice bloqueado (frontend) | ✅ CLIENTE ∉ ROLES_BACKOFFICE |
+| 7 | Profesional bloqueado (frontend) | ✅ CLIENTE no tiene permisos de profesional |
+| 8 | Logout + sesión cerrada | ✅ 200 + 401 en /me |
+
+## Verificación Airtable (usuario demo creado y limpiado)
+
+- **Hash**: bcrypt `$2b$` confirmado
+- **ROL**: vinculado a CLIENTE (`recTJFfeiWzjliBGd`)
+- **CLIENTE**: vinculado a CLIENTES record (`recPactD0ywNNM0HZ`)
+- **ACTIVO**: True
+- **EMAIL_VERIFICADO**: True
+- **Cleanup**: Ambos registros (USUARIOS + CLIENTES) eliminados post-test
+
+## Guards Frontend Verificados
+
+| Ruta | CLIENTE | ADMIN | GERENTE | PROFESIONAL | EMPL_GESTION |
+|------|---------|-------|--------|-------------|--------------|
+| /portal | ✅ | ✅ | ❌ | ❌ | ❌ |
+| /backoffice/* | ❌ | ✅ | ✅ | ❌* | ✅* |
+| /profesional | ❌ | ✅ | ✅ | ✅ | ❌ |
+
+\* EMPLEADO_GESTION tiene backoffice pero sin Sucursales (fix PATCH_013R aplicado)
+\* PROFESIONAL tiene backoffice limitado (agenda/citas)
+
+## Password Validation (security.py)
+
+| Regla | Estado |
+|-------|--------|
+| Mínimo 7 caracteres | ✅ |
+| Al menos 1 letra | ✅ |
+| Al menos 1 número | ✅ |
+| Solo alfanumérico | ✅ (decisión de producto) |
+| Rate-limiting | ✅ (5 intentos/15 min → 429) |
+
+## Veredicto
+
+**FASE_3A: COMPLETA — CERO CAMBIOS DE CÓDIGO**
+
+El flujo de registro público de clientes ya estaba implementado y funcional. No se requirió ninguna modificación de código. Se verificó end-to-end:
+
+1. Rol CLIENTE existe en Airtable
+2. Backend registra con bcrypt ($2b$, 12 rounds)
+3. Endpoint `/api/auth/register-client` funcional (crea USUARIOS + CLIENTES + link)
+4. Frontend Register.jsx conectado al backend
+5. AuthContext mapea CLIENTE correctamente (portal=true, backoffice=false)
+6. Guard routes protegen backoffice y profesional del rol CLIENTE
+
+**No se requirió build ni deploy** — sin cambios de código.
+
+**Próximo: FASE_3B — registro desde frontend público con redirect a portal cliente.**

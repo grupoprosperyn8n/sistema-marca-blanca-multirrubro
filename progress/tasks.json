@@ -1,8 +1,8 @@
 {
   "project": "sistema-marca-blanca-multirrubro",
   "harness_version": "3.7.2",
-  "last_updated": "2026-06-23T22:00:00Z",
-  "current_phase": "cierre_final_salon_013r_y_preparacion_fase_3",
+  "last_updated": "2026-06-23T23:30:00Z",
+  "current_phase": "fase_3a_registro_publico_clientes",
   "project_domain": "https://bellezapro-demo.surge.sh",
   "project_backend": "https://earnest-comfort-production-3d75.up.railway.app",
   "architecture": "Vite/React frontend + FastAPI Railway backend + Airtable data",
@@ -627,6 +627,73 @@
       "build": "OK 76 módulos",
       "validacion_bundle": "Ax = [ADMIN, GERENTE, SOLO_LECTURA] protege ruta Sucursales",
       "no_bloqueante": "HN-013R-01 /api/auth/refresh (backlog)"
+    },
+    "fase_3a_registro_publico_clientes": {
+      "status": "completed",
+      "closed_at": "2026-06-23T23:30:00Z",
+      "description": "FASE_3A — Preflight y validación del registro público de clientes reales. Verificación de rol CLIENTE, bcrypt, endpoint /register, guards frontend y smoke test end-to-end. CERO cambios de código necesarios — el flujo ya estaba completamente implementado.",
+      "preflight": {
+        "rol_cliente": {
+          "existe": true,
+          "id": "recTJFfeiWzjliBGd",
+          "nivel": 1,
+          "activo": true,
+          "sistema": false
+        },
+        "bcrypt_verify": "CONTRASENA_HASH usa bcrypt ($2b$, 12 rounds) via security.py hash_password()",
+        "endpoint_register": "POST /api/auth/register-client — completo y funcional",
+        "frontend_register": "Register.jsx activo con validaciones cliente"
+      },
+      "smoke_test": {
+        "total_checks": 8,
+        "passed": 8,
+        "failed": 0,
+        "details": {
+          "register": "200 — crea USUARIO + CLIENTE con link ROL",
+          "duplicate_email": "409 — rechaza email duplicado",
+          "login": "200 — autentica CLIENTE, devuelve rol=CLIENTE en payload",
+          "me": "200 — /me retorna rol=CLIENTE",
+          "logout": "200 — limpia cookie HttpOnly",
+          "me_after_logout": "401 — verifica sesión cerrada",
+          "password_validation": "OK — validate_password() en security.py (7+ chars, 1 letra + 1 número, solo alfanumérico)",
+          "rate_limit": "OK — se activa en exceso de intentos (429)"
+        }
+      },
+      "airtable_verification": {
+        "hash_bcrypt": "$2b$ confirmed via API",
+        "rol_linked": "CLIENTE (recTJFfeiWzjliBGd)",
+        "cliente_linked": "Vinculado a CLIENTES record",
+        "activo": true,
+        "email_verificado": true
+      },
+      "guards_frontend": {
+        "portal_access": "CLIENTE + ADMINISTRADOR",
+        "backoffice_blocked": "CLIENTE NO en ROLES_BACKOFFICE",
+        "professional_blocked": "ROLES_PRO = [PROFESIONAL, ADMINISTRADOR, GERENTE]",
+        "sucursales_guard": "ROLES_SUCURSALES = [ADMIN, GERENTE, SOLO_LECTURA] — incluido el fix EMPLEADO_GESTION"
+      },
+      "backend_endpoints_verified": [
+        "POST /api/auth/register-client",
+        "POST /api/auth/login",
+        "GET /api/auth/me",
+        "POST /api/auth/logout"
+      ],
+      "code_changes": 0,
+      "archivos_modificados": [],
+      "build_required": false,
+      "deploy_required": false,
+      "reglas_cumplidas": [
+        "No crear rol CLIENTE (ya existía)",
+        "No modificar backend — endpoint /register ya funcional",
+        "No modificar frontend — Register.jsx + AuthContext ya funcionales",
+        "No modificar Airtable schema",
+        "No crear reservas reales",
+        "No modificar fábrica madre ni plantillas externas",
+        "No deploy (sin cambios de código)",
+        "No mostrar passwords, hashes completos, JWT, cookies"
+      ],
+      "veredict": "FASE_3A COMPLETA — CERO CAMBIOS DE CÓDIGO. Infraestructura ya implementada. Listo para FASE_3B.",
+      "proxima_fase": "FASE_3B — registro desde frontend público con redirect a portal cliente"
     }
   },
   "salon_015d_documentar_resultados_qa_recovery": {
@@ -655,5 +722,5 @@
     "Eliminar campos DEPRECATED_* de Airtable (requiere UI manual)",
     "HN-013R-01: /api/auth/refresh — mejora futura no bloqueante"
   ],
-  "proxima_fase_recomendada": "FASE_3_RESERVAS_CLIENTES_REALES"
+  "proxima_fase_recomendada": "FASE_3B_REGISTRO_FRONTEND_PUBLICO_PORTAL"
 }
