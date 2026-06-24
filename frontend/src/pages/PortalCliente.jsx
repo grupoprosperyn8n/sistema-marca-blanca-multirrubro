@@ -77,8 +77,8 @@ export default function PortalCliente() {
     setError(null);
     try {
       const [perfilData, citasData] = await Promise.all([
-        fetchWithCookie("/clientes/me"),
-        fetchWithCookie("/clientes/me/citas"),
+        fetchWithCookie("/api/clientes/me"),
+        fetchWithCookie("/api/clientes/me/citas"),
       ]);
       setPerfil(perfilData);
       setCitas(citasData);
@@ -108,7 +108,7 @@ export default function PortalCliente() {
     setSaving(true);
     try {
       const payload = { [fieldKey]: editValue };
-      const updated = await fetchWithCookie("/clientes/me", {
+      const updated = await fetchWithCookie("/api/clientes/me", {
         method: "PATCH",
         body: JSON.stringify(payload),
       });
