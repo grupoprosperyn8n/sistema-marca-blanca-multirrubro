@@ -408,17 +408,29 @@ export function BrandConfigProvider({ children }) {
   const [config, setConfig] = useState(() => applyDomainVariant(FALLBACK));
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const API = import.meta.env.VITE_API_BASE_URL || "";
+
+  async function fetchBrandConfig() {
+    const res = await fetch(`${API}/api/marca-blanca`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    return applyDomainVariant(transformMarcaBlanca(data));
+  }
+
+  async function refresh() {
+    const transformed = await fetchBrandConfig();
+    applyCssVariables(transformed);
+    setConfig(transformed);
+    setError(null);
+    return transformed;
+  }
 
   useEffect(() => {
     let cancelled = false;
-    const API = import.meta.env.VITE_API_BASE_URL || "";
     async function fetchAndApply() {
       try {
-        const res = await fetch(`${API}/api/marca-blanca`);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
+        const transformed = await fetchBrandConfig();
         if (cancelled) return;
-        const transformed = applyDomainVariant(transformMarcaBlanca(data));
         applyCssVariables(transformed);
         setConfig(transformed);
         setError(null);
@@ -436,7 +448,7 @@ export function BrandConfigProvider({ children }) {
 
   return React.createElement(
     BrandConfigContext.Provider,
-    { value: { config, loading, error } },
+    { value: { config, loading, error, refresh } },
     children
   );
 }
@@ -444,7 +456,7 @@ export function BrandConfigProvider({ children }) {
 export function useBrandConfig() {
   const ctx = useContext(BrandConfigContext);
   if (!ctx) {
-    return { config: FALLBACK, loading: false, error: null };
+    return { config: FALLBACK, loading: false, error: null, refresh: async () => FALLBACK };
   }
   return ctx;
 }

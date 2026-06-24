@@ -1,19 +1,107 @@
 """
 Rutas FastAPI para MODULOS y MARCA_BLANCA — /api/modulos, /api/marca-blanca
-Solo lectura. Sin escrituras.
+Lectura pública y edición controlada de MARCAS para administradores.
 """
 import sys
 from pathlib import Path
 from unicodedata import normalize
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 
 _BACKEND = Path(__file__).resolve().parent.parent
 if str(_BACKEND) not in sys.path:
     sys.path.insert(0, str(_BACKEND))
 
 from airtable_adapter import AirtableClient
+from auth.dependencies import get_current_user
 
 router = APIRouter(prefix="/api", tags=["modulos"])
+
+ROOT_EDITABLE_FIELDS = {
+    "nombre_sistema": "NOMBRE_MARCA",
+    "nombre_negocio": "NOMBRE_COMERCIAL",
+    "rubro": "RUBRO",
+    "logo": "LOGO_URL",
+    "favicon": "FAVICON_URL",
+    "seo_title": "SEO_TITLE",
+    "seo_description": "SEO_DESCRIPTION",
+    "legal_aviso": "LEGAL_AVISO_PUBLICO",
+    "privacy_url": "PRIVACY_URL",
+    "terms_url": "TERMS_URL",
+    "registro_activo": "REGISTRO_ACTIVO",
+}
+
+COLOR_EDITABLE_FIELDS = {
+    "primario": "COLOR_PRIMARIO",
+    "secundario": "COLOR_SECUNDARIO",
+    "acento": "COLOR_ACENTO",
+    "fondo": "COLOR_FONDO",
+    "texto": "COLOR_TEXTO",
+    "texto_secundario": "COLOR_TEXTO_SECUNDARIO",
+    "tipografia_titulos": "TIPOGRAFIA_TITULOS",
+    "tipografia_cuerpo": "TIPOGRAFIA_CUERPO",
+    "preset": "THEME_PRESET",
+}
+
+TEXT_EDITABLE_FIELDS = {
+    "hero_badge": "HERO_BADGE",
+    "hero_titulo": "HERO_TITULO",
+    "hero_subtitulo": "HERO_SUBTITULO",
+    "hero_cta_primario": "HERO_CTA_PRIMARIO_TEXTO",
+    "hero_cta_primario_url": "HERO_CTA_PRIMARIO_URL",
+    "hero_cta_secundario": "HERO_CTA_SECUNDARIO_TEXTO",
+    "hero_cta_secundario_url": "HERO_CTA_SECUNDARIO_URL",
+    "hero_imagen_url": "HERO_IMAGEN_URL",
+    "banner_activo": "BANNER_ACTIVO",
+    "banner_titulo": "BANNER_TITULO",
+    "banner_mensaje": "BANNER_MENSAJE",
+    "banner_cta_texto": "BANNER_CTA_TEXTO",
+    "banner_cta_url": "BANNER_CTA_URL",
+    "reserva_titulo": "RESERVA_TITULO",
+    "reserva_subtitulo": "RESERVA_SUBTITULO",
+    "reserva_requiere_login": "RESERVA_REQUIERE_LOGIN",
+    "reserva_sin_horarios": "RESERVA_MENSAJE_SIN_HORARIOS",
+    "reserva_demo": "RESERVA_MENSAJE_DEMO",
+    "reserva_cta_texto": "RESERVA_CTA_TEXTO",
+    "contacto_telefono": "TELEFONO_PUBLICO",
+    "contacto_whatsapp": "WHATSAPP_PUBLICO",
+    "contacto_email": "EMAIL_PUBLICO",
+    "contacto_direccion": "DIRECCION_PUBLICA",
+    "redes_instagram": "INSTAGRAM_URL",
+    "redes_facebook": "FACEBOOK_URL",
+    "redes_tiktok": "TIKTOK_URL",
+    "redes_maps": "GOOGLE_MAPS_URL",
+}
+
+SECTION_EDITABLE_FIELDS = {
+    "mostrar_servicios": "MOSTRAR_SERVICIOS",
+    "mostrar_productos": "MOSTRAR_PRODUCTOS",
+    "mostrar_sucursales": "MOSTRAR_SUCURSALES",
+    "mostrar_ofertas": "MOSTRAR_OFERTAS",
+    "mostrar_testimonios": "MOSTRAR_TESTIMONIOS",
+    "mostrar_como_funciona": "MOSTRAR_COMO_FUNCIONA",
+    "orden_secciones": "ORDEN_SECCIONES",
+}
+
+BOOLEAN_MARCA_FIELDS = {
+    "BANNER_ACTIVO",
+    "RESERVA_REQUIERE_LOGIN",
+    "MOSTRAR_SERVICIOS",
+    "MOSTRAR_PRODUCTOS",
+    "MOSTRAR_SUCURSALES",
+    "MOSTRAR_OFERTAS",
+    "MOSTRAR_TESTIMONIOS",
+    "MOSTRAR_COMO_FUNCIONA",
+    "REGISTRO_ACTIVO",
+}
+
+COLOR_MARCA_FIELDS = {
+    "COLOR_PRIMARIO",
+    "COLOR_SECUNDARIO",
+    "COLOR_ACENTO",
+    "COLOR_FONDO",
+    "COLOR_TEXTO",
+    "COLOR_TEXTO_SECUNDARIO",
+}
 
 
 def _to_bool(value, default=False):
@@ -30,6 +118,47 @@ def _to_bool(value, default=False):
     if text in {"false", "0", "no", "n", "inactivo", "inactiva", "deshabilitado", "deshabilitada"}:
         return False
     return default
+
+
+def _require_config_editor(user: dict):
+    rol = (user.get("rol") or "").upper()
+    if rol not in {"ADMINISTRADOR", "ADMIN_SISTEMA"}:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Acceso restringido a administradores para editar marca blanca.",
+        )
+
+
+def _normalize_edit_value(field_name, value):
+    if field_name in BOOLEAN_MARCA_FIELDS:
+        return _to_bool(value, default=False)
+    if value is None:
+        return None
+    if isinstance(value, str):
+        cleaned = value.strip()
+        if cleaned == "":
+            return None
+        if field_name in COLOR_MARCA_FIELDS:
+            cleaned = cleaned.replace("#", "").strip()
+        return cleaned
+    return value
+
+
+def _collect_editable_patch(payload: dict) -> dict:
+    patch = {}
+    sources = [
+        (payload, ROOT_EDITABLE_FIELDS),
+        (payload.get("colores") or {}, COLOR_EDITABLE_FIELDS),
+        (payload.get("textos_publicos") or {}, TEXT_EDITABLE_FIELDS),
+        (payload.get("secciones_visibles") or {}, SECTION_EDITABLE_FIELDS),
+    ]
+    for source, mapping in sources:
+        if not isinstance(source, dict):
+            continue
+        for public_key, airtable_field in mapping.items():
+            if public_key in source:
+                patch[airtable_field] = _normalize_edit_value(airtable_field, source[public_key])
+    return patch
 
 
 def _clean_token(value):
@@ -320,5 +449,53 @@ async def datos_marca_blanca():
             result["modulos_activos"],
         )
         return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+
+
+@router.patch("/marca-blanca")
+async def actualizar_marca_blanca(payload: dict, user: dict = Depends(get_current_user)):
+    """Actualiza campos seguros de MARCAS. Solo ADMINISTRADOR/ADMIN_SISTEMA."""
+    _require_config_editor(user)
+    if not isinstance(payload, dict):
+        raise HTTPException(status_code=400, detail="Payload inválido.")
+
+    try:
+        client = AirtableClient()
+        table = client.get_table("MARCAS")
+        if not table:
+            raise HTTPException(status_code=404, detail="Tabla MARCAS no encontrada.")
+
+        available_fields = set(table.field_names)
+        requested_patch = _collect_editable_patch(payload)
+        safe_patch = {
+            field: value
+            for field, value in requested_patch.items()
+            if field in available_fields
+        }
+        ignored_fields = sorted(set(requested_patch) - set(safe_patch))
+
+        if not safe_patch:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "message": "No hay campos editables compatibles con MARCAS.",
+                    "ignored_fields": ignored_fields,
+                },
+            )
+
+        marca_records = client.list_records("MARCAS", max_records=1)
+        if not marca_records:
+            raise HTTPException(status_code=404, detail="MARCAS no tiene registros.")
+
+        record_id = marca_records[0].get("id")
+        client.patch_record("MARCAS", record_id, safe_patch)
+
+        updated = await datos_marca_blanca()
+        updated["updated_fields"] = sorted(safe_patch.keys())
+        updated["ignored_fields"] = ignored_fields
+        return updated
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")

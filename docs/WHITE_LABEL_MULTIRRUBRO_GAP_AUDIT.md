@@ -231,16 +231,16 @@ Implementar primero el **contrato de configuración marca blanca** y después ha
 
 Sin ese contrato, cada pantalla nueva va a sumar hardcode y el producto deja de ser marca blanca.
 
-## Implementación P0 iniciada
+## Implementación P0/P0.1 iniciada
 
-Estado: contrato base implementado en backend/frontend, todavía sin edición desde backoffice.
+Estado: contrato base implementado y backoffice convertido en editor seguro inicial.
 
 | Pieza | Resultado |
 |---|---|
 | Backend | `/api/marca-blanca` agrega `business_config` derivado de `MARCAS` + `MODULOS` |
 | Frontend público | Navbar, footer, home y sucursales empiezan a obedecer productos/servicios/turnos/sucursales/contacto |
-| Backoffice | `/backoffice/configuracion` muestra el contrato P0, módulos activos, flags y estado de pasarela |
-| Seguridad | Sin escrituras en Airtable; solo lectura de configuración |
+| Backoffice | `/backoffice/configuracion` muestra contrato P0 y permite editar campos seguros de `MARCAS` |
+| Seguridad | `PATCH /api/marca-blanca` exige sesión y rol administrador; las pruebas no escribieron Airtable |
 
 El contrato P0 expone:
 
@@ -264,4 +264,4 @@ El contrato P0 expone:
 - `catalog_label`
 - `primary_flow`
 
-Pendiente inmediato: convertir esta pantalla de diagnóstico en editor seguro, con RBAC real y validaciones por tipo de negocio.
+Pendiente inmediato: ampliar RBAC dinámico con `PERMISOS_MODULO`/`PERMISOS_CAMPO`, y crear campos Airtable explícitos para las opciones avanzadas del modelo de negocio (`USA_PAGO_ONLINE`, `CANAL_OPERACION`, `FONDO_TIPO`, etc.).
