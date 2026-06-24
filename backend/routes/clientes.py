@@ -24,6 +24,65 @@ _CAMPOS_EDITABLES_CLIENTE = {
     "PREFERENCIAS_SERVICIOS", "ACEPTA_COMUNICACIONES", "FECHA_NACIMIENTO",
 }
 
+_ESTADOS_CITA_ACTIVA = {
+    "CONFIRMADA",
+    "PENDIENTE_CONFIRMACION",
+    "EN_CURSO",
+    "REPROGRAMADA",
+}
+
+
+def _as_list(value):
+    """Normaliza valores simples/listas de Airtable a lista."""
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return value
+    return [value]
+
+
+def _as_id_list(value) -> list[str]:
+    """Normaliza linked-record fields de Airtable a IDs string."""
+    return [str(item).strip() for item in _as_list(value) if str(item).strip()]
+
+
+def _record_links_to(fields: dict, field_name: str, record_id: str) -> bool:
+    """True si un linked-record field contiene el record_id indicado."""
+    return bool(record_id) and record_id in _as_id_list(fields.get(field_name))
+
+
+def _has_active_cita_for_slot(
+    at: AirtableClient,
+    slot_id: str,
+    exclude_cita_id: str | None = None,
+) -> bool:
+    """Busca CITAS activas vinculadas al AGENDA_SLOT indicado.
+
+    Nota: Airtable REST devuelve linked records como IDs (`rec...`), no como
+    nombres visibles. Por eso filtramos por ID real, no por display name.
+    """
+    if not slot_id:
+        return False
+
+    records = at.list_records(
+        "CITAS",
+        fields=["AGENDA_SLOT", "ESTADO_CITA"],
+        by_name=True,
+    )
+    for record in records:
+        if exclude_cita_id and record.get("id") == exclude_cita_id:
+            continue
+        fields = record.get("fields", {})
+        estado = (fields.get("ESTADO_CITA") or "").upper()
+        if estado in _ESTADOS_CITA_ACTIVA and _record_links_to(fields, "AGENDA_SLOT", slot_id):
+            return True
+    return False
+
+
+def _rollback_payload(fields: dict, field_names: list[str]) -> dict:
+    """Arma payload para restaurar campos; None limpia valores creados."""
+    return {field_name: fields.get(field_name, None) for field_name in field_names}
+
 
 @router.get("/clientes")
 async def listar_clientes():
@@ -92,14 +151,11 @@ async def get_my_citas(user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=404, detail="No tenes un perfil de cliente vinculado.")
     try:
         at = AirtableClient()
-        # Obtener el nombre del cliente para filtrar (by_name=True usa nombres)
-        cliente_record = at.get_record("CLIENTES", cliente_id)
-        cliente_nombre = cliente_record.get("fields", {}).get("NOMBRE_CLIENTE", "")
-        # by_name=True: linked fields retornan nombres, no IDs
+        # Airtable REST retorna linked records como IDs (`rec...`), no nombres.
         records = at.list_records("CITAS", by_name=True)
         records = [
             r for r in records
-            if cliente_nombre in (r.get("fields", {}).get("CLIENTE") or [])
+            if _record_links_to(r.get("fields", {}), "CLIENTE", cliente_id)
         ]
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al obtener citas: {str(e)}")
@@ -211,15 +267,11 @@ async def dry_run_reserva(payload: dict, user: dict = Depends(get_current_user))
 
     # 5. Validar conflicto de slot
     try:
-        formula = (
-            f"AND({{AGENDA_SLOT}}='{slot_id}', "
-            "OR({ESTADO_CITA}='CONFIRMADA', {ESTADO_CITA}='PENDIENTE_CONFIRMACION', "
-            "{ESTADO_CITA}='EN_CURSO'))"
-        )
-        existing = at.list_records("CITAS", filter_formula=formula, by_name=True, page_size=1)
-    except Exception:
-        existing = []
-    if existing:
+        slot_ocupado = _has_active_cita_for_slot(at, slot_id)
+    except Exception as e:
+        errores.append(f"No se pudo validar conflicto de agenda: {str(e)}")
+        slot_ocupado = False
+    if slot_ocupado:
         errores.append("El slot ya tiene una cita activa (CONFIRMADA/PENDIENTE/EN_CURSO).")
 
     # 6. Responder
@@ -344,15 +396,10 @@ async def confirmar_reserva(payload: dict, user: dict = Depends(get_current_user
 
     # 5. Revalidar conflicto de slot (sin CITAS activas)
     try:
-        formula = (
-            f"AND({{AGENDA_SLOT}}='{slot_id}', "
-            "OR({ESTADO_CITA}='CONFIRMADA', {ESTADO_CITA}='PENDIENTE_CONFIRMACION', "
-            "{ESTADO_CITA}='EN_CURSO'))"
-        )
-        existing = at.list_records("CITAS", filter_formula=formula, by_name=True, page_size=1)
-    except Exception:
-        existing = []
-    if existing:
+        slot_ocupado = _has_active_cita_for_slot(at, slot_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al validar conflicto de slot: {str(e)}")
+    if slot_ocupado:
         errores.append("El slot ya tiene una cita activa (CONFIRMADA/PENDIENTE/EN_CURSO).")
 
     # 6. Si hay errores, rechazar
@@ -446,67 +493,48 @@ async def confirmar_reserva(payload: dict, user: dict = Depends(get_current_user
 # ---- FASE_3C3: CANCELAR Y REPROGRAMAR ----
 
 @router.post("/clientes/citas/{cita_id}/cancelar")
-async def cancelar_cita(cita_id: str, payload: dict = {}, user: dict = Depends(get_current_user)):
+async def cancelar_cita(cita_id: str, payload: dict | None = None, user: dict = Depends(get_current_user)):
     """Cancela una CITA propia del cliente. No borra datos.
-    
+
     FASE_3C3: Cancela CITA y libera AGENDA_SLOT. No usa RESERVAS.
     Payload opcional: {motivo: str}
     """
     import logging
     logger = logging.getLogger("cancelar_cita")
-    
+
     # 1. Auth: solo CLIENTE
     rol = (user.get("rol") or "").upper()
     if rol != "CLIENTE":
         raise HTTPException(status_code=403, detail="Solo clientes pueden cancelar turnos.")
-    
+
     cliente_id = (user.get("cliente") or "").strip()
     if not cliente_id:
         raise HTTPException(status_code=404, detail="No tenes un perfil de cliente vinculado.")
-    
+
     at = AirtableClient()
     hoy = date.today().isoformat()
-    
+
     # 2. Obtener CITA
     try:
         cita_record = at.get_record("CITAS", cita_id)
         cita_fields = cita_record.get("fields", {})
     except Exception:
         raise HTTPException(status_code=404, detail=f"Cita {cita_id} no encontrada.")
-    
+
     # 3. Verificar pertenencia al CLIENTE
-    cliente_en_cita = cita_fields.get("CLIENTE", [])
-    if isinstance(cliente_en_cita, str):
-        cliente_en_cita = [cliente_en_cita]
-    if cliente_id not in cliente_en_cita:
+    if not _record_links_to(cita_fields, "CLIENTE", cliente_id):
         raise HTTPException(status_code=403, detail="No podes cancelar una cita que no te pertenece.")
-    
+
     # 4. Verificar que no este ya cancelada/completada
     estado_actual = (cita_fields.get("ESTADO_CITA") or "").upper()
     if estado_actual in ("CANCELADA", "COMPLETADA", "NO_ASISTIO"):
         raise HTTPException(status_code=409, detail=f"La cita ya esta en estado {estado_actual}, no se puede cancelar.")
-    
+
     # 5. Obtener AGENDA_SLOT vinculado
-    slot_link = cita_fields.get("AGENDA_SLOT", [])
-    if isinstance(slot_link, str):
-        slot_link = [slot_link]
+    slot_link = _as_id_list(cita_fields.get("AGENDA_SLOT"))
     slot_id = slot_link[0] if slot_link else None
-    
-    # 6. Cancelar CITA
-    motivo = (payload.get("motivo") or "Cancelado por cliente desde portal").strip()
-    cita_update = {
-        "ESTADO_CITA": "CANCELADA",
-        "MOTIVO_CANCELACION": motivo,
-        "FECHA_CANCELACION": hoy,
-        "CANCELADO_POR": "CLIENTE",
-    }
-    try:
-        at.patch_record("CITAS", cita_id, cita_update)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al cancelar CITA: {str(e)}")
-    
-    # 7. Liberar AGENDA_SLOT si existe
-    slot_liberado = False
+
+    slot_update = None
     if slot_id:
         try:
             slot_record = at.get_record("AGENDA_SLOTS", slot_id)
@@ -517,12 +545,37 @@ async def cancelar_cita(cita_id: str, payload: dict = {}, user: dict = Depends(g
                 "ESTADO_SLOT": "DISPONIBLE",
                 "CAPACIDAD_OCUPADA": nueva_cap,
             }
-            at.patch_record("AGENDA_SLOTS", slot_id, slot_update)
-            slot_liberado = True
         except Exception as e:
-            logger.warning(f"Slot {slot_id} no pudo liberarse: {e}")
-            # No fallar — la cancelacion de la cita ya fue exitosa
-    
+            raise HTTPException(status_code=500, detail=f"No se pudo validar el slot de la cita: {str(e)}")
+
+    # 6. Cancelar CITA
+    motivo = ((payload or {}).get("motivo") or "Cancelado por cliente desde portal").strip()
+    cita_update = {
+        "ESTADO_CITA": "CANCELADA",
+        "MOTIVO_CANCELACION": motivo,
+        "FECHA_CANCELACION": hoy,
+        "CANCELADO_POR": "CLIENTE",
+    }
+    cita_rollback = _rollback_payload(cita_fields, [
+        "ESTADO_CITA",
+        "MOTIVO_CANCELACION",
+        "FECHA_CANCELACION",
+        "CANCELADO_POR",
+    ])
+    cita_actualizada = False
+    try:
+        at.patch_record("CITAS", cita_id, cita_update)
+        cita_actualizada = True
+        if slot_id and slot_update:
+            at.patch_record("AGENDA_SLOTS", slot_id, slot_update)
+    except Exception as e:
+        if cita_actualizada:
+            try:
+                at.patch_record("CITAS", cita_id, cita_rollback)
+            except Exception as rollback_error:
+                logger.error("Rollback de cancelacion fallo para %s: %s", cita_id, rollback_error)
+        raise HTTPException(status_code=500, detail=f"Error al cancelar turno de forma consistente: {str(e)}")
+
     return {
         "cancelado": True,
         "mensaje": "Turno cancelado exitosamente.",
@@ -534,7 +587,7 @@ async def cancelar_cita(cita_id: str, payload: dict = {}, user: dict = Depends(g
         },
         "slot": {
             "id": slot_id,
-            "liberado": slot_liberado,
+            "liberado": bool(slot_id),
         } if slot_id else None,
     }
 
@@ -542,70 +595,80 @@ async def cancelar_cita(cita_id: str, payload: dict = {}, user: dict = Depends(g
 @router.post("/clientes/citas/{cita_id}/reprogramar")
 async def reprogramar_cita(cita_id: str, payload: dict, user: dict = Depends(get_current_user)):
     """Reprograma una CITA propia a un nuevo AGENDA_SLOT. No borra datos.
-    
+
     FASE_3C3: Mueve reserva del slot actual al nuevo. No usa RESERVAS.
     Payload: {nuevo_slot_id: str}
     """
     import logging
     logger = logging.getLogger("reprogramar_cita")
-    
+
     # 1. Auth: solo CLIENTE
     rol = (user.get("rol") or "").upper()
     if rol != "CLIENTE":
         raise HTTPException(status_code=403, detail="Solo clientes pueden reprogramar turnos.")
-    
+
     cliente_id = (user.get("cliente") or "").strip()
     if not cliente_id:
         raise HTTPException(status_code=404, detail="No tenes un perfil de cliente vinculado.")
-    
+
     nuevo_slot_id = (payload.get("nuevo_slot_id") or "").strip()
     if not nuevo_slot_id:
         raise HTTPException(status_code=400, detail="Falta nuevo_slot_id.")
-    
+
     at = AirtableClient()
-    hoy = date.today().isoformat()
-    
     # 2. Obtener CITA actual
     try:
         cita_record = at.get_record("CITAS", cita_id)
         cita_fields = cita_record.get("fields", {})
     except Exception:
         raise HTTPException(status_code=404, detail=f"Cita {cita_id} no encontrada.")
-    
+
     # 3. Verificar pertenencia al CLIENTE
-    cliente_en_cita = cita_fields.get("CLIENTE", [])
-    if isinstance(cliente_en_cita, str):
-        cliente_en_cita = [cliente_en_cita]
-    if cliente_id not in cliente_en_cita:
+    if not _record_links_to(cita_fields, "CLIENTE", cliente_id):
         raise HTTPException(status_code=403, detail="No podes reprogramar una cita que no te pertenece.")
-    
+
     # 4. Verificar que no este cancelada/completada
     estado_actual = (cita_fields.get("ESTADO_CITA") or "").upper()
     if estado_actual in ("CANCELADA", "COMPLETADA", "NO_ASISTIO"):
         raise HTTPException(status_code=409, detail=f"La cita esta en estado {estado_actual}, no se puede reprogramar.")
-    
+
     # 5. Obtener slot actual
-    slot_actual_link = cita_fields.get("AGENDA_SLOT", [])
-    if isinstance(slot_actual_link, str):
-        slot_actual_link = [slot_actual_link]
+    slot_actual_link = _as_id_list(cita_fields.get("AGENDA_SLOT"))
     slot_viejo_id = slot_actual_link[0] if slot_actual_link else None
-    
+    slot_viejo_update = None
+    slot_viejo_rollback = None
+    if slot_viejo_id:
+        try:
+            vs_record = at.get_record("AGENDA_SLOTS", slot_viejo_id)
+            vs_fields = vs_record.get("fields", {})
+            cap_vieja = vs_fields.get("CAPACIDAD_OCUPADA", 0) or 0
+            slot_viejo_update = {
+                "ESTADO_SLOT": "DISPONIBLE",
+                "CAPACIDAD_OCUPADA": max(0, cap_vieja - 1),
+            }
+            slot_viejo_rollback = _rollback_payload(vs_fields, [
+                "ESTADO_SLOT",
+                "CAPACIDAD_OCUPADA",
+            ])
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"No se pudo validar el slot actual: {str(e)}")
+
     # 6. Validar que el nuevo slot sea diferente
     if nuevo_slot_id == slot_viejo_id:
         raise HTTPException(status_code=400, detail="El nuevo slot es el mismo que el actual.")
-    
+
     # 7. Obtener y validar NUEVO slot
     try:
         nuevo_slot = at.get_record("AGENDA_SLOTS", nuevo_slot_id)
         ns_fields = nuevo_slot.get("fields", {})
     except Exception:
         raise HTTPException(status_code=404, detail=f"Nuevo slot {nuevo_slot_id} no encontrado.")
-    
+
     estado_ns = (ns_fields.get("ESTADO_SLOT") or "").upper()
     permite_web = ns_fields.get("PERMITE_RESERVA_WEB", False)
     activo_ns = ns_fields.get("ACTIVO", False)
     cap_ns = ns_fields.get("CAPACIDAD_DISPONIBLE", 0)
-    
+
     if estado_ns != "DISPONIBLE":
         raise HTTPException(status_code=409, detail=f"El nuevo slot no esta disponible (estado: {estado_ns}).")
     if not permite_web:
@@ -614,26 +677,21 @@ async def reprogramar_cita(cita_id: str, payload: dict, user: dict = Depends(get
         raise HTTPException(status_code=409, detail="El nuevo slot esta inactivo.")
     if cap_ns is not None and cap_ns <= 0:
         raise HTTPException(status_code=409, detail="El nuevo slot no tiene capacidad disponible.")
-    
+
     # 8. Verificar que el nuevo slot no tenga ya una cita activa
     try:
-        formula = (
-            f"AND({{AGENDA_SLOT}}='{nuevo_slot_id}', "
-            "OR({ESTADO_CITA}='CONFIRMADA', {ESTADO_CITA}='PENDIENTE_CONFIRMACION', "
-            "{ESTADO_CITA}='EN_CURSO'))"
-        )
-        existing = at.list_records("CITAS", filter_formula=formula, by_name=True, page_size=1)
-    except Exception:
-        existing = []
-    if existing:
+        slot_ocupado = _has_active_cita_for_slot(at, nuevo_slot_id, exclude_cita_id=cita_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al validar conflicto de slot: {str(e)}")
+    if slot_ocupado:
         raise HTTPException(status_code=409, detail="El nuevo slot ya tiene una cita activa.")
-    
+
     # 9. Extraer datos del nuevo slot para actualizar CITA
     nueva_fecha = ns_fields.get("FECHA_SLOT", cita_fields.get("FECHA_CITA", ""))
     nueva_hora_ini = ns_fields.get("HORA_INICIO", cita_fields.get("HORA_INICIO", ""))
     nueva_hora_fin = ns_fields.get("HORA_FIN", cita_fields.get("HORA_FIN", ""))
     nueva_duracion = ns_fields.get("DURACION_MINUTOS", cita_fields.get("DURACION_MINUTOS", ""))
-    
+
     # 10. Actualizar CITA con nuevo slot
     cita_update = {
         "AGENDA_SLOT": [nuevo_slot_id],
@@ -643,37 +701,54 @@ async def reprogramar_cita(cita_id: str, payload: dict, user: dict = Depends(get
         "DURACION_MINUTOS": nueva_duracion,
         "ESTADO_CITA": "REPROGRAMADA",
     }
+    cita_rollback = _rollback_payload(cita_fields, [
+        "AGENDA_SLOT",
+        "FECHA_CITA",
+        "HORA_INICIO",
+        "HORA_FIN",
+        "DURACION_MINUTOS",
+        "ESTADO_CITA",
+    ])
+    cap_nueva_ocupada = (ns_fields.get("CAPACIDAD_OCUPADA", 0) or 0) + 1
+    slot_nuevo_update = {
+        "ESTADO_SLOT": "RESERVADO",
+        "CAPACIDAD_OCUPADA": cap_nueva_ocupada,
+    }
+    slot_nuevo_rollback = _rollback_payload(ns_fields, [
+        "ESTADO_SLOT",
+        "CAPACIDAD_OCUPADA",
+    ])
+
+    # 10-12. Swap con rollback compensatorio: Airtable no ofrece transacciones.
+    cita_actualizada = False
+    slot_viejo_liberado = False
+    slot_nuevo_reservado = False
     try:
         at.patch_record("CITAS", cita_id, cita_update)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al reprogramar CITA: {str(e)}")
-    
-    # 11. Liberar slot VIEJO
-    slot_viejo_liberado = False
-    if slot_viejo_id:
-        try:
-            vs_record = at.get_record("AGENDA_SLOTS", slot_viejo_id)
-            vs_fields = vs_record.get("fields", {})
-            cap_vieja = vs_fields.get("CAPACIDAD_OCUPADA", 0) or 0
-            nueva_cap_vieja = max(0, cap_vieja - 1)
-            at.patch_record("AGENDA_SLOTS", slot_viejo_id, {
-                "ESTADO_SLOT": "DISPONIBLE",
-                "CAPACIDAD_OCUPADA": nueva_cap_vieja,
-            })
+        cita_actualizada = True
+        if slot_viejo_id and slot_viejo_update:
+            at.patch_record("AGENDA_SLOTS", slot_viejo_id, slot_viejo_update)
             slot_viejo_liberado = True
-        except Exception as e:
-            logger.warning(f"Slot viejo {slot_viejo_id} no pudo liberarse: {e}")
-    
-    # 12. Marcar NUEVO slot como RESERVADO
-    cap_nueva_ocupada = (ns_fields.get("CAPACIDAD_OCUPADA", 0) or 0) + 1
-    try:
-        at.patch_record("AGENDA_SLOTS", nuevo_slot_id, {
-            "ESTADO_SLOT": "RESERVADO",
-            "CAPACIDAD_OCUPADA": cap_nueva_ocupada,
-        })
+        at.patch_record("AGENDA_SLOTS", nuevo_slot_id, slot_nuevo_update)
+        slot_nuevo_reservado = True
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al reservar nuevo slot: {str(e)}. CITA actualizada pero slot nuevo puede no estar marcado.")
-    
+        if slot_nuevo_reservado:
+            try:
+                at.patch_record("AGENDA_SLOTS", nuevo_slot_id, slot_nuevo_rollback)
+            except Exception as rollback_error:
+                logger.error("Rollback de slot nuevo fallo para %s: %s", nuevo_slot_id, rollback_error)
+        if slot_viejo_liberado and slot_viejo_id and slot_viejo_rollback:
+            try:
+                at.patch_record("AGENDA_SLOTS", slot_viejo_id, slot_viejo_rollback)
+            except Exception as rollback_error:
+                logger.error("Rollback de slot viejo fallo para %s: %s", slot_viejo_id, rollback_error)
+        if cita_actualizada:
+            try:
+                at.patch_record("CITAS", cita_id, cita_rollback)
+            except Exception as rollback_error:
+                logger.error("Rollback de reprogramacion fallo para %s: %s", cita_id, rollback_error)
+        raise HTTPException(status_code=500, detail=f"Error al reprogramar turno de forma consistente: {str(e)}")
+
     return {
         "reprogramado": True,
         "mensaje": "Turno reprogramado exitosamente.",
