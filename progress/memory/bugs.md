@@ -412,3 +412,15 @@ console.log('🏪 Salón Pro — Conectado a Airtable (app93Vhy56KrxNhwe)');
 **Fix:** `backend/routes/clientes.py` ahora normaliza linked-record fields y filtra por el CLIENTE record ID real. También se reemplazaron chequeos de conflicto dependientes de `page_size`/fórmulas frágiles por validación contra CITAS activas.
 
 **QA:** Railway `/api/clientes/me/citas` responde `200` con `total=6`, `proximas=3`, `historial=3` para el usuario QA. Cancelar/reprogramar pasó QA mutante con fixtures restaurados.
+
+---
+
+## 2026-06-24 — FIXED: Dominios Surge mostraban la misma home/branding
+
+**Estado:** Cerrado en commit `1a0d602`.
+
+**Causa raíz:** Los tres dominios servían el mismo build y el frontend aplicaba la misma respuesta de `/api/marca-blanca` para todos. No había resolución por hostname.
+
+**Fix:** `BrandConfigContext` aplica variantes runtime por `window.location.hostname` para `belleza-demo`, `sistema-multirrubro-demo` y `bellezapro-demo`.
+
+**QA:** Chrome headless verificó DOM renderizado con markers diferentes por dominio.

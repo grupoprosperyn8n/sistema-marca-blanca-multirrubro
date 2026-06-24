@@ -197,3 +197,38 @@ También se endurecieron `cancelar` y `reprogramar` para validar pertenencia por
 - Avanzar con Portal Profesional: agenda diaria, clientes del día y marcar cita como COMPLETADA.
 - Evaluar una limpieza de datos para slots `DISPONIBLE` con CITAS activas vinculadas.
 - Agregar tests persistentes para helpers de linked-record IDs y rollback 3C3.
+
+---
+
+# HOTFIX — Branding por dominio en Surge
+
+**Fecha:** 2026-06-24
+**Estado:** CERRADO
+
+## Problema
+
+Los tres dominios Surge (`belleza-demo`, `sistema-multirrubro-demo`, `bellezapro-demo`) renderizaban la misma home con el mismo branding.
+
+## Causa raíz
+
+Se estaba publicando el mismo build en los tres dominios y el frontend consumía una única marca desde `/api/marca-blanca`, que devuelve `BellezaPro Demo` para todos. No existía resolución por hostname.
+
+## Fix
+
+`frontend/src/context/BrandConfigContext.jsx` ahora aplica variantes runtime por `window.location.hostname`:
+
+- `belleza-demo.surge.sh` → Belleza Demo
+- `sistema-multirrubro-demo.surge.sh` → Sistema Multirrubro
+- `bellezapro-demo.surge.sh` → BellezaPro
+
+## Verificación
+
+Chrome headless confirmó DOM renderizado distinto:
+
+| Dominio | Marker verificado |
+|---------|-------------------|
+| `belleza-demo.surge.sh` | `Belleza Demo`, `Gestión de salones` |
+| `sistema-multirrubro-demo.surge.sh` | `Sistema Multirrubro`, `Un sistema base` |
+| `bellezapro-demo.surge.sh` | `BellezaPro`, `experiencia premium` |
+
+Commit: `1a0d602 fix(frontend): diferenciar branding por dominio`
