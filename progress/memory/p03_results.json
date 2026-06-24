@@ -1,0 +1,207 @@
+{
+  "phase": "P0.3",
+  "executed_at": "2026-06-03T04:43:31.047381+00:00",
+  "base_id": "app93Vhy56KrxNhwe",
+  "phases": {
+    "audit": {
+      "Inventario": {
+        "table_id": "tblNz69ntR4zvHjH1",
+        "field_count": 0,
+        "fields": []
+      },
+      "Movimientos de Inventario": {
+        "table_id": "tbljN33UIQSdxiBVQ",
+        "field_count": 0,
+        "fields": []
+      },
+      "Productos": {
+        "table_id": "tblkz2NvmwGBXHjpF",
+        "field_count": 0,
+        "fields": []
+      },
+      "Agenda": {
+        "table_id": "tbltQl7ljsgTBpkr1",
+        "field_count": 0,
+        "fields": []
+      },
+      "Citas": {
+        "table_id": "tblZNB7HfD3OAGL9x",
+        "field_count": 0,
+        "fields": []
+      },
+      "Servicios": {
+        "table_id": "tblIDRFHpLoQpB9JH",
+        "field_count": 0,
+        "fields": []
+      },
+      "INGRESOS/EGRESOS": {
+        "table_id": "tblEoTMnKvkZzHDBf",
+        "field_count": 0,
+        "fields": []
+      }
+    },
+    "data_checks": {},
+    "mutations": [
+      {
+        "area": "B",
+        "action": "POST create",
+        "target": "Tipo de Ajuste (singleSelect)",
+        "status": 200,
+        "response": {
+          "type": "singleSelect",
+          "options": {
+            "choices": [
+              {
+                "id": "seluR90ldnWblTGr2",
+                "name": "Aumenta stock",
+                "color": "grayLight2"
+              },
+              {
+                "id": "seltewG5BfhLNpmiC",
+                "name": "Disminuye stock",
+                "color": "grayLight2"
+              }
+            ]
+          },
+          "id": "fld4SvBlCRfP5bFLG",
+          "name": "Tipo de Ajuste"
+        },
+        "note": "",
+        "timestamp": "2026-06-03T04:43:38.723827+00:00"
+      },
+      {
+        "area": "B",
+        "action": "SKIP",
+        "target": "Stock Actual creation",
+        "status": 0,
+        "response": {},
+        "note": "No Movimientos linked field found in Inventario",
+        "timestamp": "2026-06-03T04:43:38.723863+00:00"
+      },
+      {
+        "area": "C",
+        "action": "SKIP",
+        "target": "Stock Actual lookup",
+        "status": 0,
+        "response": {},
+        "note": "No Inventario link found in Productos",
+        "timestamp": "2026-06-03T04:43:38.723877+00:00"
+      },
+      {
+        "area": "D",
+        "action": "SKIP",
+        "target": "Estado de la Cita",
+        "status": 0,
+        "response": {},
+        "note": "Field not found or not singleSelect",
+        "timestamp": "2026-06-03T04:43:38.723896+00:00"
+      },
+      {
+        "area": "D",
+        "action": "SKIP",
+        "target": "Agenda.Cliente desde Cita",
+        "status": 0,
+        "response": {},
+        "note": "No Citas link in Agenda",
+        "timestamp": "2026-06-03T04:43:38.723909+00:00"
+      },
+      {
+        "area": "D",
+        "action": "SKIP",
+        "target": "Agenda.Servicio desde Cita",
+        "status": 0,
+        "response": {},
+        "note": "No Citas link in Agenda",
+        "timestamp": "2026-06-03T04:43:38.723916+00:00"
+      },
+      {
+        "area": "D",
+        "action": "SKIP",
+        "target": "Agenda.Estado desde Cita",
+        "status": 0,
+        "response": {},
+        "note": "No Citas link in Agenda",
+        "timestamp": "2026-06-03T04:43:38.723922+00:00"
+      },
+      {
+        "area": "D",
+        "action": "SKIP",
+        "target": "Agenda.Notas desde Cita",
+        "status": 0,
+        "response": {},
+        "note": "No Citas link in Agenda",
+        "timestamp": "2026-06-03T04:43:38.723928+00:00"
+      },
+      {
+        "area": "F",
+        "action": "WARN",
+        "target": "Servicios.Duración del Servicio not found",
+        "status": 0,
+        "response": {},
+        "note": "",
+        "timestamp": "2026-06-03T04:43:38.723951+00:00"
+      },
+      {
+        "area": "F",
+        "action": "WARN",
+        "target": "Servicios.Valor Hora Hombre not found",
+        "status": 0,
+        "response": {},
+        "note": "",
+        "timestamp": "2026-06-03T04:43:38.723959+00:00"
+      },
+      {
+        "area": "F",
+        "action": "WARN",
+        "target": "Servicios.Total Hora Hombre not found",
+        "status": 0,
+        "response": {},
+        "note": "",
+        "timestamp": "2026-06-03T04:43:38.723965+00:00"
+      },
+      {
+        "area": "F",
+        "action": "WARN",
+        "target": "Servicios.Costo Variable not found",
+        "status": 0,
+        "response": {},
+        "note": "",
+        "timestamp": "2026-06-03T04:43:38.723971+00:00"
+      },
+      {
+        "area": "F",
+        "action": "WARN",
+        "target": "Servicios.Costo Total not found",
+        "status": 0,
+        "response": {},
+        "note": "",
+        "timestamp": "2026-06-03T04:43:38.723976+00:00"
+      },
+      {
+        "area": "F",
+        "action": "WARN",
+        "target": "Servicios.Valor del Servicio not found",
+        "status": 0,
+        "response": {},
+        "note": "",
+        "timestamp": "2026-06-03T04:43:38.723982+00:00"
+      },
+      {
+        "area": "G",
+        "action": "INFO",
+        "target": "INGRESOS/EGRESOS audit complete",
+        "status": 0,
+        "response": {},
+        "note": "",
+        "timestamp": "2026-06-03T04:43:38.724028+00:00"
+      }
+    ]
+  },
+  "summary": {
+    "total_mutations": 15,
+    "successful": 1,
+    "failed": 0,
+    "skipped": 14,
+    "needs_manual_action": []
+  }
+}

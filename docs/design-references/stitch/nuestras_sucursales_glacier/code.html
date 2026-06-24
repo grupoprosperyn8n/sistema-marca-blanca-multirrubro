@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Contacto y Ubicaciones - Glacier</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&amp;family=Manrope:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-bright": "#f8f9ff",
+                        "primary": "#006686",
+                        "tertiary": "#576065",
+                        "on-tertiary-container": "#4c555a",
+                        "on-secondary-fixed-variant": "#4f319c",
+                        "primary-container": "#7dd3fc",
+                        "on-secondary-fixed": "#21005e",
+                        "on-primary-fixed": "#001e2b",
+                        "secondary-container": "#ab8ffe",
+                        "inverse-surface": "#213145",
+                        "inverse-primary": "#7bd1fa",
+                        "on-primary-container": "#005b78",
+                        "surface-tint": "#006686",
+                        "tertiary-fixed": "#dbe4ea",
+                        "surface-container-highest": "#d3e4fe",
+                        "on-surface-variant": "#3f484e",
+                        "surface-container-low": "#eff4ff",
+                        "on-error": "#ffffff",
+                        "background": "#f8f9ff",
+                        "on-tertiary-fixed": "#141d21",
+                        "surface": "#f8f9ff",
+                        "secondary": "#674bb5",
+                        "secondary-fixed-dim": "#cebdff",
+                        "tertiary-fixed-dim": "#bfc8ce",
+                        "error": "#ba1a1a",
+                        "outline-variant": "#bec8ce",
+                        "on-tertiary-fixed-variant": "#3f484d",
+                        "surface-container": "#e5eeff",
+                        "on-secondary": "#ffffff",
+                        "surface-variant": "#d3e4fe",
+                        "secondary-fixed": "#e8ddff",
+                        "on-surface": "#0b1c30",
+                        "error-container": "#ffdad6",
+                        "primary-fixed": "#c0e8ff",
+                        "on-secondary-container": "#3f1e8c",
+                        "primary-fixed-dim": "#7bd1fa",
+                        "on-primary-fixed-variant": "#004d66",
+                        "on-primary": "#ffffff",
+                        "tertiary-container": "#c1cad0",
+                        "surface-container-high": "#dce9ff",
+                        "inverse-on-surface": "#eaf1ff",
+                        "outline": "#6f787e",
+                        "on-background": "#0b1c30",
+                        "on-tertiary": "#ffffff",
+                        "surface-dim": "#cbdbf5",
+                        "surface-container-lowest": "#ffffff",
+                        "on-error-container": "#93000a"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "surface-gap": "16px",
+                        "container-padding-desktop": "40px",
+                        "gutter": "24px",
+                        "container-padding-mobile": "20px",
+                        "unit": "8px"
+                    },
+                    "fontFamily": {
+                        "label-sm": ["JetBrains Mono"],
+                        "headline-lg": ["Manrope"],
+                        "display-lg": ["Manrope"],
+                        "headline-lg-mobile": ["Manrope"],
+                        "body-md": ["Manrope"]
+                    },
+                    "fontSize": {
+                        "label-sm": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .glass-modal {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(32px);
+            -webkit-backdrop-filter: blur(32px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 4px 30px rgba(0, 102, 134, 0.1);
+        }
+        .btn-primary {
+            background: linear-gradient(180deg, #7dd3fc 0%, #006686 100%);
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            filter: brightness(1.1);
+        }
+        .bg-gradient-icy {
+            background: linear-gradient(135deg, #eff4ff 0%, #ffffff 100%);
+        }
+    </style>
+</head>
+<body class="bg-surface-bright text-on-surface font-body-md bg-gradient-icy min-h-screen flex flex-col">
+<!-- TopNavBar -->
+<nav class="bg-white/60 dark:bg-surface-container-lowest/60 backdrop-blur-lg fixed top-0 w-full z-50 border-b border-white/20 shadow-sm flex justify-between items-center px-container-padding-desktop max-w-full h-20">
+<div class="font-display-lg text-display-lg tracking-tight text-primary">Glacier</div>
+<div class="hidden md:flex space-x-8">
+<a class="text-on-surface-variant hover:text-primary transition-colors hover:bg-white/40 duration-300 px-4 py-2 rounded-full font-body-md text-body-md" href="#">Services</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors hover:bg-white/40 duration-300 px-4 py-2 rounded-full font-body-md text-body-md" href="#">Gallery</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors hover:bg-white/40 duration-300 px-4 py-2 rounded-full font-body-md text-body-md" href="#">Stylists</a>
+<a class="text-primary font-bold border-b-2 border-primary pb-1 font-body-md text-body-md px-4 py-2 hover:bg-white/40 transition-all duration-300" href="#">Locations</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors hover:bg-white/40 duration-300 px-4 py-2 rounded-full font-body-md text-body-md" href="#">About</a>
+</div>
+<button class="text-primary font-body-md text-body-md px-6 py-2 rounded-full border border-primary hover:bg-primary hover:text-white transition-colors duration-300 Active: scale-95 transition-transform">
+            Book Now
+        </button>
+</nav>
+<!-- Main Content -->
+<main class="flex-grow pt-32 pb-24 px-container-padding-mobile md:px-container-padding-desktop max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-gutter">
+<!-- Left Column: Locations & Map -->
+<div class="lg:col-span-7 space-y-surface-gap">
+<h1 class="font-display-lg text-display-lg text-primary mb-8">Nuestras Sedes</h1>
+<!-- Map Placeholder -->
+<div class="glass-panel rounded-xl overflow-hidden h-[400px] relative mb-8">
+<img alt="Map" class="w-full h-full object-cover opacity-80" data-alt="A highly detailed aerial view of a modern city grid with glowing icy blue map markers indicating premium salon locations. The lighting is bright and ethereal, reflecting a clean, professional aesthetic with a soft glassmorphism overlay. The color palette emphasizes crisp whites, soft greys, and vibrant ice blue accents to denote luxury and precision." data-location="Santiago, Chile" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD96dO65bjaWznjW9BiTYI1jHvvgd82glG5lwf5KBELorrHRbGUy_GytTV4sslaIS2bDZInzvOP_ra6alziljFUfFg-llfnNvuoTcMH-VD3n_Ns9hIxTTAIkJXTR4GlBSxg-mjGwf5nstBpjP58t7w3NRQZGSB9wRA6_53xrLAyPuNYuDzYP4IWfOmvQBDuhB3y63fWqG9qa6NCP2CyOB7iv1kZUWF_UGJ7HIPcx8TJucvYO54Sh_qZ_N7n022N79xoD7li6Oki6m2z"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface-bright/80 to-transparent"></div>
+</div>
+<!-- Branch Cards -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-surface-gap">
+<!-- Downtown -->
+<div class="glass-panel rounded-xl p-6">
+<h3 class="font-headline-lg text-headline-lg text-primary mb-2">Centro</h3>
+<p class="font-body-md text-on-surface-variant mb-4">Av. Libertador Bernardo O'Higgins 1234, Santiago</p>
+<div class="space-y-2 mb-6">
+<div class="flex items-center text-sm font-label-sm text-tertiary">
+<span class="material-symbols-outlined mr-2 text-primary" style="font-variation-settings: 'FILL' 1;">schedule</span>
+                            Lun - Vie: 09:00 - 20:00
+                        </div>
+<div class="flex items-center text-sm font-label-sm text-tertiary">
+<span class="material-symbols-outlined mr-2 text-primary" style="font-variation-settings: 'FILL' 1;">schedule</span>
+                            Sáb: 10:00 - 18:00
+                        </div>
+</div>
+<div class="flex space-x-4 border-t border-white/30 pt-4">
+<a class="flex items-center text-primary hover:text-secondary-container transition-colors" href="#">
+<span class="material-symbols-outlined mr-1">chat</span>
+<span class="font-label-sm text-label-sm">WhatsApp</span>
+</a>
+<a class="flex items-center text-primary hover:text-secondary-container transition-colors" href="#">
+<span class="material-symbols-outlined mr-1">mail</span>
+<span class="font-label-sm text-label-sm">Email</span>
+</a>
+</div>
+</div>
+<!-- Las Condes -->
+<div class="glass-panel rounded-xl p-6">
+<h3 class="font-headline-lg text-headline-lg text-primary mb-2">Las Condes</h3>
+<p class="font-body-md text-on-surface-variant mb-4">Av. Apoquindo 4567, Las Condes</p>
+<div class="space-y-2 mb-6">
+<div class="flex items-center text-sm font-label-sm text-tertiary">
+<span class="material-symbols-outlined mr-2 text-primary" style="font-variation-settings: 'FILL' 1;">schedule</span>
+                            Lun - Vie: 08:30 - 21:00
+                        </div>
+<div class="flex items-center text-sm font-label-sm text-tertiary">
+<span class="material-symbols-outlined mr-2 text-primary" style="font-variation-settings: 'FILL' 1;">schedule</span>
+                            Sáb - Dom: 09:00 - 19:00
+                        </div>
+</div>
+<div class="flex space-x-4 border-t border-white/30 pt-4">
+<a class="flex items-center text-primary hover:text-secondary-container transition-colors" href="#">
+<span class="material-symbols-outlined mr-1">chat</span>
+<span class="font-label-sm text-label-sm">WhatsApp</span>
+</a>
+<a class="flex items-center text-primary hover:text-secondary-container transition-colors" href="#">
+<span class="material-symbols-outlined mr-1">mail</span>
+<span class="font-label-sm text-label-sm">Email</span>
+</a>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Column: Inquiry Form -->
+<div class="lg:col-span-5">
+<div class="glass-modal rounded-xl p-8 sticky top-28">
+<h2 class="font-headline-lg text-headline-lg text-on-surface mb-6 border-b border-white/30 pb-4">Consulta Premium</h2>
+<form class="space-y-6">
+<div>
+<label class="block font-label-sm text-label-sm text-on-surface-variant mb-2">Nombre Completo</label>
+<input class="w-full bg-white/40 border border-white/20 rounded-lg px-4 py-3 text-on-surface placeholder-tertiary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all" placeholder="Ej. Camila Silva" type="text"/>
+</div>
+<div>
+<label class="block font-label-sm text-label-sm text-on-surface-variant mb-2">Correo Electrónico</label>
+<input class="w-full bg-white/40 border border-white/20 rounded-lg px-4 py-3 text-on-surface placeholder-tertiary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all" placeholder="camila@ejemplo.com" type="email"/>
+</div>
+<div>
+<label class="block font-label-sm text-label-sm text-on-surface-variant mb-2">Sede de Interés</label>
+<select class="w-full bg-white/40 border border-white/20 rounded-lg px-4 py-3 text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all appearance-none">
+<option>Centro</option>
+<option>Las Condes</option>
+</select>
+</div>
+<div>
+<label class="block font-label-sm text-label-sm text-on-surface-variant mb-2">Mensaje</label>
+<textarea class="w-full bg-white/40 border border-white/20 rounded-lg px-4 py-3 text-on-surface placeholder-tertiary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all resize-none" placeholder="¿En qué podemos ayudarle?" rows="4"></textarea>
+</div>
+<button class="w-full btn-primary text-white font-label-sm text-label-sm py-4 rounded-lg shadow-sm hover:shadow-md transition-all" type="button">
+                        Enviar Consulta
+                    </button>
+</form>
+</div>
+</div>
+</main>
+<!-- Footer -->
+<footer class="bg-surface-container-low dark:bg-surface-dim w-full mt-auto border-t border-outline-variant grid grid-cols-1 md:grid-cols-4 gap-gutter px-container-padding-desktop py-12">
+<div class="font-headline-lg text-headline-lg text-on-surface">Glacier</div>
+<div class="col-span-1 md:col-span-3 flex flex-wrap gap-4 items-center justify-end">
+<a class="text-on-tertiary-container hover:text-primary font-label-sm text-label-sm hover:underline decoration-primary/30 transition-all duration-200" href="#">Privacy Policy</a>
+<a class="text-on-tertiary-container hover:text-primary font-label-sm text-label-sm hover:underline decoration-primary/30 transition-all duration-200" href="#">Terms of Service</a>
+<a class="text-on-tertiary-container hover:text-primary font-label-sm text-label-sm hover:underline decoration-primary/30 transition-all duration-200" href="#">Careers</a>
+<a class="text-on-tertiary-container hover:text-primary font-label-sm text-label-sm hover:underline decoration-primary/30 transition-all duration-200" href="#">Press</a>
+<a class="text-primary font-label-sm text-label-sm hover:underline decoration-primary/30 transition-all duration-200" href="#">Contact Us</a>
+</div>
+<div class="col-span-1 md:col-span-4 mt-8 pt-4 border-t border-white/20 text-center font-label-sm text-label-sm text-primary">
+            © 2024 Glacier Luxury Spa &amp; Salon. All rights reserved.
+        </div>
+</footer>
+</body></html>

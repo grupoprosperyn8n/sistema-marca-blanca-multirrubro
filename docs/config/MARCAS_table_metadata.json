@@ -1,0 +1,63 @@
+{
+  "id": "tblAe0mMVfqZgRLkA",
+  "name": "MARCAS",
+  "description": "Configuración de identidad visual y textual para portales marca blanca.",
+  "primaryFieldId": "fldDfPf8bSHdIgrOx",
+  "fields": [
+    {
+      "type": "singleLineText",
+      "id": "fldDfPf8bSHdIgrOx",
+      "name": "MARCA_ID"
+    },
+    {
+      "type": "singleLineText",
+      "id": "fldt9SFcMnAWaSZZK",
+      "name": "NOMBRE_MARCA"
+    },
+    {
+      "type": "singleLineText",
+      "id": "fldyhtqcDL2mc3we6",
+      "name": "NOMBRE_COMERCIAL"
+    },
+    {
+      "type": "singleLineText",
+      "id": "fldWdMFoVjauIZhWN",
+      "name": "TAGLINE_MARCA"
+    },
+    {
+      "type": "singleLineText",
+      "id": "fld58Pp9VtJNuDNVE",
+      "name": "SLUG_PUBLICO"
+    },
+    {
+      "type": "singleLineText",
+      "id": "fldrfed3Pk0X562JY",
+      "name": "COLOR_PRIMARIO"
+    },
+    {
+      "type": "singleLineText",
+      "id": "fldzP82uSOXN3cSIe",
+      "name": "ESTADO_MARCA"
+    },
+    {
+      "type": "singleLineText",
+      "id": "fld1hlHuq7NCX0LwX",
+      "name": "AMBIENTE"
+    },
+    {
+      "type": "number",
+      "options": {
+        "precision": 0
+      },
+      "id": "fld75kHeEnyKMlGj7",
+      "name": "PRIORIDAD"
+    }
+  ],
+  "views": [
+    {
+      "id": "viwB9rX6nCmgt95l0",
+      "name": "Grid view",
+      "type": "grid"
+    }
+  ]
+}

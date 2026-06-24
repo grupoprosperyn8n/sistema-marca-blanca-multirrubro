@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
+import ReservaTurnoModal from "../components/ReservaTurnoModal";
 
 const API = import.meta.env.VITE_API_BASE_URL || "/api";
 
@@ -55,6 +56,7 @@ export default function PortalCliente() {
   const [editValue, setEditValue] = useState("");
   const [toast, setToast] = useState(null);
   const [error, setError] = useState(null);
+  const [showReservaModal, setShowReservaModal] = useState(false);
 
   /* ── fetch helpers ── */
   const fetchWithCookie = useCallback(async (url, options = {}) => {
@@ -206,7 +208,7 @@ export default function PortalCliente() {
 
         {/* ── CTA Reservar Turno ── */}
         <button
-          onClick={() => showToast("🛠️ Reserva de turnos — Próximamente", "info")}
+          onClick={() => setShowReservaModal(true)}
           style={{
             background: "linear-gradient(135deg, #10b981, #059669)",
             color: "#fff",
@@ -256,6 +258,11 @@ export default function PortalCliente() {
           </>
         )}
       </section>
+
+      {/* ── ReservaTurnoModal ── */}
+      {showReservaModal && (
+        <ReservaTurnoModal onClose={() => setShowReservaModal(false)} />
+      )}
     </div>
   );
 }

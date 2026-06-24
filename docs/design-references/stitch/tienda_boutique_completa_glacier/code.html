@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Boutique Premium - Glacier Spa</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+        .glass-card:hover {
+            background: rgba(255, 255, 255, 0.6);
+            transform: translateY(-4px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+            border-top: 1px solid rgba(255, 255, 255, 0.6);
+        }
+        .glass-button {
+            background: transparent;
+            border: 1px solid rgba(0, 102, 134, 0.2);
+            backdrop-filter: blur(8px);
+            transition: all 0.3s ease;
+        }
+        .glass-button:hover {
+            backdrop-filter: blur(16px);
+            background: rgba(255, 255, 255, 0.8);
+            border-color: rgba(0, 102, 134, 0.4);
+        }
+        .primary-gradient-btn {
+            background: linear-gradient(180deg, #7dd3fc 0%, #006686 100%);
+            transition: filter 0.3s ease;
+        }
+        .primary-gradient-btn:hover {
+            filter: brightness(1.1);
+        }
+        .page-bg {
+            background: linear-gradient(135deg, #eff4ff 0%, #ffffff 100%);
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface-bright": "#f8f9ff",
+                      "primary": "#006686",
+                      "tertiary": "#576065",
+                      "on-tertiary-container": "#4c555a",
+                      "on-secondary-fixed-variant": "#4f319c",
+                      "primary-container": "#7dd3fc",
+                      "on-secondary-fixed": "#21005e",
+                      "on-primary-fixed": "#001e2b",
+                      "secondary-container": "#ab8ffe",
+                      "inverse-surface": "#213145",
+                      "inverse-primary": "#7bd1fa",
+                      "on-primary-container": "#005b78",
+                      "surface-tint": "#006686",
+                      "tertiary-fixed": "#dbe4ea",
+                      "surface-container-highest": "#d3e4fe",
+                      "on-surface-variant": "#3f484e",
+                      "surface-container-low": "#eff4ff",
+                      "on-error": "#ffffff",
+                      "background": "#f8f9ff",
+                      "on-tertiary-fixed": "#141d21",
+                      "surface": "#f8f9ff",
+                      "secondary": "#674bb5",
+                      "secondary-fixed-dim": "#cebdff",
+                      "tertiary-fixed-dim": "#bfc8ce",
+                      "error": "#ba1a1a",
+                      "outline-variant": "#bec8ce",
+                      "on-tertiary-fixed-variant": "#3f484d",
+                      "surface-container": "#e5eeff",
+                      "on-secondary": "#ffffff",
+                      "surface-variant": "#d3e4fe",
+                      "secondary-fixed": "#e8ddff",
+                      "on-surface": "#0b1c30",
+                      "error-container": "#ffdad6",
+                      "primary-fixed": "#c0e8ff",
+                      "on-secondary-container": "#3f1e8c",
+                      "primary-fixed-dim": "#7bd1fa",
+                      "on-primary-fixed-variant": "#004d66",
+                      "on-primary": "#ffffff",
+                      "tertiary-container": "#c1cad0",
+                      "surface-container-high": "#dce9ff",
+                      "inverse-on-surface": "#eaf1ff",
+                      "outline": "#6f787e",
+                      "on-background": "#0b1c30",
+                      "on-tertiary": "#ffffff",
+                      "surface-dim": "#cbdbf5",
+                      "surface-container-lowest": "#ffffff",
+                      "on-error-container": "#93000a"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "surface-gap": "16px",
+                      "container-padding-desktop": "40px",
+                      "gutter": "24px",
+                      "container-padding-mobile": "20px",
+                      "unit": "8px"
+              },
+              "fontFamily": {
+                      "label-sm": [
+                              "JetBrains Mono"
+                      ],
+                      "headline-lg": [
+                              "Manrope"
+                      ],
+                      "display-lg": [
+                              "Manrope"
+                      ],
+                      "headline-lg-mobile": [
+                              "Manrope"
+                      ],
+                      "body-md": [
+                              "Manrope"
+                      ]
+              },
+              "fontSize": {
+                      "label-sm": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "headline-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "40px",
+                                      "letterSpacing": "-0.01em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "display-lg": [
+                              "48px",
+                              {
+                                      "lineHeight": "56px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "headline-lg-mobile": [
+                              "24px",
+                              {
+                                      "lineHeight": "32px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "400"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+</head>
+<body class="page-bg text-on-surface font-body-md text-body-md min-h-screen flex flex-col antialiased">
+<!-- TopNavBar -->
+<nav class="bg-white/60 dark:bg-surface-container-lowest/60 backdrop-blur-lg fixed top-0 w-full z-50 border-b border-white/20 shadow-sm flex justify-between items-center px-container-padding-desktop max-w-full h-20">
+<div class="font-display-lg text-display-lg tracking-tight text-primary">
+            Glacier
+        </div>
+<!-- Desktop Nav -->
+<div class="hidden md:flex items-center gap-surface-gap">
+<a class="text-on-surface-variant hover:text-primary transition-colors hover:bg-white/40 transition-all duration-300 px-unit py-unit rounded" href="#">Services</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors hover:bg-white/40 transition-all duration-300 px-unit py-unit rounded" href="#">Gallery</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors hover:bg-white/40 transition-all duration-300 px-unit py-unit rounded" href="#">Stylists</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors hover:bg-white/40 transition-all duration-300 px-unit py-unit rounded" href="#">Locations</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors hover:bg-white/40 transition-all duration-300 px-unit py-unit rounded" href="#">About</a>
+</div>
+<div class="flex items-center gap-surface-gap">
+<button class="material-symbols-outlined text-primary hover:bg-white/40 transition-all duration-300 p-unit rounded-full">search</button>
+<button class="material-symbols-outlined text-primary hover:bg-white/40 transition-all duration-300 p-unit rounded-full relative">
+                shopping_bag
+                <span class="absolute top-0 right-0 bg-primary text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center">2</span>
+</button>
+<button class="primary-gradient-btn text-white px-gutter py-unit rounded-full font-label-sm text-label-sm hidden md:block">
+                Book Now
+            </button>
+<button class="material-symbols-outlined text-primary md:hidden p-unit">menu</button>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="flex-grow pt-[120px] pb-24 px-container-padding-mobile md:px-container-padding-desktop max-w-7xl mx-auto w-full">
+<!-- Header -->
+<header class="mb-16 text-center md:text-left">
+<h1 class="font-display-lg text-display-lg text-primary mb-4">Boutique Premium</h1>
+<p class="font-body-md text-body-md text-on-surface-variant max-w-2xl">Descubre nuestra colección exclusiva de productos de bienestar y belleza. Formulados con la precisión de la ciencia y la pureza de la naturaleza para elevar tu rutina diaria.</p>
+</header>
+<!-- Filters -->
+<div class="flex flex-wrap gap-unit mb-12">
+<button class="glass-panel px-6 py-2 rounded-full text-primary font-label-sm text-label-sm border-b-2 border-primary">Todos</button>
+<button class="glass-button px-6 py-2 rounded-full text-on-surface-variant font-label-sm text-label-sm">Hair</button>
+<button class="glass-button px-6 py-2 rounded-full text-on-surface-variant font-label-sm text-label-sm">Face</button>
+<button class="glass-button px-6 py-2 rounded-full text-on-surface-variant font-label-sm text-label-sm">Body</button>
+<button class="glass-button px-6 py-2 rounded-full text-on-surface-variant font-label-sm text-label-sm">Aromatherapy</button>
+</div>
+<!-- Product Grid (Bento Style Layout) -->
+<div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-gutter auto-rows-[minmax(350px,auto)]">
+<!-- Featured Large Item (Spans 2 cols, 2 rows) -->
+<article class="glass-card rounded-xl overflow-hidden md:col-span-2 md:row-span-2 group flex flex-col relative">
+<div class="absolute top-4 right-4 z-10 glass-panel px-3 py-1 rounded-full text-primary font-label-sm text-label-sm">
+                    Best Seller
+                </div>
+<div class="h-2/3 bg-surface-container-low w-full relative overflow-hidden">
+<img alt="Suero Facial Renovador" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" data-alt="A sleek, minimalist glass dropper bottle containing an illuminating facial serum resting on a pristine white marble slab. The background is a soft, high-key blur of ethereal light blue and stark white, creating a sense of sterile luxury. Gentle, diffused studio lighting catches the prismatic highlights on the glass bottle. The composition is highly editorial, emphasizing clean lines and premium spa aesthetics." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCPKPydmxfgKTZG_ayk4Zb7abWfu7BN2DhfPUMbethPbDB_gXw7xSJJQ0DrL9lTtovrMZ64dLLWQyFj_Ccry-wnB1l5SRVshuYp7q7aTMJlZuCMRBGzLWaFs2vJRgINZ6ot3lFLhNMqvnNNEfv0-rmbXHBfItNNO-4yvUEMJFEaT-84OEfO6JZ7ogMyqkfSEVni5xBOhLEdyO82Qvg3W3bXOZzunGaQP0eMNPIMjKYEpjgDn_-TF5z2ABVgoEmkBxYIk6IyoJ018-HI"/>
+</div>
+<div class="p-gutter flex flex-col flex-grow bg-white/20">
+<div class="flex justify-between items-start mb-2">
+<div>
+<span class="text-tertiary font-label-sm text-label-sm uppercase tracking-wider mb-1 block">Face</span>
+<h2 class="font-headline-lg text-headline-lg text-on-surface">Suero Renovador Glacial</h2>
+</div>
+<span class="font-headline-lg text-headline-lg text-primary">$125</span>
+</div>
+<p class="text-on-surface-variant font-body-md text-body-md mb-6 line-clamp-2">Infusión de péptidos botánicos y ácido hialurónico marino para una hidratación profunda y luminosidad instantánea.</p>
+<div class="mt-auto">
+<button class="w-full glass-button text-primary font-label-sm text-label-sm py-3 rounded-lg flex items-center justify-center gap-2 uppercase tracking-wider">
+<span class="material-symbols-outlined text-[18px]">add_shopping_cart</span>
+                            Agregar al Carrito
+                        </button>
+</div>
+</div>
+</article>
+<!-- Standard Items -->
+<article class="glass-card rounded-xl overflow-hidden group flex flex-col">
+<div class="h-[200px] bg-surface-container-low w-full relative overflow-hidden">
+<img alt="Crema Corporal" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" data-alt="A luxurious jar of rich body cream sitting on a smooth, icy blue surface. Soft, filtered sunlight creates gentle shadows and highlights the creamy texture visible through the semi-translucent glass jar. The aesthetic is clean, medical-grade yet inviting, using a palette of soft whites and pale blues. The framing is tight, focusing on the premium packaging and minimalist elegance." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD1mEHSgut7rVRKLNpG2OW1hax_qAiiATfPT7Sx2XgdTNZSIEi_oYNSYRmxuNOV9Ho73rLx99Ke04GNWrbbo8X67V5sNp8SL0gWctuU8M_eZMkOXLKOmih5dM4GvnlI4gaEWQ0pmti98dwWiI1-X9j_M_bCNJ9S3RtNFLp8OalDrYbFBOiddRlGPpU9l2VptRgO0AEsvBizKn3nhU6ag_6gIVzilCwjBi33EekOXEZGDhkWfMyQU2g8S01gym-mogUbYFjlBESZQJP3"/>
+</div>
+<div class="p-surface-gap flex flex-col flex-grow bg-white/20">
+<span class="text-tertiary font-label-sm text-label-sm uppercase tracking-wider mb-1">Body</span>
+<h3 class="font-body-md text-body-md font-semibold text-on-surface mb-1">Crema Corporal de Loto</h3>
+<span class="font-body-md text-body-md text-primary font-semibold mb-4">$48</span>
+<div class="mt-auto">
+<button class="w-full glass-button text-primary font-label-sm text-label-sm py-2 rounded-lg flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[16px]">add</span>
+                            Comprar
+                        </button>
+</div>
+</div>
+</article>
+<article class="glass-card rounded-xl overflow-hidden group flex flex-col">
+<div class="h-[200px] bg-surface-container-low w-full relative overflow-hidden">
+<img alt="Aceite Esencial" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" data-alt="A collection of small, amber glass essential oil bottles arranged neatly on a reflective, frosted glass shelf. The scene is illuminated by cool, crisp lighting that evokes a high-end wellness sanctuary. A subtle gradient background transitions from ice blue to stark white. The overall mood is calming, precise, and therapeutic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCNPYaCdourZGFWaVNS7SLxIUXdjp2F1NqUz4GJvIOPQuHCJTp_8sVfulYdlDppGKquFOFzrQ8wYH4YlyGBJ-UoD2cwShM9DLoVwP9ALHWhTNwgYuZKNLK48HQwtyND2ku0VWjoRX9o8Wbh0AQd-fOrTueS30I3-Z2TFzO9R4paG2fIEjmuFlH54Y8LPp2Zb1dp46ZHvC2lb5wYI5AV2Vc14SUYgB7sBt_TssIEynpiFFqRoo-4bzrnLVBHYDySfEQPAoHGwZuWcMTC"/>
+</div>
+<div class="p-surface-gap flex flex-col flex-grow bg-white/20">
+<span class="text-tertiary font-label-sm text-label-sm uppercase tracking-wider mb-1">Aromatherapy</span>
+<h3 class="font-body-md text-body-md font-semibold text-on-surface mb-1">Elixir Calma Profunda</h3>
+<span class="font-body-md text-body-md text-primary font-semibold mb-4">$35</span>
+<div class="mt-auto">
+<button class="w-full glass-button text-primary font-label-sm text-label-sm py-2 rounded-lg flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[16px]">add</span>
+                            Comprar
+                        </button>
+</div>
+</div>
+</article>
+<article class="glass-card rounded-xl overflow-hidden group flex flex-col">
+<div class="h-[200px] bg-surface-container-low w-full relative overflow-hidden">
+<img alt="Mascarilla Capilar" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" data-alt="A modern, matte white tube of hair mask leaning against a smooth, pale blue acrylic block. The minimalist composition is set against a bright, airy background, conveying a sense of sterile reliability and soft luxury. Lighting is even and shadowless, highlighting the clean typography and sleek shape of the product. The scene feels refreshing and professional." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBsXiunn91mc9MdcPxdWnd5jBgRC5YDYct68OB90hQi3qKmdXmm4ASOP3JX_PgEZHeVnkYbXYjzokGejTOvjK9aAUWapce85gWR6EdU-5SjotPWFgjVlkgoDgcPEtpoo94knVHhwY8WjR-RdU-UDXxKrbRWXW1hCjdBPpyU9LUVZguURwv_3PYitSWUXTU569s-ME-gDHr5w0fAF7IEJyPBTaOCRf6JSRrQFvhwPFvy77AuyXIhjc2F0zkvH3aKzC0IBe1Qzh4BiGeL"/>
+</div>
+<div class="p-surface-gap flex flex-col flex-grow bg-white/20">
+<span class="text-tertiary font-label-sm text-label-sm uppercase tracking-wider mb-1">Hair</span>
+<h3 class="font-body-md text-body-md font-semibold text-on-surface mb-1">Mascarilla Restauradora</h3>
+<span class="font-body-md text-body-md text-primary font-semibold mb-4">$60</span>
+<div class="mt-auto">
+<button class="w-full glass-button text-primary font-label-sm text-label-sm py-2 rounded-lg flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[16px]">add</span>
+                            Comprar
+                        </button>
+</div>
+</div>
+</article>
+<article class="glass-card rounded-xl overflow-hidden group flex flex-col">
+<div class="h-[200px] bg-surface-container-low w-full relative overflow-hidden">
+<img alt="Limpiador Facial" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" data-alt="A clear pump bottle of facial cleanser filled with translucent gel, sitting on a mirrored surface. Water droplets lightly mist the bottle, suggesting freshness and purity. The background is an abstract, soft-focus blend of ice blue and white gradients. The lighting is pristine and clinical, emphasizing the clean, high-end boutique aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAKfHbdPj1NRrcS9bln7pJ-v3N6OaAnv2x4vSi3g80hNwF-3sg7hqD_kCHC51-adI8KIK1u2jAc2Utjr3xXrRA45gvesQ4qIQWZLLEd5PEr2ak2Hgymy_8SSUwQ0X9VdHHZZeKwsQHVeyz4WSRSVFxMKOQtqB51uVolybHWCkcUfOX5ijdQHH-Dh5SQx1Zh1j4ufASvk6MKUBEgnzrjhuyGQqDB4bMGujId4k9Kk-lFVC7-UI-i16YcnOGKkTqqyGp9mGs93YFu0sgv"/>
+</div>
+<div class="p-surface-gap flex flex-col flex-grow bg-white/20">
+<span class="text-tertiary font-label-sm text-label-sm uppercase tracking-wider mb-1">Face</span>
+<h3 class="font-body-md text-body-md font-semibold text-on-surface mb-1">Gel Limpiador Purificante</h3>
+<span class="font-body-md text-body-md text-primary font-semibold mb-4">$42</span>
+<div class="mt-auto">
+<button class="w-full glass-button text-primary font-label-sm text-label-sm py-2 rounded-lg flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[16px]">add</span>
+                            Comprar
+                        </button>
+</div>
+</div>
+</article>
+</div>
+</main>
+<!-- Footer -->
+<footer class="bg-surface-container-low dark:bg-surface-dim w-full mt-auto border-t border-outline-variant flat no shadows grid grid-cols-1 md:grid-cols-4 gap-gutter px-container-padding-desktop py-12">
+<div class="font-headline-lg text-headline-lg text-on-surface md:col-span-1">
+            Glacier
+        </div>
+<div class="md:col-span-3 flex flex-wrap gap-x-8 gap-y-4 md:justify-end items-center">
+<a class="font-label-sm text-label-sm text-on-tertiary-container hover:text-primary hover:underline decoration-primary/30 transition-all duration-200" href="#">Privacy Policy</a>
+<a class="font-label-sm text-label-sm text-on-tertiary-container hover:text-primary hover:underline decoration-primary/30 transition-all duration-200" href="#">Terms of Service</a>
+<a class="font-label-sm text-label-sm text-on-tertiary-container hover:text-primary hover:underline decoration-primary/30 transition-all duration-200" href="#">Careers</a>
+<a class="font-label-sm text-label-sm text-on-tertiary-container hover:text-primary hover:underline decoration-primary/30 transition-all duration-200" href="#">Press</a>
+<a class="font-label-sm text-label-sm text-on-tertiary-container hover:text-primary hover:underline decoration-primary/30 transition-all duration-200" href="#">Contact Us</a>
+</div>
+<div class="col-span-1 md:col-span-4 mt-8 pt-8 border-t border-outline-variant/30 text-center">
+<p class="font-label-sm text-label-sm text-primary">© 2024 Glacier Luxury Spa &amp; Salon. All rights reserved.</p>
+</div>
+</footer>
+</body></html>

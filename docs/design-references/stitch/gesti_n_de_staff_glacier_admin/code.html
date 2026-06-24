@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Aura Management - Equipo</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700&amp;family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "error-container": "#ffdad6",
+                        "primary-fixed": "#cde5ff",
+                        "primary-container": "#0077b6",
+                        "inverse-primary": "#94ccff",
+                        "surface-tint": "#006399",
+                        "on-primary-container": "#f3f7ff",
+                        "surface-bright": "#f7f9fb",
+                        "on-tertiary-container": "#ebfaff",
+                        "on-surface": "#191c1e",
+                        "on-error-container": "#93000a",
+                        "background": "#f7f9fb",
+                        "on-background": "#191c1e",
+                        "surface-dim": "#d8dadc",
+                        "primary": "#005d90",
+                        "outline-variant": "#bfc7d1",
+                        "on-tertiary-fixed-variant": "#004e5b",
+                        "error": "#ba1a1a",
+                        "on-secondary-fixed": "#001f24",
+                        "tertiary-fixed": "#a7edff",
+                        "on-secondary": "#ffffff",
+                        "secondary-fixed-dim": "#95d0dc",
+                        "on-primary-fixed-variant": "#004b74",
+                        "on-tertiary-fixed": "#001f25",
+                        "outline": "#707881",
+                        "secondary": "#2a6671",
+                        "tertiary-fixed-dim": "#58d6f1",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-container-high": "#e6e8ea",
+                        "inverse-on-surface": "#eff1f3",
+                        "primary-fixed-dim": "#94ccff",
+                        "tertiary": "#006272",
+                        "surface-container-low": "#f2f4f6",
+                        "surface-container-highest": "#e0e3e5",
+                        "on-surface-variant": "#404850",
+                        "surface-container": "#eceef0",
+                        "tertiary-container": "#007d90",
+                        "on-primary-fixed": "#001d32",
+                        "surface": "#f7f9fb",
+                        "secondary-fixed": "#b1ecf8",
+                        "secondary-container": "#aee9f5",
+                        "on-tertiary": "#ffffff",
+                        "on-secondary-fixed-variant": "#054e58",
+                        "on-secondary-container": "#2f6b75",
+                        "on-primary": "#ffffff",
+                        "surface-variant": "#e0e3e5",
+                        "on-error": "#ffffff",
+                        "inverse-surface": "#2d3133"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "gutter": "16px",
+                        "stack-compact": "8px",
+                        "sidebar-width": "260px",
+                        "margin-page": "24px",
+                        "topbar-height": "64px",
+                        "stack-dense": "4px"
+                    },
+                    "fontFamily": {
+                        "display-sm": ["Hanken Grotesk"],
+                        "body-sm": ["Inter"],
+                        "body-md": ["Inter"],
+                        "label-xs": ["JetBrains Mono"],
+                        "label-md": ["JetBrains Mono"],
+                        "headline-md": ["Hanken Grotesk"]
+                    },
+                    "fontSize": {
+                        "display-sm": ["30px", { "lineHeight": "38px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "body-sm": ["12px", { "lineHeight": "18px", "fontWeight": "400" }],
+                        "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "label-xs": ["10px", { "lineHeight": "12px", "fontWeight": "500" }],
+                        "label-md": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+                        "headline-md": ["20px", { "lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { background-color: #f7f9fb; background-image: linear-gradient(180deg, #f7f9fb 0%, #ffffff 100%); min-height: 100vh; }
+        .glass-panel { background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.4); box-shadow: 0 4px 24px rgba(0, 93, 144, 0.05); }
+        .glass-inlay { background: rgba(242, 244, 246, 0.5); box-shadow: inset 0 2px 4px rgba(0,0,0,0.02); }
+        .active-glow { box-shadow: inset 4px 0 0 #005d90, inset 0 0 12px rgba(0, 93, 144, 0.1); }
+        .zebra-glass tr:nth-child(even) { background-color: rgba(205, 229, 255, 0.1); }
+    </style>
+</head>
+<body class="text-on-surface font-body-md flex antialiased selection:bg-primary-container selection:text-on-primary-container overflow-hidden">
+<!-- SideNavBar -->
+<nav class="hidden md:flex flex-col h-screen w-[260px] fixed left-0 top-0 bg-surface-container-low/80 dark:bg-inverse-surface/80 backdrop-blur-2xl border-r border-white/10 shadow-2xl shadow-primary/10 p-gutter z-50 transition-all duration-300 ease-out hover:backdrop-blur-3xl hover:translate-x-1">
+<div class="flex items-center gap-3 mb-8 px-2">
+<div class="w-10 h-10 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-bold font-headline-md">G</div>
+<div>
+<h2 class="font-headline-md text-headline-md text-on-surface font-semibold tracking-tight">Glacier Admin</h2>
+<p class="font-label-xs text-label-xs text-on-surface-variant">Downtown Branch</p>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto space-y-stack-dense">
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-variant/50 rounded-lg transition-colors group" href="#">
+<span class="material-symbols-outlined text-outline group-hover:text-primary transition-colors">dashboard</span>
+<span class="font-label-md text-label-md">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-variant/50 rounded-lg transition-colors group" href="#">
+<span class="material-symbols-outlined text-outline group-hover:text-primary transition-colors">calendar_today</span>
+<span class="font-label-md text-label-md">Appointments</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-variant/50 rounded-lg transition-colors group" href="#">
+<span class="material-symbols-outlined text-outline group-hover:text-primary transition-colors">group</span>
+<span class="font-label-md text-label-md">Clients</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-primary bg-primary-fixed/40 rounded-lg border-l-2 border-primary active-glow transition-colors group" href="#">
+<span class="material-symbols-outlined text-primary">badge</span>
+<span class="font-label-md text-label-md font-bold">Staff</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-variant/50 rounded-lg transition-colors group" href="#">
+<span class="material-symbols-outlined text-outline group-hover:text-primary transition-colors">inventory_2</span>
+<span class="font-label-md text-label-md">Inventory</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-on-surface-variant hover:bg-surface-variant/50 rounded-lg transition-colors group" href="#">
+<span class="material-symbols-outlined text-outline group-hover:text-primary transition-colors">settings</span>
+<span class="font-label-md text-label-md">Settings</span>
+</a>
+</div>
+<div class="mt-auto pt-6 space-y-stack-dense border-t border-outline-variant/30">
+<button class="w-full bg-primary text-on-primary py-2 px-4 rounded-xl font-label-md text-label-md hover:bg-surface-tint transition-colors flex items-center justify-center gap-2 mb-4">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                Book New Service
+            </button>
+<a class="flex items-center gap-3 px-4 py-2 text-on-surface-variant hover:bg-surface-variant/50 rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined text-outline">help</span>
+<span class="font-label-md text-label-md">Help Center</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 text-on-surface-variant hover:bg-error-container/50 hover:text-on-error-container rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined">logout</span>
+<span class="font-label-md text-label-md">Logout</span>
+</a>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="flex-1 md:ml-[260px] flex flex-col h-screen overflow-hidden">
+<!-- TopNavBar -->
+<header class="sticky top-0 z-40 flex justify-between items-center px-margin-page py-4 w-full bg-surface/60 dark:bg-surface-dim/60 backdrop-blur-xl border-b border-white/20 shadow-sm shadow-primary/5 h-[64px]">
+<div class="flex items-center gap-4">
+<button class="md:hidden text-on-surface-variant p-2 -ml-2 rounded-lg hover:bg-surface-variant/50">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<div class="flex items-center gap-2 text-on-surface-variant font-body-sm text-body-sm">
+<span>Glacier Admin</span>
+<span class="material-symbols-outlined text-[14px]">chevron_right</span>
+<span class="text-primary font-medium">Staff Management</span>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<div class="relative hidden sm:block">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[18px]">search</span>
+<input class="glass-inlay border-outline-variant/50 text-body-sm font-body-sm rounded-full pl-9 pr-4 py-1.5 focus:ring-2 focus:ring-primary focus:border-primary outline-none w-48 transition-all focus:w-64" placeholder="Search staff..." type="text"/>
+</div>
+<button class="text-on-surface-variant p-2 rounded-full hover:bg-primary-fixed/30 transition-colors cursor-pointer active:scale-95 duration-200">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">notifications</span>
+</button>
+<button class="text-on-surface-variant p-2 rounded-full hover:bg-primary-fixed/30 transition-colors cursor-pointer active:scale-95 duration-200">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">storefront</span>
+</button>
+<button class="text-primary p-1 rounded-full hover:bg-primary-fixed/30 transition-colors cursor-pointer active:scale-95 duration-200">
+<img alt="Admin Profile" class="w-8 h-8 rounded-full border-2 border-primary-fixed" data-alt="A professional headshot of a middle-aged man with short brown hair, wearing a dark grey suit jacket and light blue shirt. He has a warm, confident smile. The background is a blurred modern office setting with bright, natural lighting reflecting a serene, high-performance professional environment." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDivlF8_cIs4uUtR9RCWQOUMaro8iieoALv6gflp7xTseF-rURA4iQJcmAGx6FZndYkEXw-JIGWCIeqjx_XXO3gYO4IxPBkmZdOwk2pOMr20_jkWZr8_-i9fnLGA3raRCBNjjGrgDs4rl6EIL5mdZcYcLwn8FrIJAawWjULLWdBIKvlXSdlpmtrD6iJuhQ1flT5imdyhwnoOHRh2qa7fvJXIrvEOMmnkowTGJa3qbK7QyS0r1u8IowtO8UGu5192aZV41wql6quTIKA"/>
+</button>
+</div>
+</header>
+<!-- Page Content -->
+<div class="flex-1 overflow-y-auto p-margin-page">
+<div class="max-w-7xl mx-auto space-y-6">
+<!-- Page Header & Actions -->
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+<div>
+<h1 class="font-display-sm text-display-sm text-primary tracking-tight">Staff Management</h1>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1">Manage team members, schedules, and performance metrics.</p>
+</div>
+<div class="flex gap-3">
+<div class="glass-panel rounded-lg p-1 flex">
+<button class="px-3 py-1.5 rounded bg-white shadow-sm text-primary font-label-md text-label-md flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px]">grid_view</span> Grid
+                            </button>
+<button class="px-3 py-1.5 rounded text-on-surface-variant hover:text-primary font-label-md text-label-md flex items-center gap-2 transition-colors">
+<span class="material-symbols-outlined text-[16px]">view_list</span> List
+                            </button>
+</div>
+<button class="bg-primary text-on-primary px-4 py-2 rounded-lg font-label-md text-label-md hover:bg-surface-tint transition-colors flex items-center gap-2 shadow-sm shadow-primary/20">
+<span class="material-symbols-outlined text-[18px]">person_add</span>
+                            Dar de Alta Profesional
+                        </button>
+</div>
+</div>
+<!-- Bento Grid - Staff Profiles -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-gutter">
+<!-- Profile Card 1 -->
+<div class="glass-panel rounded-xl p-5 flex flex-col hover:-translate-y-1 transition-transform duration-300">
+<div class="flex justify-between items-start mb-4">
+<span class="inline-flex items-center gap-1 bg-tertiary-fixed/40 text-on-tertiary-fixed px-2 py-0.5 rounded-full font-label-xs text-label-xs">
+<span class="w-1.5 h-1.5 rounded-full bg-tertiary"></span> Active
+                            </span>
+<button class="text-outline hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[20px]">more_vert</span>
+</button>
+</div>
+<div class="flex flex-col items-center text-center mb-4">
+<div class="w-20 h-20 rounded-full border-4 border-white shadow-sm overflow-hidden mb-3">
+<img alt="Staff Photo" class="w-full h-full object-cover" data-alt="A portrait of a young woman professional with shoulder-length dark hair, smiling gently. She is wearing a clean, white uniform typical of a high-end salon or spa. The lighting is soft and flattering, highlighting a serene and hygienic aesthetic against a pale, neutral background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCT00NOlu6YYUo9Ghs1AbAV-an5hgbiq7pvxWUAbWFc4Cf1FK4FRecSPD0fSPl65CVG1KchiTcfLGGEbZ_zxVIQ3vKgHRUb13RHzqKKZTHCwRoZtneTndilrgjfurCaqPEHMIshqm0ZhLZuyfc94X3ylhddHc8iC-1w0rjbP9mBJ0CGvfDs9XCtqlt99wxSZR391lpC8Y3GJDc0zliyR2QIQ2PWd-fZvFyDr1_GafTe_CxkcDDCMDI-_1u7LpR5mXEyQiaGLno3MYN9"/>
+</div>
+<h3 class="font-headline-md text-[18px] leading-snug text-on-surface mb-1">Elena Rodriguez</h3>
+<p class="font-body-sm text-body-sm text-primary font-medium">Senior Stylist</p>
+</div>
+<div class="space-y-3 mt-auto pt-4 border-t border-outline-variant/20">
+<div class="flex items-center gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px] text-outline">schedule</span>
+<span class="font-body-sm text-body-sm">09:00 - 18:00 (M-F)</span>
+</div>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px] text-outline">trending_up</span>
+<span class="font-body-sm text-body-sm">Performance</span>
+</div>
+<span class="font-label-md text-label-md text-primary font-bold">94%</span>
+</div>
+<div class="w-full bg-surface-variant rounded-full h-1.5 mt-1 overflow-hidden">
+<div class="bg-primary h-1.5 rounded-full w-[94%]"></div>
+</div>
+</div>
+</div>
+<!-- Profile Card 2 -->
+<div class="glass-panel rounded-xl p-5 flex flex-col hover:-translate-y-1 transition-transform duration-300">
+<div class="flex justify-between items-start mb-4">
+<span class="inline-flex items-center gap-1 bg-tertiary-fixed/40 text-on-tertiary-fixed px-2 py-0.5 rounded-full font-label-xs text-label-xs">
+<span class="w-1.5 h-1.5 rounded-full bg-tertiary"></span> Active
+                            </span>
+<button class="text-outline hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[20px]">more_vert</span>
+</button>
+</div>
+<div class="flex flex-col items-center text-center mb-4">
+<div class="w-20 h-20 rounded-full border-4 border-white shadow-sm overflow-hidden mb-3">
+<img alt="Staff Photo" class="w-full h-full object-cover" data-alt="A portrait of a male professional massage therapist with a neat, short beard and short hair. He is wearing a crisp, dark navy polo shirt. He exudes calm confidence. The background is slightly blurred, showing hints of a clean, bright, modern wellness center." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDe8nIPBDoUxWday5p831VFkbaIpIC3TYaRijYIRaT1beou2X0ZNpCfi0MU-5xRdqis-9S_mDwYnchMKmWLPW56AL0fRQueOLyGMDPC0IyMaP4-3Ls020Y9Cz1qI2MTJRXpTldfAa_T47P0B8O76qYe7V2vQ3LzbYdvH1dx5zYSrRuFZSxxS-LuUIFyg15N0PAVprJ8MHwf9UyuVhohWJSiLASicvnO8Ax0BVJ-UeVs8GigIQaS2sUamZMNnD9W9zmW07tl2HRcdzg-"/>
+</div>
+<h3 class="font-headline-md text-[18px] leading-snug text-on-surface mb-1">Marcus Chen</h3>
+<p class="font-body-sm text-body-sm text-secondary font-medium">Massage Therapist</p>
+</div>
+<div class="space-y-3 mt-auto pt-4 border-t border-outline-variant/20">
+<div class="flex items-center gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px] text-outline">schedule</span>
+<span class="font-body-sm text-body-sm">10:00 - 19:00 (T-S)</span>
+</div>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px] text-outline">trending_up</span>
+<span class="font-body-sm text-body-sm">Performance</span>
+</div>
+<span class="font-label-md text-label-md text-secondary font-bold">88%</span>
+</div>
+<div class="w-full bg-surface-variant rounded-full h-1.5 mt-1 overflow-hidden">
+<div class="bg-secondary h-1.5 rounded-full w-[88%]"></div>
+</div>
+</div>
+</div>
+<!-- Profile Card 3 -->
+<div class="glass-panel rounded-xl p-5 flex flex-col hover:-translate-y-1 transition-transform duration-300 opacity-75">
+<div class="flex justify-between items-start mb-4">
+<span class="inline-flex items-center gap-1 bg-surface-variant text-on-surface-variant px-2 py-0.5 rounded-full font-label-xs text-label-xs">
+<span class="w-1.5 h-1.5 rounded-full bg-outline"></span> On Leave
+                            </span>
+<button class="text-outline hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[20px]">more_vert</span>
+</button>
+</div>
+<div class="flex flex-col items-center text-center mb-4">
+<div class="w-20 h-20 rounded-full border-4 border-white shadow-sm overflow-hidden mb-3 grayscale">
+<img alt="Staff Photo" class="w-full h-full object-cover" data-alt="A portrait of a young female receptionist with long blonde hair tied back neatly. She is wearing a light gray blazer over a white blouse. Her expression is welcoming but professional. The lighting is bright and even, set against a minimalist, high-key office environment." src="https://lh3.googleusercontent.com/aida-public/AB6AXuClC2OCnqKutr2iwt-i6EBHUitDZ7gYTGXSQOhiok_8jnNlo279mv69oXGCXqak3cNaIS5Fe__OVaS1hdP5NH8-0t-nwiMJ0x6_o2a12ri8AVGLkyXLuAnenOqtjHUHieuSHVAzU2OzeUIvsd6HWYRsFpQrSnzhFuxf4PUltJ6EpnpENZQfXRG1Md9SY48jgswcCZBu24fIEwkskUs63ODQBoQAhkNXyrEhVEbiGz8GrJ_rc_EVHmEf9B6wHwIbGkld6Tx_KOo2IOOI"/>
+</div>
+<h3 class="font-headline-md text-[18px] leading-snug text-on-surface mb-1">Sarah Jenkins</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant font-medium">Head Receptionist</p>
+</div>
+<div class="space-y-3 mt-auto pt-4 border-t border-outline-variant/20">
+<div class="flex items-center gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px] text-outline">schedule</span>
+<span class="font-body-sm text-body-sm italic">Returns Oct 15</span>
+</div>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px] text-outline">trending_up</span>
+<span class="font-body-sm text-body-sm">Performance</span>
+</div>
+<span class="font-label-md text-label-md text-on-surface-variant font-bold">92%</span>
+</div>
+<div class="w-full bg-surface-variant rounded-full h-1.5 mt-1 overflow-hidden">
+<div class="bg-outline-variant h-1.5 rounded-full w-[92%]"></div>
+</div>
+</div>
+</div>
+<!-- Quick Action Card -->
+<div class="glass-panel rounded-xl p-5 flex flex-col justify-center items-center text-center border-dashed border-2 border-primary/30 hover:border-primary/60 hover:bg-primary-fixed/10 transition-all cursor-pointer group">
+<div class="w-14 h-14 rounded-full bg-primary-fixed text-primary flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-[28px]">add</span>
+</div>
+<h3 class="font-headline-md text-[18px] text-primary mb-1">Add Staff Member</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Onboard a new professional to your team.</p>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>

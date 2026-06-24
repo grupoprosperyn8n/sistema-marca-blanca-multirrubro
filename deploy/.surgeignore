@@ -1,0 +1,44 @@
+# .surgeignore — Archivos y directorios que NO se suben a Surge
+# Gestion de Salones de Belleza
+
+# Archivos del proyecto (raíz)
+AGENTS.md
+PROYECTO.md
+PROMPT_ARRANQUE.md
+FACTORY_HARNESS_MASTER.md
+START.md
+README.md
+COMANDO.txt
+CREDENCIALES.md
+
+# Configuración sensible
+.env
+.env.*
+!deploy/.env.surge.example
+
+# Harness y scripts
+harness/
+scripts/
+skills/
+config/
+contracts/
+deploy/
+docs/
+progress/
+ai/
+inicio-rapido/
+exportar-proyecto.sh
+
+# Git
+.git/
+.gitignore
+
+# Logs
+*.log
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+~*

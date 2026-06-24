@@ -32,3 +32,7 @@ frontend/.vite/
 harness/
 # Local AI runtime state
 .atl/
+CREDENCIALES.md
+.env.backup*
+n8n/README.md
+security/airtable-token-audit.md

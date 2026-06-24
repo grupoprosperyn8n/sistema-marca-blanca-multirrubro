@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Reservar Cita - Glacier Luxury Spa</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&amp;family=Manrope:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-bright": "#f8f9ff",
+                    "primary": "#006686",
+                    "tertiary": "#576065",
+                    "on-tertiary-container": "#4c555a",
+                    "on-secondary-fixed-variant": "#4f319c",
+                    "primary-container": "#7dd3fc",
+                    "on-secondary-fixed": "#21005e",
+                    "on-primary-fixed": "#001e2b",
+                    "secondary-container": "#ab8ffe",
+                    "inverse-surface": "#213145",
+                    "inverse-primary": "#7bd1fa",
+                    "on-primary-container": "#005b78",
+                    "surface-tint": "#006686",
+                    "tertiary-fixed": "#dbe4ea",
+                    "surface-container-highest": "#d3e4fe",
+                    "on-surface-variant": "#3f484e",
+                    "surface-container-low": "#eff4ff",
+                    "on-error": "#ffffff",
+                    "background": "#f8f9ff",
+                    "on-tertiary-fixed": "#141d21",
+                    "surface": "#f8f9ff",
+                    "secondary": "#674bb5",
+                    "secondary-fixed-dim": "#cebdff",
+                    "tertiary-fixed-dim": "#bfc8ce",
+                    "error": "#ba1a1a",
+                    "outline-variant": "#bec8ce",
+                    "on-tertiary-fixed-variant": "#3f484d",
+                    "surface-container": "#e5eeff",
+                    "on-secondary": "#ffffff",
+                    "surface-variant": "#d3e4fe",
+                    "secondary-fixed": "#e8ddff",
+                    "on-surface": "#0b1c30",
+                    "error-container": "#ffdad6",
+                    "primary-fixed": "#c0e8ff",
+                    "on-secondary-container": "#3f1e8c",
+                    "primary-fixed-dim": "#7bd1fa",
+                    "on-primary-fixed-variant": "#004d66",
+                    "on-primary": "#ffffff",
+                    "tertiary-container": "#c1cad0",
+                    "surface-container-high": "#dce9ff",
+                    "inverse-on-surface": "#eaf1ff",
+                    "outline": "#6f787e",
+                    "on-background": "#0b1c30",
+                    "on-tertiary": "#ffffff",
+                    "surface-dim": "#cbdbf5",
+                    "surface-container-lowest": "#ffffff",
+                    "on-error-container": "#93000a"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "surface-gap": "16px",
+                    "container-padding-desktop": "40px",
+                    "gutter": "24px",
+                    "container-padding-mobile": "20px",
+                    "unit": "8px"
+            },
+            "fontFamily": {
+                    "label-sm": [
+                            "JetBrains Mono"
+                    ],
+                    "headline-lg": [
+                            "Manrope"
+                    ],
+                    "display-lg": [
+                            "Manrope"
+                    ],
+                    "headline-lg-mobile": [
+                            "Manrope"
+                    ],
+                    "body-md": [
+                            "Manrope"
+                    ]
+            },
+            "fontSize": {
+                    "label-sm": [
+                            "12px",
+                            {
+                                    "lineHeight": "16px",
+                                    "fontWeight": "500"
+                            }
+                    ],
+                    "headline-lg": [
+                            "32px",
+                            {
+                                    "lineHeight": "40px",
+                                    "letterSpacing": "-0.01em",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "display-lg": [
+                            "48px",
+                            {
+                                    "lineHeight": "56px",
+                                    "letterSpacing": "-0.02em",
+                                    "fontWeight": "700"
+                            }
+                    ],
+                    "headline-lg-mobile": [
+                            "24px",
+                            {
+                                    "lineHeight": "32px",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "body-md": [
+                            "16px",
+                            {
+                                    "lineHeight": "24px",
+                                    "fontWeight": "400"
+                            }
+                    ]
+            }
+          }
+        }
+      }
+    </script>
+<style>
+        body {
+            background: linear-gradient(135deg, #f8f9ff 0%, #dce9ff 100%);
+            min-height: 100vh;
+        }
+        
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(32px);
+            -webkit-backdrop-filter: blur(32px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            box-shadow: 0 10px 40px -10px rgba(0, 102, 134, 0.1);
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .glass-input {
+            background: rgba(255, 255, 255, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            transition: all 0.3s ease;
+        }
+        
+        .glass-input:focus {
+            background: rgba(255, 255, 255, 0.8);
+            border-color: #7dd3fc;
+            box-shadow: 0 0 0 4px rgba(125, 211, 252, 0.2);
+            outline: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(180deg, #7dd3fc 0%, #38bdf8 100%);
+            color: white;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            filter: saturate(1.2) brightness(1.05);
+            transform: translateY(-1px);
+        }
+
+        .btn-ghost {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            color: #006686;
+            transition: all 0.3s ease;
+        }
+
+        .btn-ghost:hover {
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(8px);
+        }
+        
+        /* Progress Stepper Styles */
+        .step-indicator {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 9999px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .step-completed {
+            background-color: #006686;
+            color: white;
+        }
+        
+        .step-active {
+            background-color: #7dd3fc;
+            color: #001e2b;
+            box-shadow: 0 0 0 4px rgba(125, 211, 252, 0.2);
+        }
+        
+        .step-pending {
+            background-color: rgba(255, 255, 255, 0.4);
+            color: #6f787e;
+            border: 1px solid rgba(111, 120, 126, 0.2);
+        }
+        
+        .step-line {
+            flex: 1;
+            height: 2px;
+            background-color: rgba(111, 120, 126, 0.2);
+            margin: 0 8px;
+        }
+        
+        .step-line-active {
+            background-color: #006686;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center p-4 md:p-container-padding-desktop">
+<!-- Top Navigation (Suppressed per rules as this is a transactional flow, but keeping Brand Anchor if needed, here just rendering the modal as requested) -->
+<!-- Modal Container -->
+<div class="glass-panel w-full max-w-[1000px] rounded-2xl overflow-hidden flex flex-col relative animate-fade-in-up">
+<!-- Header / Stepper -->
+<div class="p-6 md:px-10 md:pt-10 border-b border-white/20">
+<div class="flex justify-between items-center mb-8">
+<h1 class="font-headline-lg text-headline-lg text-on-surface">Reservar Cita</h1>
+<button aria-label="Cerrar" class="text-outline hover:text-primary transition-colors flex items-center justify-center w-10 h-10 rounded-full hover:bg-white/40">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">close</span>
+</button>
+</div>
+<!-- Progress Bar -->
+<div class="flex items-center w-full max-w-md mx-auto">
+<div class="flex flex-col items-center">
+<div class="step-indicator step-completed">
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">check</span>
+</div>
+<span class="font-label-sm text-label-sm text-primary mt-2">Servicio</span>
+</div>
+<div class="step-line step-line-active"></div>
+<div class="flex flex-col items-center">
+<div class="step-indicator step-completed">
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">check</span>
+</div>
+<span class="font-label-sm text-label-sm text-primary mt-2">Fecha</span>
+</div>
+<div class="step-line step-line-active"></div>
+<div class="flex flex-col items-center relative">
+<div class="step-indicator step-active">3</div>
+<span class="font-label-sm text-label-sm text-on-surface mt-2 absolute -bottom-6 whitespace-nowrap">Tus Datos</span>
+</div>
+<div class="step-line"></div>
+<div class="flex flex-col items-center">
+<div class="step-indicator step-pending">4</div>
+<span class="font-label-sm text-label-sm text-outline mt-2 opacity-50">Pago</span>
+</div>
+</div>
+</div>
+<!-- Main Content Area -->
+<div class="flex flex-col md:flex-row flex-1 p-6 md:p-10 gap-surface-gap md:gap-10">
+<!-- Left Column: Form -->
+<div class="w-full md:w-3/5 flex flex-col space-y-6">
+<div>
+<h2 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface mb-2">Información Personal</h2>
+<p class="font-body-md text-body-md text-on-surface-variant">Por favor, ingresa tus datos para confirmar la reserva.</p>
+</div>
+<form class="space-y-5">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div class="flex flex-col space-y-2">
+<label class="font-label-sm text-label-sm text-on-surface" for="firstName">Nombre *</label>
+<input class="glass-input rounded-lg px-4 py-3 font-body-md text-body-md text-on-surface placeholder:text-outline/60 focus:ring-0" id="firstName" name="firstName" placeholder="Ej. María" required="" type="text"/>
+</div>
+<div class="flex flex-col space-y-2">
+<label class="font-label-sm text-label-sm text-on-surface" for="lastName">Apellidos *</label>
+<input class="glass-input rounded-lg px-4 py-3 font-body-md text-body-md text-on-surface placeholder:text-outline/60 focus:ring-0" id="lastName" name="lastName" placeholder="Ej. García" required="" type="text"/>
+</div>
+</div>
+<div class="flex flex-col space-y-2">
+<label class="font-label-sm text-label-sm text-on-surface" for="email">Correo Electrónico *</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline" style="font-variation-settings: 'FILL' 0;">mail</span>
+<input class="glass-input rounded-lg pl-12 pr-4 py-3 w-full font-body-md text-body-md text-on-surface placeholder:text-outline/60 focus:ring-0" id="email" name="email" placeholder="maria.garcia@email.com" required="" type="email"/>
+</div>
+</div>
+<div class="flex flex-col space-y-2">
+<label class="font-label-sm text-label-sm text-on-surface" for="phone">Teléfono *</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline" style="font-variation-settings: 'FILL' 0;">call</span>
+<input class="glass-input rounded-lg pl-12 pr-4 py-3 w-full font-body-md text-body-md text-on-surface placeholder:text-outline/60 focus:ring-0" id="phone" name="phone" placeholder="+34 600 000 000" required="" type="tel"/>
+</div>
+</div>
+<div class="flex flex-col space-y-2">
+<label class="font-label-sm text-label-sm text-on-surface" for="notes">Notas Adicionales (Opcional)</label>
+<textarea class="glass-input rounded-lg px-4 py-3 w-full font-body-md text-body-md text-on-surface placeholder:text-outline/60 focus:ring-0 resize-none" id="notes" name="notes" placeholder="Alergias, preferencias o comentarios para la especialista..." rows="3"></textarea>
+</div>
+</form>
+</div>
+<!-- Right Column: Booking Summary -->
+<div class="w-full md:w-2/5 mt-8 md:mt-0">
+<div class="glass-card rounded-xl p-6 h-full flex flex-col">
+<h3 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface mb-6 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">receipt_long</span>
+                        Resumen de Cita
+                    </h3>
+<div class="space-y-6 flex-1">
+<!-- Service Info -->
+<div class="flex gap-4 pb-6 border-b border-white/20">
+<div class="w-16 h-16 rounded-lg bg-surface-container-high overflow-hidden shrink-0 relative">
+<!-- Dummy image using standard unsplash -->
+<img alt="Tratamiento Facial Láser" class="w-full h-full object-cover" data-alt="A macro shot of a sleek, futuristic laser facial device glowing with soft ice-blue light in a sterile, pristine white medical spa environment. The lighting is high-key and ethereal, casting soft reflections on polished glass surfaces. The mood is clinical yet luxurious, emphasizing precision and advanced skincare technology." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAHOXbQkhSz_oZHyunZDuJpDk_eTIF1FLpFPl9TFFZOL8ht1GIc-k2VXFhrzI_Vhu1htAovy-tp53dTHwZGyXh3fVJKM_5gtEkrludIJA3Y9ZmpHtuzVlQJA7x_Xb6rAESMI6PnR2vsMH38dJlcLiIAD9UfWkn0heidToG8d62iePXiHFCXOTRENb9f0oEh9kwGOZsVcBfJqahb5XSiPMgBPZh9_m2NP1e6_fbtXKJ3AqdH0zlwLmX0WDs3-mCRjvVoV14Y4XuWmx8X"/>
+</div>
+<div>
+<h4 class="font-body-md text-body-md font-semibold text-on-surface">Facial Láser Iluminador</h4>
+<p class="font-label-sm text-label-sm text-on-surface-variant mt-1">60 min • Restaura y unifica el tono</p>
+</div>
+</div>
+<!-- Details -->
+<ul class="space-y-4">
+<li class="flex items-start gap-3">
+<span class="material-symbols-outlined text-outline mt-0.5" style="font-variation-settings: 'FILL' 0;">person</span>
+<div>
+<span class="block font-label-sm text-label-sm text-outline uppercase tracking-wider mb-0.5">Especialista</span>
+<span class="block font-body-md text-body-md text-on-surface">Dr. Valeria Torres</span>
+</div>
+</li>
+<li class="flex items-start gap-3">
+<span class="material-symbols-outlined text-outline mt-0.5" style="font-variation-settings: 'FILL' 0;">calendar_today</span>
+<div>
+<span class="block font-label-sm text-label-sm text-outline uppercase tracking-wider mb-0.5">Fecha</span>
+<span class="block font-body-md text-body-md text-on-surface">Viernes, 12 Noviembre 2024</span>
+</div>
+</li>
+<li class="flex items-start gap-3">
+<span class="material-symbols-outlined text-outline mt-0.5" style="font-variation-settings: 'FILL' 0;">schedule</span>
+<div>
+<span class="block font-label-sm text-label-sm text-outline uppercase tracking-wider mb-0.5">Hora</span>
+<span class="block font-body-md text-body-md text-on-surface">14:30 hrs</span>
+</div>
+</li>
+<li class="flex items-start gap-3">
+<span class="material-symbols-outlined text-outline mt-0.5" style="font-variation-settings: 'FILL' 0;">location_on</span>
+<div>
+<span class="block font-label-sm text-label-sm text-outline uppercase tracking-wider mb-0.5">Ubicación</span>
+<span class="block font-body-md text-body-md text-on-surface">Glacier Polanco, CDMX</span>
+</div>
+</li>
+</ul>
+</div>
+<!-- Price Total -->
+<div class="mt-6 pt-6 border-t border-white/20">
+<div class="flex justify-between items-end">
+<span class="font-body-md text-body-md text-on-surface-variant">Total Estimado</span>
+<span class="font-headline-lg-mobile text-headline-lg-mobile text-primary">$2,450 MXN</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Footer Actions -->
+<div class="p-6 md:px-10 border-t border-white/20 bg-surface-bright/40 flex justify-between items-center rounded-b-2xl">
+<button class="btn-ghost font-body-md text-body-md font-semibold px-6 py-3 rounded-lg flex items-center gap-2">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">arrow_back</span>
+                Atrás
+            </button>
+<button class="btn-primary font-body-md text-body-md font-semibold px-8 py-3 rounded-lg flex items-center gap-2 shadow-lg shadow-primary-container/50">
+                Continuar al Pago
+                <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">arrow_forward</span>
+</button>
+</div>
+</div>
+</body></html>

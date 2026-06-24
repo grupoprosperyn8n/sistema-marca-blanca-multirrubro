@@ -1,0 +1,236 @@
+{
+  "project": "erp-saas-aionui-workspace",
+  "owner": "Diego Lopez",
+  "main_orchestrator": "Hermes Agent",
+  "mcp_servers": [
+    {
+      "name": "filesystem",
+      "status": "required",
+      "purpose": "Permitir a los agentes leer y escribir archivos dentro del workspace.",
+      "scope": "./erp-saas-aionui-workspace",
+      "permissions": {
+        "read": true,
+        "write": true,
+        "delete": "approval_required"
+      },
+      "secrets_required": false
+    },
+    {
+      "name": "github",
+      "status": "required",
+      "purpose": "Gestionar repositorios, issues, commits, branches y pull requests.",
+      "permissions": {
+        "read_repos": true,
+        "write_repos": "approval_required",
+        "delete_repo": false
+      },
+      "secrets_required": true,
+      "env_vars": [
+        "GITHUB_TOKEN",
+        "GITHUB_OWNER",
+        "GITHUB_REPO"
+      ]
+    },
+    {
+      "name": "supabase",
+      "status": "required",
+      "purpose": "Gestionar base de datos, auth, storage, edge functions, policies y migrations.",
+      "permissions": {
+        "read_schema": true,
+        "write_migrations": true,
+        "apply_migrations": "approval_required",
+        "manage_rls": "approval_required",
+        "delete_data": false
+      },
+      "secrets_required": true,
+      "env_vars": [
+        "NEXT_PUBLIC_SUPABASE_URL",
+        "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+        "SUPABASE_SERVICE_ROLE_KEY",
+        "SUPABASE_PROJECT_REF",
+        "SUPABASE_DB_PASSWORD"
+      ]
+    },
+    {
+      "name": "postgres",
+      "status": "required",
+      "purpose": "Consultar y validar el modelo de datos PostgreSQL usado por Supabase.",
+      "permissions": {
+        "select": true,
+        "insert": "approval_required",
+        "update": "approval_required",
+        "delete": false,
+        "ddl": "approval_required"
+      },
+      "secrets_required": true,
+      "env_vars": [
+        "DATABASE_URL"
+      ]
+    },
+    {
+      "name": "airtable",
+      "status": "required",
+      "purpose": "Usar Airtable como CRM, backoffice no-code, staging operativo y panel de datos no técnicos.",
+      "permissions": {
+        "read_schema": true,
+        "read_records": true,
+        "create_records": "approval_required",
+        "update_records": "approval_required",
+        "delete_records": false
+      },
+      "secrets_required": true,
+      "env_vars": [
+        "AIRTABLE_API_KEY",
+        "AIRTABLE_BASE_ID"
+      ]
+    },
+    {
+      "name": "n8n",
+      "status": "required",
+      "purpose": "Crear, documentar y administrar workflows de automatización, webhooks e integraciones.",
+      "permissions": {
+        "read_workflows": true,
+        "create_workflows": true,
+        "update_workflows": "approval_required",
+        "activate_workflows": "approval_required",
+        "delete_workflows": false
+      },
+      "secrets_required": true,
+      "env_vars": [
+        "N8N_BASE_URL",
+        "N8N_API_KEY"
+      ]
+    },
+    {
+      "name": "browser-playwright",
+      "status": "recommended",
+      "purpose": "Testear interfaces, formularios, flujos de usuario y dashboards.",
+      "permissions": {
+        "browse": true,
+        "test_ui": true,
+        "submit_forms": "approval_required"
+      },
+      "secrets_required": false
+    },
+    {
+      "name": "local-docs",
+      "status": "recommended",
+      "purpose": "Leer documentación local del proyecto y mantener contexto persistente.",
+      "scope": "./docs",
+      "permissions": {
+        "read": true,
+        "write": true
+      },
+      "secrets_required": false
+    },
+    {
+      "name": "memory-docs",
+      "status": "required",
+      "purpose": "Permitir que Hermes lea y actualice memoria escrita del harness.",
+      "scope": [
+        "./harness",
+        "./ai",
+        "./docs"
+      ],
+      "permissions": {
+        "read": true,
+        "write": true,
+        "delete": "approval_required"
+      },
+      "secrets_required": false
+    },
+    {
+      "name": "verification-runner",
+      "status": "recommended",
+      "purpose": "Ejecutar checklists y sensores antes de entregar avances.",
+      "permissions": {
+        "run_checklists": true,
+        "write_reports": true
+      },
+      "secrets_required": false
+    },
+    {
+      "name": "supabase-security-sensor",
+      "status": "required",
+      "purpose": "Revisar RLS, policies, tablas sensibles y exposición de claves.",
+      "permissions": {
+        "read_schema": true,
+        "inspect_rls": true,
+        "apply_changes": "approval_required"
+      },
+      "secrets_required": true,
+      "env_vars": [
+        "NEXT_PUBLIC_SUPABASE_URL",
+        "SUPABASE_SERVICE_ROLE_KEY",
+        "SUPABASE_PROJECT_REF"
+      ]
+    },
+    {
+      "name": "airtable-sync-sensor",
+      "status": "recommended",
+      "purpose": "Validar mapeos y sincronizaciones Airtable-Supabase.",
+      "permissions": {
+        "read_schema": true,
+        "read_records": true,
+        "write_records": "approval_required"
+      },
+      "secrets_required": true,
+      "env_vars": [
+        "AIRTABLE_API_KEY",
+        "AIRTABLE_BASE_ID",
+        "NEXT_PUBLIC_SUPABASE_URL",
+        "SUPABASE_SERVICE_ROLE_KEY"
+      ]
+    },
+    {
+      "name": "n8n-workflow-sensor",
+      "status": "required",
+      "purpose": "Validar workflows n8n antes de activarlos.",
+      "permissions": {
+        "read_workflows": true,
+        "test_workflows": true,
+        "activate_workflows": "approval_required"
+      },
+      "secrets_required": true,
+      "env_vars": [
+        "N8N_BASE_URL",
+        "N8N_API_KEY",
+        "N8N_WEBHOOK_SECRET"
+      ]
+    },
+    {
+      "name": "telegram-or-slack",
+      "status": "optional",
+      "purpose": "Enviar reportes de avance, alertas de errores y resúmenes diarios.",
+      "permissions": {
+        "send_messages": true,
+        "read_messages": false
+      },
+      "secrets_required": true,
+      "env_vars": [
+        "TELEGRAM_BOT_TOKEN",
+        "TELEGRAM_CHAT_ID",
+        "SLACK_BOT_TOKEN",
+        "SLACK_CHANNEL_ID"
+      ]
+    },
+    {
+      "name": "office-document-generator",
+      "status": "optional",
+      "purpose": "Generar documentos DOCX, XLSX y PPTX editables para propuestas, reportes y documentación.",
+      "permissions": {
+        "create_docs": true,
+        "create_spreadsheets": true,
+        "create_presentations": true
+      },
+      "secrets_required": false
+    }
+  ],
+  "security_policy": {
+    "never_commit_secrets": true,
+    "require_human_approval_for_production": true,
+    "require_backup_before_migration": true,
+    "disable_destructive_commands_by_default": true,
+    "disable_yolo_in_production": true
+  }
+}

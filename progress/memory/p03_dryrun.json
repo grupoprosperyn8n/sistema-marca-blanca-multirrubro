@@ -1,0 +1,37 @@
+{
+  "Inventario": {
+    "table_id": "tblNz69ntR4zvHjH1",
+    "field_count": 0,
+    "fields": []
+  },
+  "Movimientos de Inventario": {
+    "table_id": "tbljN33UIQSdxiBVQ",
+    "field_count": 0,
+    "fields": []
+  },
+  "Productos": {
+    "table_id": "tblkz2NvmwGBXHjpF",
+    "field_count": 0,
+    "fields": []
+  },
+  "Agenda": {
+    "table_id": "tbltQl7ljsgTBpkr1",
+    "field_count": 0,
+    "fields": []
+  },
+  "Citas": {
+    "table_id": "tblZNB7HfD3OAGL9x",
+    "field_count": 0,
+    "fields": []
+  },
+  "Servicios": {
+    "table_id": "tblIDRFHpLoQpB9JH",
+    "field_count": 0,
+    "fields": []
+  },
+  "INGRESOS/EGRESOS": {
+    "table_id": "tblEoTMnKvkZzHDBf",
+    "field_count": 0,
+    "fields": []
+  }
+}

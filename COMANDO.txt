@@ -1,0 +1,61 @@
+═════════════════════════════════════
+  EXPORTAR PROYECTO + FACTORY HARNESS V3.7.2
+═════════════════════════════════════
+
+Tu proyecto ya esta descomprimido en esta carpeta.
+
+Este comando instala la fabrica en la RAÍZ del proyecto.
+No la mete dentro de otra carpeta harness.
+
+Abri una terminal y pega:
+
+   bash "/home/diegol/Descargas/Proyectos/sistema-marca-blanca-multirrubro/exportar-proyecto.sh"   "/home/diegol/Descargas/Proyectos/sistema-marca-blanca-multirrubro"   "/home/diegol/Documentos/erp-saas-aionui-workspace"
+
+═════════════════════════════════════
+RESULTADO ESPERADO
+═════════════════════════════════════
+
+PROYECTO.md
+CREDENCIALES.md
+COMANDO.txt
+inicio-rapido/
+AGENTS.md
+FACTORY_HARNESS_MASTER.md
+PROMPT_ARRANQUE.md
+progress/
+harness/init.sh
+skills/
+config/
+docs/
+scripts/
+
+═════════════════════════════════════
+NO DEBE QUEDAR
+═════════════════════════════════════
+
+harness/harness/init.sh
+
+═════════════════════════════════════
+DESPUÉS DE INSTALAR
+═════════════════════════════════════
+
+Desde la raiz del proyecto ejecutar:
+
+  bash harness/init.sh
+
+Primero: ejecutar bash harness/init.sh.
+Luego: leer progress/session-summary.md si existe (contexto compacto).
+
+Elegir el prompt de inicio-rapido/ según el caso:
+  01-ARRANQUE-NUEVO.md    → Proyecto nuevo
+  02-CONTINUAR-TRABAJO.md → Continuar trabajo existente
+  03-DEBUGGING.md         → Debugging
+  04-REVISION-PRE-DEPLOY.md → Revisión pre-deploy
+  05-CREAR-FEATURE.md     → Feature nueva
+  06-CREAR-MODULO.md      → Módulo ERP/SaaS
+  07-REVISAR-SEGURIDAD.md → Revisión de seguridad
+
+O usar PROMPT_ARRANQUE.md directamente.
+
+Al terminar: actualizar progress/session-summary.md con resumen corto.
+═════════════════════════════════════

@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Especialistas - Glacier</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&amp;family=Manrope:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface-bright": "#f8f9ff",
+                      "primary": "#006686",
+                      "tertiary": "#576065",
+                      "on-tertiary-container": "#4c555a",
+                      "on-secondary-fixed-variant": "#4f319c",
+                      "primary-container": "#7dd3fc",
+                      "on-secondary-fixed": "#21005e",
+                      "on-primary-fixed": "#001e2b",
+                      "secondary-container": "#ab8ffe",
+                      "inverse-surface": "#213145",
+                      "inverse-primary": "#7bd1fa",
+                      "on-primary-container": "#005b78",
+                      "surface-tint": "#006686",
+                      "tertiary-fixed": "#dbe4ea",
+                      "surface-container-highest": "#d3e4fe",
+                      "on-surface-variant": "#3f484e",
+                      "surface-container-low": "#eff4ff",
+                      "on-error": "#ffffff",
+                      "background": "#f8f9ff",
+                      "on-tertiary-fixed": "#141d21",
+                      "surface": "#f8f9ff",
+                      "secondary": "#674bb5",
+                      "secondary-fixed-dim": "#cebdff",
+                      "tertiary-fixed-dim": "#bfc8ce",
+                      "error": "#ba1a1a",
+                      "outline-variant": "#bec8ce",
+                      "on-tertiary-fixed-variant": "#3f484d",
+                      "surface-container": "#e5eeff",
+                      "on-secondary": "#ffffff",
+                      "surface-variant": "#d3e4fe",
+                      "secondary-fixed": "#e8ddff",
+                      "on-surface": "#0b1c30",
+                      "error-container": "#ffdad6",
+                      "primary-fixed": "#c0e8ff",
+                      "on-secondary-container": "#3f1e8c",
+                      "primary-fixed-dim": "#7bd1fa",
+                      "on-primary-fixed-variant": "#004d66",
+                      "on-primary": "#ffffff",
+                      "tertiary-container": "#c1cad0",
+                      "surface-container-high": "#dce9ff",
+                      "inverse-on-surface": "#eaf1ff",
+                      "outline": "#6f787e",
+                      "on-background": "#0b1c30",
+                      "on-tertiary": "#ffffff",
+                      "surface-dim": "#cbdbf5",
+                      "surface-container-lowest": "#ffffff",
+                      "on-error-container": "#93000a"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "surface-gap": "16px",
+                      "container-padding-desktop": "40px",
+                      "gutter": "24px",
+                      "container-padding-mobile": "20px",
+                      "unit": "8px"
+              },
+              "fontFamily": {
+                      "label-sm": [
+                              "JetBrains Mono"
+                      ],
+                      "headline-lg": [
+                              "Manrope"
+                      ],
+                      "display-lg": [
+                              "Manrope"
+                      ],
+                      "headline-lg-mobile": [
+                              "Manrope"
+                      ],
+                      "body-md": [
+                              "Manrope"
+                      ]
+              },
+              "fontSize": {
+                      "label-sm": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "headline-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "40px",
+                                      "letterSpacing": "-0.01em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "display-lg": [
+                              "48px",
+                              {
+                                      "lineHeight": "56px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "headline-lg-mobile": [
+                              "24px",
+                              {
+                                      "lineHeight": "32px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "400"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+<style>
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .ambient-glow {
+            box-shadow: 0 8px 32px 0 rgba(0, 102, 134, 0.05);
+        }
+
+        .btn-primary-glass {
+            background: linear-gradient(180deg, rgba(125, 211, 252, 1) 0%, rgba(125, 211, 252, 0.9) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 4px 12px rgba(125, 211, 252, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary-glass:hover {
+            background: linear-gradient(180deg, rgba(125, 211, 252, 1) 0%, rgba(125, 211, 252, 1) 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(125, 211, 252, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+        }
+    </style>
+</head>
+<body class="bg-surface-bright text-on-surface min-h-screen flex flex-col font-body-md text-body-md relative overflow-x-hidden">
+<!-- Ambient Background Gradient -->
+<div class="fixed inset-0 pointer-events-none z-[-1]" style="background: radial-gradient(circle at top right, rgba(125, 211, 252, 0.15), transparent 40%), radial-gradient(circle at bottom left, rgba(211, 228, 254, 0.3), transparent 50%);"></div>
+<!-- TopNavBar -->
+<header class="bg-white/60 dark:bg-surface-container-lowest/60 backdrop-blur-lg fixed top-0 w-full z-50 border-b border-white/20 shadow-sm flex justify-between items-center px-container-padding-desktop max-w-full h-20 transition-all duration-300">
+<div class="font-display-lg text-display-lg tracking-tight text-primary">
+            Glacier
+        </div>
+<nav class="hidden md:flex gap-8 items-center h-full">
+<a class="text-on-surface-variant hover:text-primary transition-colors h-full flex items-center hover:bg-white/40 duration-300 px-4" href="#">Services</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors h-full flex items-center hover:bg-white/40 duration-300 px-4" href="#">Gallery</a>
+<a class="text-primary font-bold border-b-2 border-primary pb-1 h-full flex items-center hover:bg-white/40 duration-300 px-4" href="#">Stylists</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors h-full flex items-center hover:bg-white/40 duration-300 px-4" href="#">Locations</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors h-full flex items-center hover:bg-white/40 duration-300 px-4" href="#">About</a>
+</nav>
+<div class="flex items-center gap-4">
+<button class="hidden md:block btn-primary-glass text-white px-6 py-2 rounded-full font-label-sm text-label-sm uppercase tracking-wider">Book Now</button>
+<button class="md:hidden text-primary p-2 rounded-full hover:bg-white/40 transition-colors">
+<span class="material-symbols-outlined">menu</span>
+</button>
+</div>
+</header>
+<!-- Main Content -->
+<main class="flex-grow pt-32 pb-24 px-container-padding-mobile md:px-container-padding-desktop max-w-7xl mx-auto w-full">
+<!-- Header Section -->
+<div class="text-center mb-16 relative">
+<h1 class="font-display-lg text-display-lg md:text-[64px] md:leading-[72px] text-primary mb-4 tracking-tight">Especialistas</h1>
+<p class="font-body-md text-body-md text-on-surface-variant max-w-2xl mx-auto text-lg">
+                Conozca a nuestro equipo de expertos dedicados a brindarle la más alta calidad en cuidado personal, estética y relajación en un ambiente de lujo y serenidad.
+            </p>
+<!-- Decorative line -->
+<div class="w-24 h-[1px] bg-primary/20 mx-auto mt-8"></div>
+</div>
+<!-- Specialists Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+<!-- Card 1 -->
+<article class="glass-panel ambient-glow rounded-xl p-8 flex flex-col items-center text-center transition-transform duration-300 hover:-translate-y-2 group relative overflow-hidden">
+<!-- Subtle background accent -->
+<div class="absolute top-0 right-0 w-32 h-32 bg-primary-container/20 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
+<div class="relative mb-6">
+<div class="w-40 h-40 rounded-full overflow-hidden border-4 border-white shadow-lg relative z-10">
+<img alt="Retrato profesional de una dermatóloga en un entorno luminoso y limpio." class="w-full h-full object-cover" data-alt="A professional portrait of a female dermatologist with light skin and dark hair tied back, wearing a crisp white medical coat over a light blue top. She is smiling softly at the camera. The background is a brightly lit, sterile yet luxurious spa or clinic environment with soft natural light coming from large windows. The mood is calm, professional, and ethereal. High-key lighting, glassmorphism aesthetic, soft shadows." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDrzqNSGzV8ZfVIOvcnxN47SiVKEfowtdCbe6wD5Ku-VrrZzAhEPIjzY3lGTg8HoAFkK3fT2zApgZCw1GXGoEf8WmrILKNGCIexvxHOPr6_gXNBTaNOtHbsI9BAGXnx8kJXgLU2Ff03rHOPbR4oSUNfdIz0Z8vzrq6iqqyTxMBFdIPP6tsc0mHIu2AZtwMqE66EPv2IvROH_aTcGGGa_Cq-7fVk6bh4Fd7mtopV2pNVApxqbNMNW-Jc1Bu3HqCWBQ8JXv2XjwQxVxuO"/>
+</div>
+<!-- Decorative circle behind portrait -->
+<div class="absolute inset-0 rounded-full bg-primary/5 scale-110 z-0"></div>
+</div>
+<h2 class="font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface mb-1">Dra. Elena Costa</h2>
+<p class="font-label-sm text-label-sm text-primary uppercase tracking-wider mb-4">Dermatología Avanzada</p>
+<div class="flex items-center gap-2 text-on-surface-variant mb-6 text-sm">
+<span class="material-symbols-outlined text-[18px]">verified</span>
+<span>12 años de experiencia</span>
+</div>
+<p class="text-on-surface-variant text-sm mb-8 flex-grow">Especialista en tratamientos anti-envejecimiento, peelings químicos y cuidado preventivo de la piel con un enfoque holístico.</p>
+<button class="btn-primary-glass text-white w-full py-3 rounded-lg font-label-sm text-label-sm uppercase tracking-wider flex items-center justify-center gap-2 mt-auto">
+                    Reservar con Elena
+                    <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</button>
+</article>
+<!-- Card 2 -->
+<article class="glass-panel ambient-glow rounded-xl p-8 flex flex-col items-center text-center transition-transform duration-300 hover:-translate-y-2 group relative overflow-hidden">
+<div class="absolute top-0 right-0 w-32 h-32 bg-secondary-container/20 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
+<div class="relative mb-6">
+<div class="w-40 h-40 rounded-full overflow-hidden border-4 border-white shadow-lg relative z-10">
+<img alt="Retrato de un masajista terapeuta en un entorno relajante." class="w-full h-full object-cover" data-alt="A professional portrait of a male massage therapist with tanned skin and a short beard, wearing a neat, dark blue scrub top. He has a calm, welcoming expression. The setting is a serene, dimly lit massage therapy room with subtle warm lighting, perhaps some bamboo or greenery subtly in the background. The mood is tranquil and grounding. The image uses a clean, premium visual style with a soft focus background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAdZ2rvcexbwYhgm3dJF5Bc0btQJAgnVl9okqnO8ODzIIkWRLzT-QY7IAZIB9fEAj-x1cr_dGy9O9vu9lg-DRkQsKAim1mKj6PQAh4zxyg6aWxtzxUDQ3bGwFjdDNEUycimc1g61B9MhNx1drkZVqy52kTkkQFc1bTS6aRnwH8JMjhiZcZcrnr4J3U21zDbTLzsL7tcJkBf4EwArvHDgmb3OiiJ5eZqb5TkAeZwzIyaP8fVWQg5xpjiY4Pd6TboKIWhGJIIJp0TuFPM"/>
+</div>
+<div class="absolute inset-0 rounded-full bg-secondary/5 scale-110 z-0"></div>
+</div>
+<h2 class="font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface mb-1">Mateo Silva</h2>
+<p class="font-label-sm text-label-sm text-secondary uppercase tracking-wider mb-4">Terapia de Masaje</p>
+<div class="flex items-center gap-2 text-on-surface-variant mb-6 text-sm">
+<span class="material-symbols-outlined text-[18px]">verified</span>
+<span>8 años de experiencia</span>
+</div>
+<p class="text-on-surface-variant text-sm mb-8 flex-grow">Especialista en masaje de tejido profundo, reflexología y terapias de relajación muscular con piedras calientes.</p>
+<button class="btn-primary-glass text-white w-full py-3 rounded-lg font-label-sm text-label-sm uppercase tracking-wider flex items-center justify-center gap-2 mt-auto">
+                    Reservar con Mateo
+                    <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</button>
+</article>
+<!-- Card 3 -->
+<article class="glass-panel ambient-glow rounded-xl p-8 flex flex-col items-center text-center transition-transform duration-300 hover:-translate-y-2 group relative overflow-hidden">
+<div class="absolute top-0 right-0 w-32 h-32 bg-tertiary/10 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
+<div class="relative mb-6">
+<div class="w-40 h-40 rounded-full overflow-hidden border-4 border-white shadow-lg relative z-10">
+<img alt="Retrato de una esteticista sonriente en un ambiente de spa." class="w-full h-full object-cover" data-alt="A portrait of a female esthetician with medium brown skin and curly hair framing her face, smiling brightly. She is wearing a soft beige tunic suitable for a high-end spa environment. The background is an airy, bright salon setting with subtle hints of frosted glass and white marble textures. The lighting is soft and flattering, creating a glowing, healthy look. The overall aesthetic is ethereal, clean, and luxurious." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA4q3kMNbhb1TxM7bwo9pQKu_c263IWBHto0IrNIHkzncKAAoGSX8r9ZLRmhZiCBCXwi_IIxo2YRLoCSFEXb7ec7s2rZdEsaLZZXRGwxol_8m1cXlXnlJ5_oL1OUgMb5RadwxBSZ4mTX3bhZmDKn6mhivLSgJqoEtoP4WzHY-2KgMsRla1d7RSK96NyOYxbXiLJhmS6K0B-jPmtr9cy_vIlt5NA9_FulkG0nlqNC8g9uFF8NsIoHSKO_mQgJeFoPfqqS48HzHylKFE1"/>
+</div>
+<div class="absolute inset-0 rounded-full bg-tertiary/5 scale-110 z-0"></div>
+</div>
+<h2 class="font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface mb-1">Sofía Reyes</h2>
+<p class="font-label-sm text-label-sm text-tertiary uppercase tracking-wider mb-4">Estética Facial</p>
+<div class="flex items-center gap-2 text-on-surface-variant mb-6 text-sm">
+<span class="material-symbols-outlined text-[18px]">verified</span>
+<span>5 años de experiencia</span>
+</div>
+<p class="text-on-surface-variant text-sm mb-8 flex-grow">Especialista en limpiezas faciales profundas, terapias de luz LED y esculpido facial no invasivo para un brillo natural.</p>
+<button class="btn-primary-glass text-white w-full py-3 rounded-lg font-label-sm text-label-sm uppercase tracking-wider flex items-center justify-center gap-2 mt-auto">
+                    Reservar con Sofía
+                    <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</button>
+</article>
+</div>
+</main>
+<!-- Footer -->
+<footer class="bg-surface-container-low dark:bg-surface-dim w-full mt-auto border-t border-outline-variant flat no shadows grid grid-cols-1 md:grid-cols-4 gap-gutter px-container-padding-desktop py-12">
+<div class="col-span-1 md:col-span-1 mb-8 md:mb-0">
+<div class="font-headline-lg text-headline-lg text-on-surface mb-4">Glacier</div>
+<p class="font-label-sm text-label-sm text-on-surface-variant">© 2024 Glacier Luxury Spa &amp; Salon. All rights reserved.</p>
+</div>
+<div class="col-span-1 md:col-span-3 flex flex-wrap gap-x-8 gap-y-4 md:justify-end items-center">
+<a class="font-label-sm text-label-sm text-on-tertiary-container hover:text-primary hover:underline decoration-primary/30 transition-all duration-200" href="#">Privacy Policy</a>
+<a class="font-label-sm text-label-sm text-on-tertiary-container hover:text-primary hover:underline decoration-primary/30 transition-all duration-200" href="#">Terms of Service</a>
+<a class="font-label-sm text-label-sm text-on-tertiary-container hover:text-primary hover:underline decoration-primary/30 transition-all duration-200" href="#">Careers</a>
+<a class="font-label-sm text-label-sm text-on-tertiary-container hover:text-primary hover:underline decoration-primary/30 transition-all duration-200" href="#">Press</a>
+<a class="font-label-sm text-label-sm text-on-tertiary-container hover:text-primary hover:underline decoration-primary/30 transition-all duration-200" href="#">Contact Us</a>
+</div>
+</footer>
+</body></html>

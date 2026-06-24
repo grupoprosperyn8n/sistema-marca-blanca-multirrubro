@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+
+<html lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Glacier Spa &amp; Salon - Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'ice-blue': '#7dd3fc',
+            'glacier-dark': '#0f172a',
+            'glacier-bg': '#f8fafc',
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+<style data-purpose="glassmorphism">
+    .glass-panel {
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    }
+    .glass-header {
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+    }
+    .glass-sidebar {
+      background: rgba(248, 250, 252, 0.8);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-right: 1px solid rgba(226, 232, 240, 0.8);
+    }
+  </style>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+</head>
+<body class="bg-glacier-bg text-slate-800 font-sans min-h-screen flex flex-col bg-[url('https://placehold.co/1920x1080/e0f2fe/bae6fd')] bg-cover bg-fixed bg-center">
+<!-- BEGIN: MainHeader -->
+<header class="glass-header sticky top-0 z-30 w-full">
+<div class="flex items-center justify-between px-6 py-4">
+<!-- Logo Area -->
+<div class="flex items-center gap-3 w-64">
+<div class="w-10 h-10 rounded-xl bg-gradient-to-br from-ice-blue to-blue-500 flex items-center justify-center text-white shadow-lg shadow-ice-blue/30">
+<i class="fa-solid fa-snowflake text-xl"></i>
+</div>
+<span class="text-xl font-semibold tracking-tight text-slate-900">Glacier</span>
+</div>
+<!-- Search & Branch -->
+<div class="flex-1 flex items-center justify-center gap-4 px-8 hidden md:flex">
+<div class="relative w-full max-w-md">
+<span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+<i class="fa-solid fa-search"></i>
+</span>
+<input class="w-full pl-10 pr-4 py-2 bg-white/50 border border-slate-200 rounded-full focus:outline-none focus:ring-2 focus:ring-ice-blue focus:border-transparent transition-shadow placeholder-slate-400" placeholder="Buscar clientes, citas..." type="text"/>
+</div>
+<select class="bg-white/50 border border-slate-200 text-slate-700 py-2 pl-4 pr-8 rounded-full focus:outline-none focus:ring-2 focus:ring-ice-blue appearance-none font-medium">
+<option>Sede Principal (Madrid)</option>
+<option>Sede Norte (Barcelona)</option>
+</select>
+</div>
+<!-- Right Actions -->
+<div class="flex items-center gap-5">
+<button class="relative p-2 text-slate-500 hover:text-slate-700 transition-colors">
+<i class="fa-regular fa-bell text-xl"></i>
+<span class="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
+</button>
+<div class="h-8 w-px bg-slate-200 hidden sm:block"></div>
+<div class="flex items-center gap-3 cursor-pointer">
+<img alt="Admin Avatar" class="w-9 h-9 rounded-full object-cover border-2 border-white shadow-sm" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCONuXR1VSXvg2-Dov-Bh8-nj9x6n-oM0KZFB0-Kmnw1SsfmYIuY2jIBbq4ibXQsh4Ku2yrIGu4dS06ZIATI8FRwBn71aVFXPLEpgAYEJy2rL4ldPXRjTc_UKb107FCGP17gJDJ6ltrNj2q0fqB6nFJyryQ0WZJ2vxpVyu2loy52UutZtVafVfGKcgOTbCRe8RuuqmV0YuC7uvhPskjxj8n4SXOTubIhmfSA8mHFOsD0Jsz_J6dSZ4diWhu82AvVnGw_HewqWhSwcQG"/>
+<div class="hidden sm:block text-sm">
+<p class="font-semibold text-slate-800 leading-tight">Admin User</p>
+<p class="text-slate-500 text-xs">Gerente</p>
+</div>
+</div>
+</div>
+</div>
+</header>
+<!-- END: MainHeader -->
+<div class="flex flex-1 overflow-hidden">
+<!-- BEGIN: Sidebar -->
+<aside class="glass-sidebar w-64 hidden lg:flex flex-col flex-shrink-0 z-20">
+<div class="p-6">
+<button class="w-full bg-glacier-dark hover:bg-slate-800 text-white font-medium py-3 px-4 rounded-xl shadow-lg shadow-slate-800/20 transition-all flex items-center justify-center gap-2">
+<i class="fa-solid fa-plus"></i>
+          Nueva Cita
+        </button>
+</div>
+<nav class="flex-1 px-4 space-y-1 overflow-y-auto">
+<a class="flex items-center gap-3 px-4 py-3 text-ice-blue bg-blue-50/50 rounded-xl font-medium transition-colors" href="#">
+<i class="fa-solid fa-chart-pie w-5"></i>
+          Dashboard
+        </a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-slate-100/50 hover:text-slate-900 rounded-xl font-medium transition-colors" href="#">
+<i class="fa-regular fa-calendar w-5"></i>
+          Agenda
+        </a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-slate-100/50 hover:text-slate-900 rounded-xl font-medium transition-colors" href="#">
+<i class="fa-solid fa-users w-5"></i>
+          Clientes
+        </a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-slate-100/50 hover:text-slate-900 rounded-xl font-medium transition-colors" href="#">
+<i class="fa-solid fa-scissors w-5"></i>
+          Personal
+        </a>
+<a class="flex items-center gap-3 px-4 py-3 text-slate-600 hover:bg-slate-100/50 hover:text-slate-900 rounded-xl font-medium transition-colors" href="#">
+<i class="fa-solid fa-box-open w-5"></i>
+          Inventario
+        </a>
+</nav>
+<div class="p-4 mt-auto">
+<a class="flex items-center gap-3 px-4 py-3 text-slate-500 hover:bg-slate-100/50 hover:text-slate-900 rounded-xl font-medium transition-colors" href="#">
+<i class="fa-solid fa-gear w-5"></i>
+          Configuración
+        </a>
+</div>
+</aside>
+<!-- END: Sidebar -->
+<!-- BEGIN: Main Content -->
+<main class="flex-1 overflow-y-auto p-6 lg:p-8">
+<div class="max-w-7xl mx-auto space-y-8">
+<!-- Header Info -->
+<div>
+<h1 class="text-2xl font-bold text-slate-800">Resumen del Día</h1>
+<p class="text-slate-500">Jueves, 24 de Octubre de 2023</p>
+</div>
+<!-- Metrics Grid -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<!-- Metric Card 1 -->
+<div class="glass-panel rounded-2xl p-6 flex flex-col justify-between">
+<div class="flex justify-between items-start">
+<div>
+<p class="text-sm font-medium text-slate-500 mb-1">Ingresos de Hoy</p>
+<h3 class="text-3xl font-bold text-slate-800">€1,240.50</h3>
+</div>
+<div class="p-2 bg-emerald-100 text-emerald-600 rounded-lg">
+<i class="fa-solid fa-arrow-trend-up"></i>
+</div>
+</div>
+<div class="mt-4 text-sm text-emerald-600 flex items-center gap-1 font-medium">
+<span>+12.5%</span> <span class="text-slate-400 font-normal">vs ayer</span>
+</div>
+</div>
+<!-- Metric Card 2 -->
+<div class="glass-panel rounded-2xl p-6 flex flex-col justify-between">
+<div class="flex justify-between items-start">
+<div>
+<p class="text-sm font-medium text-slate-500 mb-1">Citas Activas</p>
+<h3 class="text-3xl font-bold text-slate-800">24</h3>
+</div>
+<div class="p-2 bg-blue-100 text-blue-600 rounded-lg">
+<i class="fa-regular fa-calendar-check"></i>
+</div>
+</div>
+<div class="mt-4 text-sm text-slate-500 flex items-center gap-2">
+<span class="inline-block w-2 h-2 rounded-full bg-green-500"></span> 5 en curso
+              <span class="inline-block w-2 h-2 rounded-full bg-blue-500 ml-2"></span> 19 pendientes
+            </div>
+</div>
+<!-- Metric Card 3 -->
+<div class="glass-panel rounded-2xl p-6 flex flex-col justify-between border-l-4 border-l-amber-400">
+<div class="flex justify-between items-start">
+<div>
+<p class="text-sm font-medium text-slate-500 mb-1">Alertas de Inventario</p>
+<h3 class="text-3xl font-bold text-slate-800">3</h3>
+</div>
+<div class="p-2 bg-amber-100 text-amber-600 rounded-lg">
+<i class="fa-solid fa-triangle-exclamation"></i>
+</div>
+</div>
+<div class="mt-4 text-sm text-amber-600 font-medium cursor-pointer hover:underline">
+              Revisar productos bajos en stock →
+            </div>
+</div>
+</div>
+<!-- Main Content Area Grids -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+<!-- Upcoming Appointments List -->
+<div class="lg:col-span-1 glass-panel rounded-2xl p-6">
+<div class="flex justify-between items-center mb-6">
+<h2 class="text-lg font-bold text-slate-800">Próximas Citas</h2>
+<button class="text-ice-blue hover:text-blue-600 text-sm font-medium">Ver todas</button>
+</div>
+<div class="space-y-4">
+<!-- Appointment Item -->
+<div class="flex gap-4 items-center p-3 hover:bg-white/60 rounded-xl transition-colors cursor-pointer border border-transparent hover:border-slate-100">
+<div class="flex flex-col items-center justify-center w-12 h-12 bg-blue-50 rounded-lg text-blue-600 font-bold">
+<span class="text-sm leading-none">10</span>
+<span class="text-xs font-normal">AM</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-sm font-semibold text-slate-800 truncate">Corte y Color</p>
+<p class="text-xs text-slate-500 truncate">Ana Martínez • Estilista: Carlos</p>
+</div>
+<img alt="Servicio Color" class="w-10 h-10 rounded-lg object-cover" src="https://lh3.googleusercontent.com/aida/AP1WRLtAU_LL8bl-QmqGCVkOul9uadRO52J5rWgBIkhm4y9DApxZbCO4uJEI0qIPb1gzyp3YlQUAo10eGnQULYwklELO9FZmUwaiz4xO3jQo6YOVsUH7NIv4ngA-1EpxjASQLHdudQwKzPxtOnoVilk912aDomaRXJqfsjuDT1AZFjaQbSyD-Bnn5_xR8iCesAkicFSKctqNH5Mcgv1hJf2MaDpOYZyUMfM0eDGNKjWa5tIfeTV3m40T9NevIl_f"/>
+</div>
+<!-- Appointment Item -->
+<div class="flex gap-4 items-center p-3 hover:bg-white/60 rounded-xl transition-colors cursor-pointer border border-transparent hover:border-slate-100">
+<div class="flex flex-col items-center justify-center w-12 h-12 bg-blue-50 rounded-lg text-blue-600 font-bold">
+<span class="text-sm leading-none">11</span>
+<span class="text-xs font-normal">30</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-sm font-semibold text-slate-800 truncate">Arreglo de Barba</p>
+<p class="text-xs text-slate-500 truncate">Juan Pérez • Barbero: Luis</p>
+</div>
+<img alt="Servicio Barba" class="w-10 h-10 rounded-lg object-cover" src="https://lh3.googleusercontent.com/aida/AP1WRLsmT6A9ZPzQdLijFDj2xQJmNrUBwybWm0WWVxhRK-92cCxGmsr6w3Lrj4EB-97LeEnrUiYWEOWFwnWnN4onIAhEAVcvNDG7CA2U_LL9Dpl3DpOsb7a95EAxKB9xHkGuzgOv0E066YVPtco1RX79wNLFqDn6bjLTz02T24JjAlmNly8DioUKlphk-YwnEfUlGDeWG6ZOdeAbs7KU-B1dalC1LrBrvFlCfxY6my9Iz9C7d6oFvAV_FxP7QDBV"/>
+</div>
+<!-- Appointment Item -->
+<div class="flex gap-4 items-center p-3 hover:bg-white/60 rounded-xl transition-colors cursor-pointer border border-transparent hover:border-slate-100">
+<div class="flex flex-col items-center justify-center w-12 h-12 bg-slate-50 rounded-lg text-slate-600 font-bold opacity-50">
+<span class="text-sm leading-none">12</span>
+<span class="text-xs font-normal">PM</span>
+</div>
+<div class="flex-1 min-w-0 opacity-70">
+<p class="text-sm font-semibold text-slate-800 truncate">Lavado y Secado</p>
+<p class="text-xs text-slate-500 truncate">María Gómez • Estilista: Elena</p>
+</div>
+<img alt="Servicio Lavado" class="w-10 h-10 rounded-lg object-cover grayscale opacity-60" src="https://lh3.googleusercontent.com/aida/AP1WRLsOVa6zxpuGIvs1Em7WxLL8kwVf9Cw33wujX4NCUVoFHXyi0DKM7vJG_QGlqQDY7-Dqax4J7ECZPPFlxCbCDjNwnMghLXeytoK_BTYmSXeo6q95SEhKuNh_Rddj6B17pS1m7CX-k8A3UL-_TH9xBRnhagEJZYY51nPz-ZIKubOvjq_IXQsK7i9KCdY8p0dlMvnazuB6lXM6HKhxZA6nsD_umcCJsPVctCtvfUZbOvz0kFDkrIIghI4Wp2Lp"/>
+</div>
+</div>
+</div>
+<!-- Transactions Table -->
+<div class="lg:col-span-2 glass-panel rounded-2xl p-6 overflow-hidden flex flex-col">
+<div class="flex justify-between items-center mb-6">
+<h2 class="text-lg font-bold text-slate-800">Transacciones Recientes</h2>
+<div class="flex gap-2">
+<button class="p-2 border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-600 transition-colors"><i class="fa-solid fa-filter"></i></button>
+<button class="p-2 border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-600 transition-colors"><i class="fa-solid fa-download"></i></button>
+</div>
+</div>
+<div class="overflow-x-auto flex-1">
+<table class="w-full text-left text-sm whitespace-nowrap">
+<thead class="text-xs text-slate-500 uppercase bg-slate-50/50">
+<tr>
+<th class="px-4 py-3 font-medium rounded-l-lg" scope="col">ID Venta</th>
+<th class="px-4 py-3 font-medium" scope="col">Cliente</th>
+<th class="px-4 py-3 font-medium" scope="col">Servicio/Producto</th>
+<th class="px-4 py-3 font-medium" scope="col">Monto</th>
+<th class="px-4 py-3 font-medium rounded-r-lg" scope="col">Estado</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-100">
+<tr class="hover:bg-white/40 transition-colors">
+<td class="px-4 py-4 font-medium text-slate-900">#TRX-0842</td>
+<td class="px-4 py-4">Sofía Ruiz</td>
+<td class="px-4 py-4 text-slate-500">Corte + Tinte + Mascarilla</td>
+<td class="px-4 py-4 font-semibold text-slate-700">€125.00</td>
+<td class="px-4 py-4">
+<span class="px-2.5 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium border border-green-200">Completado</span>
+</td>
+</tr>
+<tr class="hover:bg-white/40 transition-colors">
+<td class="px-4 py-4 font-medium text-slate-900">#TRX-0841</td>
+<td class="px-4 py-4">Carlos Medina</td>
+<td class="px-4 py-4 text-slate-500">Corte Clásico</td>
+<td class="px-4 py-4 font-semibold text-slate-700">€25.00</td>
+<td class="px-4 py-4">
+<span class="px-2.5 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium border border-green-200">Completado</span>
+</td>
+</tr>
+<tr class="hover:bg-white/40 transition-colors">
+<td class="px-4 py-4 font-medium text-slate-900">#TRX-0840</td>
+<td class="px-4 py-4">Lucía Castro</td>
+<td class="px-4 py-4 text-slate-500">Producto: Shampoo Keratina</td>
+<td class="px-4 py-4 font-semibold text-slate-700">€35.50</td>
+<td class="px-4 py-4">
+<span class="px-2.5 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium border border-blue-200">En proceso</span>
+</td>
+</tr>
+<tr class="hover:bg-white/40 transition-colors">
+<td class="px-4 py-4 font-medium text-slate-900">#TRX-0839</td>
+<td class="px-4 py-4">Anónimo</td>
+<td class="px-4 py-4 text-slate-500">Arreglo Barba</td>
+<td class="px-4 py-4 font-semibold text-slate-700">€15.00</td>
+<td class="px-4 py-4">
+<span class="px-2.5 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium border border-green-200">Completado</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- END: Main Content -->
+</div>
+</body></html>

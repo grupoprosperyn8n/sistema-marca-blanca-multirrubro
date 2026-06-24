@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+
+<html lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Reserva Rápida - Glacier</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&amp;family=Manrope:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-error-container": "#93000a",
+                      "on-tertiary-fixed-variant": "#3f484d",
+                      "on-primary": "#ffffff",
+                      "secondary-fixed-dim": "#cebdff",
+                      "primary-fixed-dim": "#7bd1fa",
+                      "on-secondary-fixed-variant": "#4f319c",
+                      "surface-tint": "#006686",
+                      "surface-bright": "#f8f9ff",
+                      "primary": "#006686",
+                      "inverse-on-surface": "#eaf1ff",
+                      "background": "#f8f9ff",
+                      "tertiary-fixed": "#dbe4ea",
+                      "on-error": "#ffffff",
+                      "outline-variant": "#bec8ce",
+                      "on-secondary-fixed": "#21005e",
+                      "surface-variant": "#d3e4fe",
+                      "surface-container-low": "#eff4ff",
+                      "inverse-surface": "#213145",
+                      "tertiary-fixed-dim": "#bfc8ce",
+                      "on-tertiary-container": "#4c555a",
+                      "on-secondary": "#ffffff",
+                      "inverse-primary": "#7bd1fa",
+                      "on-primary-container": "#005b78",
+                      "error-container": "#ffdad6",
+                      "on-tertiary": "#ffffff",
+                      "tertiary": "#576065",
+                      "surface-container-highest": "#d3e4fe",
+                      "primary-fixed": "#c0e8ff",
+                      "secondary-fixed": "#e8ddff",
+                      "secondary-container": "#ab8ffe",
+                      "on-tertiary-fixed": "#141d21",
+                      "surface": "#f8f9ff",
+                      "tertiary-container": "#c1cad0",
+                      "error": "#ba1a1a",
+                      "surface-container": "#e5eeff",
+                      "outline": "#6f787e",
+                      "primary-container": "#7dd3fc",
+                      "on-surface": "#0b1c30",
+                      "on-primary-fixed-variant": "#004d66",
+                      "surface-dim": "#cbdbf5",
+                      "secondary": "#674bb5",
+                      "surface-container-lowest": "#ffffff",
+                      "on-secondary-container": "#3f1e8c",
+                      "on-background": "#0b1c30",
+                      "surface-container-high": "#dce9ff",
+                      "on-surface-variant": "#3f484e",
+                      "on-primary-fixed": "#001e2b"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "container-padding-desktop": "40px",
+                      "container-padding-mobile": "20px",
+                      "unit": "8px",
+                      "surface-gap": "16px",
+                      "gutter": "24px"
+              },
+              "fontFamily": {
+                      "headline-lg": ["Manrope"],
+                      "headline-lg-mobile": ["Manrope"],
+                      "body-md": ["Manrope"],
+                      "label-sm": ["JetBrains Mono"],
+                      "display-lg": ["Manrope"]
+              },
+              "fontSize": {
+                      "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                      "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                      "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                      "label-sm": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+                      "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }]
+              }
+            }
+          }
+        }
+    </script>
+<style>
+        body { background-color: #f8f9ff; }
+        .glass-input::-webkit-input-placeholder { color: #3f484e; opacity: 0.7; }
+        .glass-input:focus { box-shadow: 0 0 0 4px rgba(125,211,252,0.2); }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: rgba(190, 200, 206, 0.5); border-radius: 10px; }
+    </style>
+</head>
+<body class="antialiased overflow-hidden selection:bg-primary-container selection:text-on-primary-container">
+<!-- Ambient App Background Simulation (Layer 0) -->
+<div aria-hidden="true" class="fixed inset-0 z-0 bg-surface pointer-events-none">
+<div class="absolute top-[-10%] left-[-10%] w-[60vw] h-[60vw] rounded-full bg-primary-container/20 blur-[120px]"></div>
+<div class="absolute bottom-[-10%] right-[-10%] w-[70vw] h-[70vw] rounded-full bg-secondary-fixed/30 blur-[150px]"></div>
+<!-- Ghost UI underneath to enhance the blur effect -->
+<div class="absolute inset-0 opacity-20 p-8 grid grid-cols-3 gap-8">
+<div class="h-64 rounded-xl bg-white/50 border border-white/20 shadow-sm"></div>
+<div class="col-span-2 h-64 rounded-xl bg-white/50 border border-white/20 shadow-sm"></div>
+<div class="col-span-3 h-96 rounded-xl bg-white/50 border border-white/20 shadow-sm"></div>
+</div>
+</div>
+<!-- Modal Overlay Backdrop (Level 2 Context) -->
+<div class="fixed inset-0 z-50 flex items-center justify-center p-container-padding-mobile md:p-container-padding-desktop bg-surface/30 backdrop-blur-md">
+<!-- Main Modal Container (Level 2: 80% opacity, 32px blur, Ambient glow, 1px white border) -->
+<main class="relative w-full max-w-5xl max-h-[921px] bg-white/80 backdrop-blur-2xl rounded-xl border border-white/40 shadow-[0_8px_32px_rgba(125,211,252,0.12)] flex flex-col md:flex-row overflow-hidden animate-in fade-in zoom-in-95 duration-300">
+<!-- Light catch highlight -->
+<div class="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/80 to-transparent pointer-events-none"></div>
+<!-- Left Column: Interactive Form Flow -->
+<div class="flex-1 p-6 md:p-10 flex flex-col overflow-y-auto custom-scrollbar">
+<!-- Header & Close -->
+<header class="flex justify-between items-center mb-8 shrink-0">
+<div>
+<h1 class="font-headline-lg-mobile md:font-headline-lg text-headline-lg-mobile md:text-headline-lg text-primary">Confirmar Reserva</h1>
+<p class="font-body-md text-body-md text-on-surface-variant mt-1">Completa tus datos para finalizar.</p>
+</div>
+<button aria-label="Cerrar modal" class="w-10 h-10 rounded-full flex items-center justify-center bg-white/40 border border-white/20 text-on-surface hover:bg-white/60 transition-colors shadow-sm">
+<span class="material-symbols-outlined">close</span>
+</button>
+</header>
+<!-- Progress Indicator (Steps 1 & 2 completed, Step 3 active) -->
+<nav aria-label="Progreso de reserva" class="flex items-center gap-3 mb-10 shrink-0">
+<!-- Step 1 Complete -->
+<div class="flex items-center gap-2 font-label-sm text-label-sm text-primary">
+<div class="w-6 h-6 rounded-full bg-primary-container flex items-center justify-center text-on-primary">
+<span class="material-symbols-outlined text-[14px]">check</span>
+</div>
+<span class="hidden sm:inline">Servicio</span>
+</div>
+<div class="h-px flex-1 max-w-[40px] bg-primary-container/60"></div>
+<!-- Step 2 Complete -->
+<div class="flex items-center gap-2 font-label-sm text-label-sm text-primary">
+<div class="w-6 h-6 rounded-full bg-primary-container flex items-center justify-center text-on-primary">
+<span class="material-symbols-outlined text-[14px]">check</span>
+</div>
+<span class="hidden sm:inline">Fecha</span>
+</div>
+<div class="h-px flex-1 max-w-[40px] bg-primary-container/60"></div>
+<!-- Step 3 Active -->
+<div class="flex items-center gap-2 font-label-sm text-label-sm text-on-surface font-bold">
+<div class="w-6 h-6 rounded-full border-2 border-primary-container flex items-center justify-center text-primary bg-primary-container/10">
+                            3
+                        </div>
+<span>Tus Datos</span>
+</div>
+</nav>
+<!-- Form Fields (Understated glass fields) -->
+<form class="flex-1 flex flex-col gap-surface-gap shrink-0">
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-surface-gap">
+<!-- Input: Nombre -->
+<div class="flex flex-col gap-1.5">
+<label class="font-label-sm text-label-sm text-on-surface-variant ml-1" for="firstName">Nombre</label>
+<input class="glass-input w-full bg-white/40 border border-white/30 rounded-lg px-4 py-3 font-body-md text-body-md text-on-surface focus:outline-none focus:border-primary-container transition-all shadow-sm" id="firstName" placeholder="Ej. Ana" type="text"/>
+</div>
+<!-- Input: Apellido -->
+<div class="flex flex-col gap-1.5">
+<label class="font-label-sm text-label-sm text-on-surface-variant ml-1" for="lastName">Apellido</label>
+<input class="glass-input w-full bg-white/40 border border-white/30 rounded-lg px-4 py-3 font-body-md text-body-md text-on-surface focus:outline-none focus:border-primary-container transition-all shadow-sm" id="lastName" placeholder="Ej. Silva" type="text"/>
+</div>
+</div>
+<!-- Input: Email -->
+<div class="flex flex-col gap-1.5">
+<label class="font-label-sm text-label-sm text-on-surface-variant ml-1" for="email">Correo Electrónico</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/50">mail</span>
+<input class="glass-input w-full bg-white/40 border border-white/30 rounded-lg pl-12 pr-4 py-3 font-body-md text-body-md text-on-surface focus:outline-none focus:border-primary-container transition-all shadow-sm" id="email" placeholder="tu@correo.com" type="email"/>
+</div>
+</div>
+<!-- Input: Teléfono -->
+<div class="flex flex-col gap-1.5">
+<label class="font-label-sm text-label-sm text-on-surface-variant ml-1" for="phone">Teléfono Móvil</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant/50">call</span>
+<input class="glass-input w-full bg-white/40 border border-white/30 rounded-lg pl-12 pr-4 py-3 font-body-md text-body-md text-on-surface focus:outline-none focus:border-primary-container transition-all shadow-sm" id="phone" placeholder="+34 600 000 000" type="tel"/>
+</div>
+</div>
+<!-- Input: Notas -->
+<div class="flex flex-col gap-1.5 mb-4">
+<label class="font-label-sm text-label-sm text-on-surface-variant ml-1" for="notes">Notas Adicionales (Opcional)</label>
+<textarea class="glass-input w-full bg-white/40 border border-white/30 rounded-lg px-4 py-3 font-body-md text-body-md text-on-surface focus:outline-none focus:border-primary-container transition-all shadow-sm resize-none" id="notes" placeholder="Alergias, preferencias especiales..." rows="3"></textarea>
+</div>
+</form>
+<!-- Footer Actions -->
+<div class="mt-auto pt-6 border-t border-white/30 flex justify-between items-center shrink-0">
+<button class="px-6 py-2.5 rounded-lg border border-white/40 text-primary font-body-md text-body-md bg-transparent hover:bg-white/30 transition-all backdrop-blur-sm" type="button">
+                        Atrás
+                    </button>
+<!-- Primary Button: Solid Ice Blue, white text, subtle high-gloss gradient -->
+<button class="px-8 py-2.5 rounded-lg bg-primary-container text-on-primary font-body-md text-body-md font-bold shadow-sm hover:brightness-105 hover:shadow-md transition-all bg-gradient-to-b from-white/20 to-transparent flex items-center gap-2" type="button">
+                        Confirmar Cita
+                        <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</button>
+</div>
+</div>
+<!-- Right Column: Booking Summary (Level 1 Panel) -->
+<aside class="w-full md:w-[380px] bg-white/30 border-t md:border-t-0 md:border-l border-white/40 p-6 md:p-8 flex flex-col relative">
+<!-- Subtle divider glass effect for the side panel -->
+<div class="absolute inset-y-0 left-0 w-px bg-gradient-to-b from-white/10 via-white/40 to-white/10 hidden md:block pointer-events-none"></div>
+<h2 class="font-body-md text-body-md font-bold text-on-surface mb-6 flex items-center gap-2 border-b border-white/30 pb-4">
+<span class="material-symbols-outlined text-primary">receipt_long</span>
+                    Resumen de Cita
+                </h2>
+<!-- Summary Content -->
+<div class="flex flex-col gap-8 flex-1">
+<!-- Service Details -->
+<div class="flex gap-4 items-start group">
+<div class="w-12 h-12 rounded-xl bg-white/60 flex items-center justify-center text-primary border border-white/40 shadow-sm shrink-0 group-hover:bg-white/80 transition-colors">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">spa</span>
+</div>
+<div>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest mb-1 text-[10px]">Servicio Seleccionado</p>
+<p class="font-body-md text-body-md text-on-surface font-bold">Tratamiento Facial Láser</p>
+<p class="font-label-sm text-label-sm text-on-surface-variant mt-0.5">90 min • Cabina Privada</p>
+</div>
+</div>
+<!-- Glass Divider -->
+<div class="h-px w-full bg-gradient-to-r from-transparent via-white/30 to-transparent"></div>
+<!-- Specialist Details -->
+<div class="flex gap-4 items-center group">
+<img alt="Retrato de una dermatóloga profesional en una clínica luminosa" class="w-12 h-12 rounded-xl object-cover border border-white/50 shadow-sm shrink-0" data-alt="A professional headshot of a female dermatologist or aesthetician in a bright, modern, high-end medical spa. The lighting is soft, white, and high-key, creating an ethereal and sterile yet luxurious atmosphere. She is wearing a clean, minimalist clinical uniform. The background features subtle translucent glass textures and ice-blue accents to match the brand aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDo4yYZKuKnutqX09S4h5Ho0s8iu6zmli-Uw70WGAgtlHr1llxQaXPEODRJOaQToyomQFp-Z6WAnlRb3ocK6RdXqkK6vL15Khdo3KzogsibjxaySydHSbGkpLibUjXfeP8sAorXDOEQUvk1ksSs1NnGnmLqcpL7znDKRSMevB0KmITX1xSe3gXy04Z6SzGvahgyZVsiImm0q4uzqfwyh8DSB-wA4KdCTIuXjgQwp3B26H2xuavBbdl--EZ1_zrZR5LP0H-4B4O1GoST"/>
+<div>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest mb-1 text-[10px]">Especialista</p>
+<p class="font-body-md text-body-md text-on-surface font-bold">Dra. Valeria Torres</p>
+</div>
+</div>
+<!-- Glass Divider -->
+<div class="h-px w-full bg-gradient-to-r from-transparent via-white/30 to-transparent"></div>
+<!-- Date & Time Details (Highlighted) -->
+<div class="flex gap-4 items-start bg-primary-container/10 p-4 rounded-xl border border-primary-container/20">
+<div class="w-12 h-12 rounded-xl bg-primary-container/20 flex items-center justify-center text-primary border border-primary-container/30 shadow-sm shrink-0">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">event_upcoming</span>
+</div>
+<div>
+<p class="font-label-sm text-label-sm text-primary uppercase tracking-widest mb-1 text-[10px]">Fecha y Hora</p>
+<p class="font-body-md text-body-md text-on-surface font-bold">Viernes, 12 Noviembre</p>
+<p class="font-body-md text-body-md text-primary font-bold mt-0.5">14:30 - 16:00</p>
+</div>
+</div>
+</div>
+<!-- Price Total Footer -->
+<div class="mt-8 pt-6 border-t border-white/40 flex justify-between items-end shrink-0">
+<div>
+<p class="font-label-sm text-label-sm text-on-surface-variant mb-1">Total estimado</p>
+<p class="font-label-sm text-label-sm text-on-surface-variant/70 text-[10px]">Impuestos incluidos</p>
+</div>
+<p class="font-headline-lg-mobile md:font-headline-lg text-headline-lg-mobile md:text-headline-lg font-bold text-primary tracking-tight">
+                        $150.00
+                    </p>
+</div>
+<!-- Subtle trust badge -->
+<div class="mt-6 flex items-center justify-center gap-2 text-on-surface-variant/60">
+<span class="material-symbols-outlined text-[16px]">lock</span>
+<span class="font-label-sm text-label-sm text-[10px]">Reserva segura encriptada</span>
+</div>
+</aside>
+</main>
+</div>
+</body></html>

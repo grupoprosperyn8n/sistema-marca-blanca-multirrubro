@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Transformaciones - Glacier Luxury Spa &amp; Salon</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "surface-bright": "#f8f9ff",
+                        "primary": "#006686",
+                        "tertiary": "#576065",
+                        "on-tertiary-container": "#4c555a",
+                        "on-secondary-fixed-variant": "#4f319c",
+                        "primary-container": "#7dd3fc",
+                        "on-secondary-fixed": "#21005e",
+                        "on-primary-fixed": "#001e2b",
+                        "secondary-container": "#ab8ffe",
+                        "inverse-surface": "#213145",
+                        "inverse-primary": "#7bd1fa",
+                        "on-primary-container": "#005b78",
+                        "surface-tint": "#006686",
+                        "tertiary-fixed": "#dbe4ea",
+                        "surface-container-highest": "#d3e4fe",
+                        "on-surface-variant": "#3f484e",
+                        "surface-container-low": "#eff4ff",
+                        "on-error": "#ffffff",
+                        "background": "#f8f9ff",
+                        "on-tertiary-fixed": "#141d21",
+                        "surface": "#f8f9ff",
+                        "secondary": "#674bb5",
+                        "secondary-fixed-dim": "#cebdff",
+                        "tertiary-fixed-dim": "#bfc8ce",
+                        "error": "#ba1a1a",
+                        "outline-variant": "#bec8ce",
+                        "on-tertiary-fixed-variant": "#3f484d",
+                        "surface-container": "#e5eeff",
+                        "on-secondary": "#ffffff",
+                        "surface-variant": "#d3e4fe",
+                        "secondary-fixed": "#e8ddff",
+                        "on-surface": "#0b1c30",
+                        "error-container": "#ffdad6",
+                        "primary-fixed": "#c0e8ff",
+                        "on-secondary-container": "#3f1e8c",
+                        "primary-fixed-dim": "#7bd1fa",
+                        "on-primary-fixed-variant": "#004d66",
+                        "on-primary": "#ffffff",
+                        "tertiary-container": "#c1cad0",
+                        "surface-container-high": "#dce9ff",
+                        "inverse-on-surface": "#eaf1ff",
+                        "outline": "#6f787e",
+                        "on-background": "#0b1c30",
+                        "on-tertiary": "#ffffff",
+                        "surface-dim": "#cbdbf5",
+                        "surface-container-lowest": "#ffffff",
+                        "on-error-container": "#93000a"
+                    },
+                    borderRadius: {
+                        DEFAULT: "0.25rem",
+                        lg: "0.5rem",
+                        xl: "0.75rem",
+                        full: "9999px"
+                    },
+                    spacing: {
+                        "surface-gap": "16px",
+                        "container-padding-desktop": "40px",
+                        "gutter": "24px",
+                        "container-padding-mobile": "20px",
+                        "unit": "8px"
+                    },
+                    fontFamily: {
+                        "label-sm": ["JetBrains Mono"],
+                        "headline-lg": ["Manrope"],
+                        "display-lg": ["Manrope"],
+                        "headline-lg-mobile": ["Manrope"],
+                        "body-md": ["Manrope"]
+                    },
+                    fontSize: {
+                        "label-sm": ["12px", { lineHeight: "16px", fontWeight: "500" }],
+                        "headline-lg": ["32px", { lineHeight: "40px", letterSpacing: "-0.01em", fontWeight: "600" }],
+                        "display-lg": ["48px", { lineHeight: "56px", letterSpacing: "-0.02em", fontWeight: "700" }],
+                        "headline-lg-mobile": ["24px", { lineHeight: "32px", fontWeight: "600" }],
+                        "body-md": ["16px", { lineHeight: "24px", fontWeight: "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .glass-button {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(8px);
+        }
+        .glass-button:hover {
+            backdrop-filter: blur(16px);
+            background: rgba(255, 255, 255, 0.2);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background antialiased flex flex-col min-h-screen relative overflow-x-hidden">
+<!-- Decorative Background Elements -->
+<div class="fixed top-0 left-0 w-full h-full overflow-hidden -z-10 pointer-events-none">
+<div class="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] rounded-full bg-primary-container/20 blur-[100px]"></div>
+<div class="absolute top-[40%] -right-[10%] w-[40%] h-[40%] rounded-full bg-surface-container-high/40 blur-[80px]"></div>
+<div class="absolute -bottom-[20%] left-[20%] w-[60%] h-[60%] rounded-full bg-primary-fixed/30 blur-[120px]"></div>
+</div>
+<!-- TopNavBar -->
+<nav class="fixed top-0 w-full z-50 bg-white/60 dark:bg-surface-container-lowest/60 backdrop-blur-lg border-b border-white/20 shadow-sm transition-all duration-300" id="main-nav">
+<div class="flex justify-between items-center px-container-padding-mobile md:px-container-padding-desktop max-w-full h-20">
+<!-- Brand -->
+<a class="font-display-lg text-headline-lg-mobile md:text-display-lg tracking-tight text-primary flex items-center gap-2" href="#">
+                Glacier
+            </a>
+<!-- Desktop Nav Links -->
+<div class="hidden md:flex items-center gap-8 h-full">
+<a class="font-body-md text-body-md text-on-surface-variant hover:text-primary hover:bg-white/40 transition-all duration-300 h-full flex items-center px-4" href="#">Services</a>
+<a class="font-body-md text-body-md text-primary font-bold border-b-2 border-primary h-full flex items-center px-4 scale-95 transition-transform" href="#">Gallery</a>
+<a class="font-body-md text-body-md text-on-surface-variant hover:text-primary hover:bg-white/40 transition-all duration-300 h-full flex items-center px-4" href="#">Stylists</a>
+<a class="font-body-md text-body-md text-on-surface-variant hover:text-primary hover:bg-white/40 transition-all duration-300 h-full flex items-center px-4" href="#">Locations</a>
+<a class="font-body-md text-body-md text-on-surface-variant hover:text-primary hover:bg-white/40 transition-all duration-300 h-full flex items-center px-4" href="#">About</a>
+</div>
+<!-- Actions -->
+<div class="flex items-center gap-4">
+<button aria-label="Search" class="hidden md:flex p-2 rounded-full hover:bg-surface-container transition-colors text-on-surface-variant">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">search</span>
+</button>
+<button class="bg-primary hover:bg-primary/90 text-white font-body-md text-body-md px-6 py-2.5 rounded-full transition-all duration-300 shadow-sm hover:shadow hover:scale-105" style="background: linear-gradient(180deg, #7dd3fc 0%, #006686 100%);">
+                    Book Now
+                </button>
+<!-- Mobile Menu Toggle -->
+<button aria-label="Menu" class="md:hidden p-2 rounded-full text-on-surface-variant hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined">menu</span>
+</button>
+</div>
+</div>
+</nav>
+<!-- Main Content -->
+<main class="flex-grow pt-32 pb-24 px-container-padding-mobile md:px-container-padding-desktop w-full max-w-7xl mx-auto flex flex-col gap-surface-gap">
+<!-- Header Section -->
+<header class="text-center mb-12 flex flex-col items-center gap-4">
+<h1 class="font-display-lg text-headline-lg-mobile md:text-display-lg text-primary">Transformaciones</h1>
+<p class="font-body-md text-body-md text-on-surface-variant max-w-2xl">
+                Descubre el arte de la reinvención. Nuestra galería de transformaciones destaca la precisión y la visión de nuestros estilistas expertos.
+            </p>
+</header>
+<!-- Filters -->
+<div class="flex flex-wrap justify-center gap-4 mb-12">
+<button class="px-6 py-2 rounded-full font-label-sm text-label-sm bg-primary text-white shadow-sm transition-all duration-200">
+                Todos
+            </button>
+<button class="px-6 py-2 rounded-full font-label-sm text-label-sm glass-button text-primary hover:text-on-primary-container transition-all duration-200">
+                Coloración
+            </button>
+<button class="px-6 py-2 rounded-full font-label-sm text-label-sm glass-button text-primary hover:text-on-primary-container transition-all duration-200">
+                Corte y Estilo
+            </button>
+<button class="px-6 py-2 rounded-full font-label-sm text-label-sm glass-button text-primary hover:text-on-primary-container transition-all duration-200">
+                Tratamientos
+            </button>
+</div>
+<!-- Gallery Grid (Bento Style) -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-gutter">
+<!-- Item 1 (Large) -->
+<article class="glass-panel rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 md:col-span-2 group relative">
+<div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+<div class="flex h-[400px]">
+<div class="w-1/2 h-full relative">
+<span class="absolute top-4 left-4 z-20 bg-black/50 text-white font-label-sm text-label-sm px-3 py-1 rounded-full backdrop-blur-sm">Antes</span>
+<img alt="Before styling" class="w-full h-full object-cover" data-alt="A medium shot of a woman with dull, flat, medium-length brown hair before a salon treatment. She is standing in a brightly lit, modern luxury salon environment with white walls and soft, diffused natural lighting. The overall aesthetic is clean, medical-spa inspired, yet inviting. The color palette emphasizes neutral tones, soft grays, and bright whites, aligning with a high-end, airy glassmorphism UI style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBJ59hP6_HaBbpY4oq0IcKq7y0bPrNdEF1JWCap3GTloh0Dk8pL95HXxyNMK-lWWWjEwWWd6D3Gb4Hn7zC6croQ_m95uEU1imJ4VKWltFkCykSVkTm5VHq2s3BPTUJgX6F_DPFq18x7iZlKR9IvChemyOPk0Br1aXREkudu2ar4t9MLUpkEIXUSbRHZP7H_jf1hKOodu1mIslEzzC-zTVJCCEsevahHaRo3XXoiCLetVjqdZFDmkyEyYY-7jY9qnrmsxlIfxUCbv_Se"/>
+</div>
+<div class="w-1/2 h-full relative">
+<span class="absolute top-4 right-4 z-20 bg-primary/80 text-white font-label-sm text-label-sm px-3 py-1 rounded-full backdrop-blur-sm">Después</span>
+<img alt="After styling" class="w-full h-full object-cover" data-alt="A medium shot of the same woman, now with vibrant, glossy, voluminous blonde balayage hair after a luxury salon treatment. The lighting catches the brilliant highlights of her hair against the sterile, sophisticated background of the salon. The setting remains bright and minimalist, featuring subtle ice blue accents reflecting the premium brand identity. The image feels polished, airy, and highly professional." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAAHV_bQOqCl4VgXShAw5tLWvGAAPVWPbs8b9mwJIuZdPkxqBJval65nxg_2Gm6eryX5irv2P56Q6wKhqrtN3hmQlDo94A-c6VqO0QDiHdTH07I2oIBzEM1nSVTv2sQX9eMkutUX7xmPAeD-GF2fSJf3GNcf--ZFf-0DwcqBm6oxZUJk2A381xQqNWw58zA3jcXwgyCoR68Yd6Ym41ffGDy2IsUVs4uo6Mbr-Cz2CWldWMktAm-_nJrev88ubLwF7pkrnc4kGeAn9Rh"/>
+</div>
+</div>
+<div class="absolute bottom-0 left-0 w-full p-6 z-20 transform translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+<h3 class="font-headline-lg-mobile text-white mb-2">Balayage Glaciar</h3>
+<p class="font-body-md text-white/80">Transformación completa de color y tratamiento de brillo profundo.</p>
+<div class="mt-4 flex gap-2">
+<span class="bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-white font-label-sm text-label-sm border border-white/30">Coloración</span>
+<span class="bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-white font-label-sm text-label-sm border border-white/30">Tratamiento</span>
+</div>
+</div>
+</article>
+<!-- Item 2 -->
+<article class="glass-panel rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 group relative flex flex-col h-[400px]">
+<div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+<div class="flex-grow relative overflow-hidden">
+<!-- Interaction simulator for before/after slider effect (visual only for mockup) -->
+<div class="absolute inset-0 flex">
+<div class="w-1/2 h-full border-r border-white/50 relative overflow-hidden">
+<img alt="Before" class="absolute w-[200%] h-full max-w-none object-cover left-0" data-alt="Close up portrait of a person with unstyled, somewhat frizzy dark hair in a bright, modern setting. The lighting is soft and even, highlighting the need for a premium styling service. The background is slightly blurred but suggests a pristine, high-end white-label salon space. The overall tone is neutral, awaiting transformation, fitting perfectly within an ethereal, glassmorphism UI context." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCF-BTfOfqGut-xvSdsRi_8axD6bViK5FhqT0ZYPW5EzHEqMYGZL3-Txk9j3nIvSXSgzdefVdk5d--jamt54vIkbhs7zWnjMIDE4b0HnW19LgBweWW3VYfcSoDaW-FuzyuOE7PaDTMWxbRVwAqwdbARjaWiNPurylU7XDFqpE6QkTNuGuLli4v6KNZveJZteAubZ-bMs5rzjEP73IJ_nUwrIlpXnMNYmgckZSuy2WNkT824Jx_Z0nvJffWy9gW8EyUeaAF2pNc_ySGc"/>
+</div>
+<div class="w-1/2 h-full relative overflow-hidden">
+<img alt="After" class="absolute w-[200%] h-full max-w-none object-cover -left-full" data-alt="Close up portrait of the same person now sporting a sleek, expertly precision-cut bob that looks incredibly healthy and glossy. The bright, sterile-yet-inviting salon environment perfectly complements the crisp lines of the haircut. Subtle cool tones and ice-blue hints in the ambient lighting reinforce the luxury, professional brand identity of the spa." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD8-ob0R_wr5QtI84gJAYOjFWzgX_CtI6Aqy7nrla06WX7B_BFog84tz3_3RIceAgZfjsefHfMsGIVJweE91DGMWv3kigHpYd85GQG3VlqbhWDx-Y3XkJHQ5iPBqdXEh36GQBdsp7f4asAV1-7T5krE7rzMOs5FTYJ68WWWB-b8BathVVO4MsNfRVn83kzfQ4ezH5ogoVbZGuWweE445EQXZI0aA4hp-RowmD4nqFufq7oNPpmfSLwuCa5IXJ0phLrhvCqEbOrypU62"/>
+</div>
+</div>
+<div class="absolute inset-y-0 left-1/2 w-0.5 bg-white/80 shadow-[0_0_8px_rgba(255,255,255,0.8)] z-20"></div>
+</div>
+<div class="p-6 bg-white/40 backdrop-blur-md border-t border-white/20 relative z-20 group-hover:bg-white/60 transition-colors">
+<h3 class="font-headline-lg-mobile text-primary text-lg">Corte Precisión</h3>
+<p class="font-label-sm text-label-sm text-on-surface-variant mt-1">Reestructuración de estilo y saneamiento.</p>
+</div>
+</article>
+<!-- Item 3 -->
+<article class="glass-panel rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 group relative flex flex-col h-[400px]">
+<div class="flex-grow relative overflow-hidden rounded-t-xl">
+<img alt="Treatment result" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" data-alt="A macro shot of incredibly smooth, shiny, straight hair cascading down a back, demonstrating the results of a keratin treatment. The lighting is highly controlled, creating brilliant reflections on the hair strands. The background is a soft, out-of-focus pristine white and very light blue gradient, evoking a clean, high-tech beauty clinic atmosphere. The aesthetic matches a premium, airy UI style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBV-Wk3EuTCjO0tFjUTr56cHpG_8f-nj8XfK_ud8hOSxCPCoYk76bHrCL-6CXZ_5UCbqI8jiPrqTug5qxvPi5a9-qYLjXK5UIaMVqDaB61_nXpiXHl2bTx2xQha7GN6LhLbYb_UkebhqGL1JyUpDWunnnliH_ccF4p5dvHGekEe6ERJLzzFsP8h6nX7-Ajiws09R6dF3wiuEXLbrLA3U1sFNkrYH75qbQznuzHjOpBg-hHh4evksm0HRMv07PRxqvJ32_clfZFCNorW"/>
+<div class="absolute inset-0 bg-primary/10 mix-blend-overlay"></div>
+</div>
+<div class="p-6 bg-white/40 backdrop-blur-md border-t border-white/20 relative z-20">
+<div class="flex justify-between items-start">
+<div>
+<h3 class="font-headline-lg-mobile text-primary text-lg">Terapia de Seda</h3>
+<p class="font-label-sm text-label-sm text-on-surface-variant mt-1">Alisado orgánico y reparación profunda.</p>
+</div>
+<span class="material-symbols-outlined text-primary-container bg-primary/10 p-2 rounded-full" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+</div>
+</div>
+</article>
+<!-- Item 4 (Wide) -->
+<article class="glass-panel rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 md:col-span-2 group relative">
+<div class="flex flex-col sm:flex-row h-full">
+<div class="w-full sm:w-1/3 p-6 flex flex-col justify-center bg-white/50 backdrop-blur-md z-20 border-r border-white/20">
+<h3 class="font-headline-lg-mobile text-primary mb-3">Corrección de Color</h3>
+<p class="font-body-md text-on-surface-variant mb-6 text-sm">
+                            Proceso técnico de 6 horas para neutralizar tonos no deseados y lograr un rubio frío impecable sin comprometer la integridad del cabello.
+                        </p>
+<button class="flex items-center gap-2 font-label-sm text-label-sm text-primary hover:text-primary-container transition-colors group/btn">
+                            Ver Detalles del Proceso
+                            <span class="material-symbols-outlined text-sm group-hover/btn:translate-x-1 transition-transform">arrow_forward</span>
+</button>
+</div>
+<div class="w-full sm:w-2/3 flex h-[300px] sm:h-[400px]">
+<div class="w-1/2 h-full relative">
+<img alt="Before color correction" class="w-full h-full object-cover" data-alt="A portrait of a woman showing brassy, unevenly colored hair needing correction. She is seated in a modern salon chair with a minimalist white and glass background. The soft lighting emphasizes the current flaws in the hair color while maintaining a high-end, clean visual style. The overall feel is clinical yet luxurious, fitting a premium SaaS platform aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB8eNiUBVRXy63ze3126wfUJnPciH1HAGqtEWfvX6yyTqhrrD0-SwQzRKP5Z3lH1DaL4ZDXSwQBpJ1F-prafsUvjgoDLFSL9f7eT9SRj2OzghMppP72qssBFsrJSSPy6ZSfCyfLzV3RtqoFZ_XGF0jjALUP4gOIudwnK_tNNGJ9LBcapt3853HlM5Lz0tAO063tsAA_kiGjot9sVoaK2P_YZGUBrHVRyEhpPbzFsTD-MN_GCi4L0ToiJ1g8qmdufBxIcPFPowmlKSTT"/>
+</div>
+<div class="w-1/2 h-full relative">
+<img alt="After color correction" class="w-full h-full object-cover" data-alt="A portrait of the same woman now featuring a flawless, cool-toned platinum blonde hair color. The styling is elegant and smooth. The salon environment is bright, airy, and sophisticated, with subtle translucent glass elements and soft ice blue shadows enhancing the ethereal, high-end feel. The image perfectly embodies transformation within a luxury setting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDjt_8cLvuK0QuszZShZKUknEiY77JYkANR7LlKhto_V64auozXcP56CpIQ-A5sUDoOLO559wBL823n7C29R7t5rhQOVMnslOQABAQDwfhDvQEwtKxt5n2PhCeuyQnSLKYFaqtd5vXo2lEF2nswnss7cR4DXSRLumfAWFMBhOBtr5KcTegYmr0Hwzuc5qe2Qx9RwBLnHFuJmiVjeA6dS4sPL5SoaXSNVflIGwQ4Mp6k8fCAZeg5xdx02qFur2wHHhkzsun0xs6D9WrL"/>
+</div>
+</div>
+</div>
+</article>
+</div>
+<!-- Load More -->
+<div class="flex justify-center mt-8">
+<button class="px-8 py-3 rounded-full font-label-sm text-label-sm glass-button text-primary flex items-center gap-2 hover:bg-white/50 transition-all">
+                Cargar Más Galería
+                <span class="material-symbols-outlined text-sm">expand_more</span>
+</button>
+</div>
+</main>
+<!-- Footer -->
+<footer class="w-full mt-auto bg-surface-container-low dark:bg-surface-dim border-t border-outline-variant flat no shadows transition-all duration-200">
+<div class="grid grid-cols-1 md:grid-cols-4 gap-gutter px-container-padding-mobile md:px-container-padding-desktop py-12 max-w-7xl mx-auto">
+<div class="md:col-span-1 flex flex-col gap-4">
+<span class="font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface">Glacier</span>
+<p class="font-label-sm text-label-sm text-on-tertiary-container mt-2">
+                     Elevating beauty through precision and care.
+                 </p>
+</div>
+<div class="md:col-span-3 grid grid-cols-2 md:grid-cols-3 gap-8">
+<div class="flex flex-col gap-3">
+<h4 class="font-label-sm text-label-sm text-primary font-bold">Explore</h4>
+<a class="font-label-sm text-label-sm text-on-tertiary-container hover:text-primary hover:underline decoration-primary/30 transition-all duration-200" href="#">Privacy Policy</a>
+<a class="font-label-sm text-label-sm text-on-tertiary-container hover:text-primary hover:underline decoration-primary/30 transition-all duration-200" href="#">Terms of Service</a>
+</div>
+<div class="flex flex-col gap-3">
+<h4 class="font-label-sm text-label-sm text-primary font-bold">Company</h4>
+<a class="font-label-sm text-label-sm text-on-tertiary-container hover:text-primary hover:underline decoration-primary/30 transition-all duration-200" href="#">Careers</a>
+<a class="font-label-sm text-label-sm text-on-tertiary-container hover:text-primary hover:underline decoration-primary/30 transition-all duration-200" href="#">Press</a>
+</div>
+<div class="flex flex-col gap-3 col-span-2 md:col-span-1">
+<h4 class="font-label-sm text-label-sm text-primary font-bold">Connect</h4>
+<a class="font-label-sm text-label-sm text-on-tertiary-container hover:text-primary hover:underline decoration-primary/30 transition-all duration-200" href="#">Contact Us</a>
+</div>
+</div>
+<div class="col-span-1 md:col-span-4 mt-8 pt-8 border-t border-outline-variant/30 flex justify-between items-center flex-wrap gap-4">
+<span class="font-label-sm text-label-sm text-on-tertiary-container">
+                    © 2024 Glacier Luxury Spa &amp; Salon. All rights reserved.
+                </span>
+</div>
+</div>
+</footer>
+<script>
+        // Simple script to handle scroll effect on navbar
+        window.addEventListener('scroll', () => {
+            const nav = document.getElementById('main-nav');
+            if (window.scrollY > 20) {
+                nav.classList.add('shadow-md');
+                nav.classList.remove('shadow-sm');
+                nav.style.backgroundColor = 'rgba(255, 255, 255, 0.8)';
+            } else {
+                nav.classList.add('shadow-sm');
+                nav.classList.remove('shadow-md');
+                nav.style.backgroundColor = 'rgba(255, 255, 255, 0.6)';
+            }
+        });
+    </script>
+</body></html>

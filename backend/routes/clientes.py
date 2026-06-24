@@ -1,6 +1,7 @@
 """
 Rutas FastAPI para CLIENTES — /api/clientes
 Fase 3B: perfil cliente autenticado + citas propias.
+Fase 3C1: dry-run de reserva de turnos.
 """
 import sys
 from pathlib import Path
@@ -16,7 +17,6 @@ from auth.dependencies import get_current_user
 
 router = APIRouter(prefix="/api", tags=["clientes"])
 
-# ── Campos seguros que un cliente puede editar en su perfil ──
 _CAMPOS_EDITABLES_CLIENTE = {
     "NOMBRE_CLIENTE", "TELEFONO", "DOCUMENTO_IDENTIDAD",
     "CALLE_Y_N°", "LOCALIDAD", "PROVINCIA/PAIS", "CODIGO_POSTAL",
@@ -41,53 +41,36 @@ async def listar_clientes():
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 
 
-# ── GET /api/clientes/me ────────────────────────────────────────────
 @router.get("/clientes/me")
 async def get_my_cliente(user: dict = Depends(get_current_user)):
-    """Devuelve el registro CLIENTES vinculado al usuario autenticado.
-
-    El backend usa USUARIOS.CLIENTE para buscar en CLIENTES.
-    No confía en parámetros del frontend.
-    """
+    """Devuelve el registro CLIENTES vinculado al usuario autenticado."""
     cliente_id = (user.get("cliente") or "").strip()
     if not cliente_id:
         raise HTTPException(status_code=404, detail="No tenes un perfil de cliente vinculado.")
-
     try:
         at = AirtableClient()
         record = at.get_record("CLIENTES", cliente_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al obtener perfil: {str(e)}")
-
     fields = record.get("fields", {})
     return {"id": record["id"], "email": fields.get("EMAIL", user.get("email", "")), **fields}
 
 
-# ── PATCH /api/clientes/me ──────────────────────────────────────────
 @router.patch("/clientes/me")
 async def update_my_cliente(payload: dict, user: dict = Depends(get_current_user)):
-    """Actualiza solo campos seguros del perfil CLIENTES.
-
-    No permite editar email, rol, estado comercial, links ni campos admin.
-    Guarda en CLIENTES (no en USUARIOS directamente).
-    """
+    """Actualiza solo campos seguros del perfil CLIENTES."""
     cliente_id = (user.get("cliente") or "").strip()
     if not cliente_id:
         raise HTTPException(status_code=404, detail="No tenes un perfil de cliente vinculado.")
-
-    # Filtrar solo campos editables
     update_fields = {}
     for k, v in payload.items():
         if k in _CAMPOS_EDITABLES_CLIENTE:
             update_fields[k] = v
-
     if not update_fields:
         raise HTTPException(status_code=400, detail="No se enviaron campos editables validos.")
-
     try:
         at = AirtableClient()
         at.patch_record("CLIENTES", cliente_id, update_fields)
-        # Leer registro actualizado
         updated = at.get_record("CLIENTES", cliente_id)
         fields = updated.get("fields", {})
         return {
@@ -100,43 +83,30 @@ async def update_my_cliente(payload: dict, user: dict = Depends(get_current_user
         raise HTTPException(status_code=500, detail=f"Error al actualizar perfil: {str(e)}")
 
 
-# ── GET /api/clientes/me/citas ──────────────────────────────────────
 @router.get("/clientes/me/citas")
 async def get_my_citas(user: dict = Depends(get_current_user)):
-    """Devuelve las CITAS vinculadas al CLIENTE autenticado.
-
-    Filtra por backend usando USUARIOS.CLIENTE, no por parametro del frontend.
-    Separa en proximas e historial.
-    """
+    """Devuelve las CITAS vinculadas al CLIENTE autenticado."""
     cliente_id = (user.get("cliente") or "").strip()
     if not cliente_id:
         raise HTTPException(status_code=404, detail="No tenes un perfil de cliente vinculado.")
-
     try:
         at = AirtableClient()
-        # Buscar citas donde el campo CLIENTE contiene este cliente_id
         formula = "SEARCH('" + cliente_id + "', ARRAYJOIN({CLIENTE}))"
         records = at.list_records("CITAS", filter_formula=formula, by_name=True)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al obtener citas: {str(e)}")
-
     citas = []
     _campos_internos = {
-        "OBSERVACIONES_INTERNAS", "DIAGNOSTICO_PREVIO",
-        "REQUIERE_DIAGNOSTICO", "REQUIERE_CONSENTIMIENTO",
-        "CONSENTIMIENTO_FIRMADO", "REQUIERE_PRUEBA_ALERGIA",
-        "PRUEBA_ALERGIA_REALIZADA", "MOTIVO_CANCELACION",
-        "FECHA_CANCELACION", "CANCELADO_POR",
+        "OBSERVACIONES_INTERNAS", "DIAGNOSTICO_PREVIO", "REQUIERE_DIAGNOSTICO",
+        "REQUIERE_CONSENTIMIENTO", "CONSENTIMIENTO_FIRMADO", "REQUIERE_PRUEBA_ALERGIA",
+        "PRUEBA_ALERGIA_REALIZADA", "MOTIVO_CANCELACION", "FECHA_CANCELACION", "CANCELADO_POR",
     }
     for r in records:
         fields = r.get("fields", {})
         safe_fields = {k: v for k, v in fields.items() if k not in _campos_internos}
         citas.append({"id": r["id"], "createdTime": r.get("createdTime"), **safe_fields})
-
-    # Separar
     hoy = date.today().isoformat()
-    proximas = []
-    historial = []
+    proximas, historial = [], []
     for c in citas:
         estado = c.get("ESTADO_CITA", "")
         fecha = c.get("FECHA_CITA", "")
@@ -146,9 +116,139 @@ async def get_my_citas(user: dict = Depends(get_current_user)):
             proximas.append(c)
         else:
             historial.append(c)
-
     return {
         "total": len(citas),
         "proximas": sorted(proximas, key=lambda c: c.get("FECHA_CITA", "")),
         "historial": sorted(historial, key=lambda c: c.get("FECHA_CITA", ""), reverse=True),
+    }
+
+
+@router.post("/clientes/citas/dry-run")
+async def dry_run_reserva(payload: dict, user: dict = Depends(get_current_user)):
+    """Valida disponibilidad de turno SIN crear cita ni modificar slot.
+
+    FASE_3C1: Dry-run de reserva. No escribe en Airtable.
+    Payload: {slot_id, servicio_web_id, sucursal_id}
+    """
+    # 1. Validar rol CLIENTE
+    rol = (user.get("rol") or "").upper()
+    if rol != "CLIENTE":
+        raise HTTPException(status_code=403, detail="Solo clientes pueden reservar turnos.")
+
+    cliente_id = (user.get("cliente") or "").strip()
+    if not cliente_id:
+        raise HTTPException(status_code=404, detail="No tenes un perfil de cliente vinculado.")
+
+    slot_id = (payload.get("slot_id") or "").strip()
+    servicio_web_id = (payload.get("servicio_web_id") or "").strip()
+    sucursal_id = (payload.get("sucursal_id") or "").strip()
+    if not all([slot_id, servicio_web_id, sucursal_id]):
+        raise HTTPException(status_code=400,
+            detail="Faltan datos: slot_id, servicio_web_id y sucursal_id son requeridos.")
+
+    at = AirtableClient()
+    errores = []
+
+    # 2. Validar AGENDA_SLOTS
+    try:
+        slot = at.get_record("AGENDA_SLOTS", slot_id)
+        sfields = slot.get("fields", {})
+    except Exception:
+        raise HTTPException(status_code=404, detail=f"Slot {slot_id} no encontrado.")
+
+    estado_slot = (sfields.get("ESTADO_SLOT") or "").upper()
+    disponible_auto = (sfields.get("DISPONIBLE_AUTO") or "").upper()
+    permite_web = sfields.get("PERMITE_RESERVA_WEB", False)
+    activo = sfields.get("ACTIVO", False)
+    capacidad = sfields.get("CAPACIDAD_DISPONIBLE", 0)
+
+    if estado_slot != "DISPONIBLE":
+        errores.append(f"Slot no disponible (estado: {estado_slot}).")
+    if disponible_auto != "SI":
+        errores.append("Slot marcado como no disponible automaticamente.")
+    if not permite_web:
+        errores.append("Slot no permite reserva web.")
+    if not activo:
+        errores.append("Slot inactivo.")
+    if capacidad is not None and capacidad <= 0:
+        errores.append("Slot sin capacidad disponible.")
+
+    # 3. Validar SERVICIOS_WEB
+    try:
+        sw_record = at.get_record("SERVICIOS_WEB", servicio_web_id)
+        sw_fields = sw_record.get("fields", {})
+    except Exception:
+        raise HTTPException(status_code=404, detail=f"Servicio web {servicio_web_id} no encontrado.")
+
+    if not sw_fields.get("RESERVA_ONLINE_HABILITADA", False):
+        errores.append("El servicio no esta habilitado para reserva online.")
+    if not sw_fields.get("ACTIVO_EN_WEB", False):
+        errores.append("El servicio no esta activo en web.")
+
+    svc_name = sw_fields.get("NOMBRE_PUBLICO_SERVICIO", "Sin nombre")
+    svc_linked = sw_fields.get("SERVICIO")
+    svc_id = svc_linked[0] if isinstance(svc_linked, list) and svc_linked else str(svc_linked) if svc_linked else ""
+    precio = sw_fields.get("PRECIO_WEB")
+
+    # 4. Validar SUCURSALES
+    try:
+        suc_record = at.get_record("SUCURSALES", sucursal_id)
+        suc_fields = suc_record.get("fields", {})
+    except Exception:
+        raise HTTPException(status_code=404, detail=f"Sucursal {sucursal_id} no encontrada.")
+
+    if not suc_fields.get("ACTIVO", False):
+        errores.append("La sucursal no esta activa.")
+    suc_name = suc_fields.get("NOMBRE_SUCURSAL", "Sin nombre")
+
+    # 5. Validar conflicto de slot
+    try:
+        formula = (
+            f"AND({{AGENDA_SLOT}}='{slot_id}', "
+            "OR({ESTADO_CITA}='CONFIRMADA', {ESTADO_CITA}='PENDIENTE_CONFIRMACION', "
+            "{ESTADO_CITA}='EN_CURSO'))"
+        )
+        existing = at.list_records("CITAS", filter_formula=formula, by_name=True, page_size=1)
+    except Exception:
+        existing = []
+    if existing:
+        errores.append("El slot ya tiene una cita activa (CONFIRMADA/PENDIENTE/EN_CURSO).")
+
+    # 6. Responder
+    fecha = sfields.get("FECHA_SLOT", "")
+    hora_ini = sfields.get("HORA_INICIO", "")
+    hora_fin = sfields.get("HORA_FIN", "")
+    duracion = sfields.get("DURACION_MINUTOS", "")
+    disponible = len(errores) == 0
+
+    return {
+        "dry_run": True,
+        "disponible": disponible,
+        "errores": errores if errores else None,
+        "detalle": {
+            "cliente_id": cliente_id,
+            "slot": {
+                "id": slot_id,
+                "fecha": fecha,
+                "hora_inicio": hora_ini,
+                "hora_fin": hora_fin,
+                "duracion_minutos": duracion,
+            },
+            "servicio": {
+                "id": servicio_web_id,
+                "nombre": svc_name,
+                "servicio_canonico_id": svc_id or None,
+                "precio_web": precio,
+            },
+            "sucursal": {
+                "id": sucursal_id,
+                "nombre": suc_name,
+            },
+        },
+        "mensaje": (
+            "Turno disponible. Listo para confirmar en la proxima etapa."
+            if disponible else
+            "No se puede reservar: " + "; ".join(errores)
+        ),
+        "nota": "Ningun registro fue creado ni modificado. Esto es un dry-run.",
     }

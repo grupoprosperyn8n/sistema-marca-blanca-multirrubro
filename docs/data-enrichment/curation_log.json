@@ -1,0 +1,283 @@
+{
+  "stats": {
+    "PATCH": 20,
+    "POST": 0,
+    "DELETE": 0,
+    "ERRORS": [
+      "SERVICIOS_WEB/recZSobZTjmUHekNR: HTTP Error 422: Unprocessable Entity",
+      "SERVICIOS_WEB/recZzMBF8gkvUw6aV: HTTP Error 422: Unprocessable Entity",
+      "SERVICIOS_WEB/rec5N2yqnAO56xRGI: HTTP Error 422: Unprocessable Entity",
+      "SERVICIOS_WEB/recaCdDsAXkDWPYEe: HTTP Error 422: Unprocessable Entity",
+      "SERVICIOS_WEB/recVWoL3U1Sp1nTfo: HTTP Error 422: Unprocessable Entity",
+      "SERVICIOS_WEB/recZeFnW6u0SaT30q: HTTP Error 422: Unprocessable Entity"
+    ]
+  },
+  "changes": [
+    {
+      "table": "CONFIGURACION_PUBLICA",
+      "record_id": "rec1zoioWFOlduBPW",
+      "field": "TEXTO_CONFIGURACION",
+      "old": "→",
+      "new": "BellezaPro Demo"
+    },
+    {
+      "table": "CONFIGURACION_PUBLICA",
+      "record_id": "recdZJ015XpJYfWdG",
+      "field": "TEXTO_CONFIGURACION",
+      "old": "→",
+      "new": "Av. Santa Fe 1234, Palermo, Buenos Aires"
+    },
+    {
+      "table": "CONFIGURACION_PUBLICA",
+      "record_id": "rectCmtXu2Y01Xd72",
+      "field": "COLOR_HEX_CONFIGURACION",
+      "old": "→",
+      "new": "#006686"
+    },
+    {
+      "table": "CONFIGURACION_PUBLICA",
+      "record_id": "recPgRw2Zv0Jgta9G",
+      "field": "COLOR_HEX_CONFIGURACION",
+      "old": "→",
+      "new": "#7DD3FC"
+    },
+    {
+      "table": "CONFIGURACION_PUBLICA",
+      "record_id": "recYA2kRGKg7vAQLU",
+      "field": "COLOR_HEX_CONFIGURACION",
+      "old": "→",
+      "new": "#006686"
+    },
+    {
+      "table": "CONFIGURACION_PUBLICA",
+      "record_id": "recW1zILXkwEGhMEF",
+      "field": "COLOR_HEX_CONFIGURACION",
+      "old": "→",
+      "new": "#006686"
+    },
+    {
+      "table": "CONFIGURACION_PUBLICA",
+      "record_id": "recqyhpSXK3bpnu6b",
+      "field": "COLOR_HEX_CONFIGURACION",
+      "old": "→",
+      "new": "#7DD3FC"
+    },
+    {
+      "table": "CONFIGURACION_PUBLICA",
+      "record_id": "rec422fhYeILvBD7g",
+      "field": "TEXTO_CONFIGURACION",
+      "old": "→",
+      "new": "contacto@bellezapro-demo.com"
+    },
+    {
+      "table": "CONFIGURACION_PUBLICA",
+      "record_id": "recX86MxrS32X22de",
+      "field": "TEXTO_CONFIGURACION",
+      "old": "→",
+      "new": "+54 9 11 4567-8900"
+    },
+    {
+      "table": "CONFIGURACION_PUBLICA",
+      "record_id": "reczp4JodWbQYASqC",
+      "field": "TEXTO_CONFIGURACION",
+      "old": "→",
+      "new": "Descubrí servicios de belleza, bienestar y estilo en BellezaPro Demo. Reservá tu turno online."
+    },
+    {
+      "table": "CONFIGURACION_PUBLICA",
+      "record_id": "recKzakvK13cibiIv",
+      "field": "TEXTO_CONFIGURACION",
+      "old": "→",
+      "new": "BellezaPro Demo — Tu espacio de cuidado y estilo"
+    },
+    {
+      "table": "CONFIGURACION_PUBLICA",
+      "record_id": "recuE8cYfORGTwbqf",
+      "field": "TEXTO_CONFIGURACION",
+      "old": "→",
+      "new": "Tu belleza, nuestra pasión"
+    },
+    {
+      "table": "SUCURSALES",
+      "record_id": "rec7xd2l4OBLQuBJL",
+      "field": "VISIBILIDAD_WEB",
+      "old": "PUBLICA",
+      "new": "SOLO_INTERNA"
+    },
+    {
+      "table": "SUCURSALES",
+      "record_id": "rec9eQyuzpZjlDrkY",
+      "field": "VISIBILIDAD_WEB",
+      "old": "PUBLICA",
+      "new": "SOLO_INTERNA"
+    },
+    {
+      "table": "SUCURSALES",
+      "record_id": "recDdt4tRHc9MAWVs",
+      "field": "VISIBILIDAD_WEB",
+      "old": "PUBLICA",
+      "new": "SOLO_INTERNA"
+    },
+    {
+      "table": "SUCURSALES",
+      "record_id": "rechfQcnpzfB4940z",
+      "field": "VISIBILIDAD_WEB",
+      "old": "PUBLICA",
+      "new": "SOLO_INTERNA"
+    },
+    {
+      "table": "SUCURSALES",
+      "record_id": "reclv1Do4UJZpypWC",
+      "field": "VISIBILIDAD_WEB",
+      "old": "PUBLICA",
+      "new": "SOLO_INTERNA"
+    },
+    {
+      "table": "SUCURSALES",
+      "record_id": "recmPQbhvSDKJqxxw",
+      "field": "VISIBILIDAD_WEB",
+      "old": "PUBLICA",
+      "new": "SOLO_INTERNA"
+    },
+    {
+      "table": "SUCURSALES",
+      "record_id": "recqeQR5WIDXNPiwM",
+      "field": "VISIBILIDAD_WEB",
+      "old": "PUBLICA",
+      "new": "SOLO_INTERNA"
+    },
+    {
+      "table": "SUCURSALES",
+      "record_id": "recu3OJcjBmlii57P",
+      "field": "ENRIQUECER",
+      "old": "previo",
+      "new": "completo"
+    },
+    {
+      "table": "SERVICIOS_WEB",
+      "record_id": "recZSobZTjmUHekNR",
+      "field": "DESCRIPCION_WEB",
+      "old": "",
+      "new": "Corte personalizado con tijera y navaja. Incluye lavado, acondicionador y brushing profesional."
+    },
+    {
+      "table": "SERVICIOS_WEB",
+      "record_id": "recZSobZTjmUHekNR",
+      "field": "DURACION_MINUTOS_WEB",
+      "old": "",
+      "new": "45"
+    },
+    {
+      "table": "SERVICIOS_WEB",
+      "record_id": "recZSobZTjmUHekNR",
+      "field": "CATEGORIA_WEB",
+      "old": "",
+      "new": "Cabello"
+    },
+    {
+      "table": "SERVICIOS_WEB",
+      "record_id": "recZzMBF8gkvUw6aV",
+      "field": "DESCRIPCION_WEB",
+      "old": "",
+      "new": "Corte de caballero clásico y moderno con técnicas de tijera y máquina. Incluye lavado."
+    },
+    {
+      "table": "SERVICIOS_WEB",
+      "record_id": "recZzMBF8gkvUw6aV",
+      "field": "DURACION_MINUTOS_WEB",
+      "old": "",
+      "new": "30"
+    },
+    {
+      "table": "SERVICIOS_WEB",
+      "record_id": "recZzMBF8gkvUw6aV",
+      "field": "CATEGORIA_WEB",
+      "old": "",
+      "new": "Cabello"
+    },
+    {
+      "table": "SERVICIOS_WEB",
+      "record_id": "rec5N2yqnAO56xRGI",
+      "field": "DESCRIPCION_WEB",
+      "old": "",
+      "new": "Coloración profesional completa con productos de alta calidad. Consultá por tonos y tendencias."
+    },
+    {
+      "table": "SERVICIOS_WEB",
+      "record_id": "rec5N2yqnAO56xRGI",
+      "field": "DURACION_MINUTOS_WEB",
+      "old": "",
+      "new": "90"
+    },
+    {
+      "table": "SERVICIOS_WEB",
+      "record_id": "rec5N2yqnAO56xRGI",
+      "field": "CATEGORIA_WEB",
+      "old": "",
+      "new": "Cabello"
+    },
+    {
+      "table": "SERVICIOS_WEB",
+      "record_id": "recaCdDsAXkDWPYEe",
+      "field": "DESCRIPCION_WEB",
+      "old": "",
+      "new": "Manicuría tradicional con limado, cutículas y esmaltado a elección. Manos suaves y cuidadas."
+    },
+    {
+      "table": "SERVICIOS_WEB",
+      "record_id": "recaCdDsAXkDWPYEe",
+      "field": "DURACION_MINUTOS_WEB",
+      "old": "",
+      "new": "40"
+    },
+    {
+      "table": "SERVICIOS_WEB",
+      "record_id": "recaCdDsAXkDWPYEe",
+      "field": "CATEGORIA_WEB",
+      "old": "",
+      "new": "Manos y Pies"
+    },
+    {
+      "table": "SERVICIOS_WEB",
+      "record_id": "recVWoL3U1Sp1nTfo",
+      "field": "DESCRIPCION_WEB",
+      "old": "",
+      "new": "Pedicuría relajante con exfoliación, hidratación profunda y esmaltado. Experiencia SPA para tus pies."
+    },
+    {
+      "table": "SERVICIOS_WEB",
+      "record_id": "recVWoL3U1Sp1nTfo",
+      "field": "DURACION_MINUTOS_WEB",
+      "old": "",
+      "new": "50"
+    },
+    {
+      "table": "SERVICIOS_WEB",
+      "record_id": "recVWoL3U1Sp1nTfo",
+      "field": "CATEGORIA_WEB",
+      "old": "",
+      "new": "Manos y Pies"
+    },
+    {
+      "table": "SERVICIOS_WEB",
+      "record_id": "recZeFnW6u0SaT30q",
+      "field": "DESCRIPCION_WEB",
+      "old": "",
+      "new": "Alisado profesional con keratina de grado premium. Resultado sedoso, sin frizz por meses."
+    },
+    {
+      "table": "SERVICIOS_WEB",
+      "record_id": "recZeFnW6u0SaT30q",
+      "field": "DURACION_MINUTOS_WEB",
+      "old": "",
+      "new": "120"
+    },
+    {
+      "table": "SERVICIOS_WEB",
+      "record_id": "recZeFnW6u0SaT30q",
+      "field": "CATEGORIA_WEB",
+      "old": "",
+      "new": "Cabello"
+    }
+  ]
+}
