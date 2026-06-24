@@ -1,8 +1,8 @@
 # REPORTE DE BUGS — Fase 1: Auditoría Frontend
 
-> **Proyecto:** Gestión de Salones de Belleza  
-> **Fecha:** 2026-06-02  
-> **Modo:** SOLO REPORTE — sin modificar archivos  
+> **Proyecto:** Gestión de Salones de Belleza
+> **Fecha:** 2026-06-02
+> **Modo:** SOLO REPORTE — sin modificar archivos
 > **Base Airtable:** `app93Vhy56KrxNhwe`
 
 ---
@@ -24,7 +24,7 @@ Se analizaron **3 archivos fuente** (`static/index.html`, `static/api.js`, `cont
 
 ### CRIT-1: Citas — Linked Records sin Resolver (IDs crudos)
 
-**Archivo:** `index.html:1121-1122, 1133-1134, 1223-1224, 1234-1235`  
+**Archivo:** `index.html:1121-1122, 1133-1134, 1223-1224, 1234-1235`
 **Vistas afectadas:** Dashboard, Citas
 
 **Síntoma:** Las citas muestran IDs de Airtable (`recMB7MOzw1xSaWvX`) en lugar de nombres reales de cliente y servicio.
@@ -64,7 +64,7 @@ function resolveLinked(arr, map) {
 
 ### CRIT-2: Servicios — Valor del Servicio muestra $0
 
-**Archivo:** `index.html:1258, 1271`  
+**Archivo:** `index.html:1258, 1271`
 **Vista afectada:** Servicios
 
 **Síntoma:** Todas las cards de servicios muestran `$0` como precio.
@@ -79,7 +79,7 @@ El campo manual correcto es `'Valor Hora Hombre'` (campo #11 del contrato), que 
 
 ### CRIT-3: Dashboard — "Clientes Más Frecuentes" Placeholder Fijo
 
-**Archivo:** `index.html:1145`  
+**Archivo:** `index.html:1145`
 **Vista afectada:** Dashboard
 
 **Síntoma:** La sección "🏆 Clientes Más Frecuentes" siempre muestra "Cargando datos históricos..." sin reemplazarse nunca con datos reales.
@@ -106,12 +106,12 @@ const topClientes = Object.entries(clienteFrecuencia)
 
 ### ALT-1: Clientes — Columnas Huérfanas en Tabla Desktop
 
-**Archivo:** `index.html:1190, 1192`  
+**Archivo:** `index.html:1190, 1192`
 **Vista afectada:** Clientes (desktop)
 
 **Síntoma:** La tabla desktop de clientes tiene 11 `<th>` pero solo 8 `<td>` por fila. Las columnas "Última", "Total Gastado" y "Estado" aparecen duplicadas.
 
-**Causa raíz:**  
+**Causa raíz:**
 - `<thead>` (línea 1192): `Cliente | Teléfono | Email | Visitas | Última | Gasto | Estado | Acciones | Última | Total Gastado | Estado` = 11 columnas
 - `<tr>` (línea 1190): `Nombre | Teléfono | Email | - | - | - | Estado | Acciones` = 8 columnas
 
@@ -125,7 +125,7 @@ Y cargar los datos reales de visitas/última/gasto desde `Historial de Citas` y 
 
 ### ALT-2: Caja — Filtro de Ingresos No Captura Todos los Tipos
 
-**Archivo:** `index.html:1338-1339, 1439`  
+**Archivo:** `index.html:1338-1339, 1439`
 **Vistas afectadas:** Caja, Reportes
 
 **Síntoma:** Los totales de ingresos en Caja y Reportes solo cuentan transacciones marcadas explícitamente como `'Ingresos'`. Se pierden los marcados como `'Cobro Servicio'`, `'Cobro Deuda'`, `'Venta Productos'`.
@@ -134,7 +134,7 @@ Y cargar los datos reales de visitas/última/gasto desde `Historial de Citas` y 
 
 **Opciones del campo `Ingresos` (contrato, campo #14):**
 - `Ingresos` ✅ capturado
-- `Cobro Servicio` ❌ no capturado  
+- `Cobro Servicio` ❌ no capturado
 - `Cobro Deuda` ❌ no capturado
 - `Venta Productos` ❌ no capturado
 - `Egresos` → correctamente excluido
@@ -157,7 +157,7 @@ const esIngreso = (r) => !(r.fields['Ingresos'] || []).includes('Egresos');
 
 **Causa raíz:** `filterHoy = IS_SAME({Fecha de Venta}, TODAY(), "day")` — filtro duro que limita a hoy. No hay selector de fecha ni opción "ver todos".
 
-**Solución:** 
+**Solución:**
 1. Agregar un selector de fecha o rango de fechas en la vista Caja
 2. Por defecto mostrar "últimos 7 días" en lugar de solo hoy
 3. Agregar botones "Hoy | Semana | Mes | Todo"
@@ -220,7 +220,7 @@ return `...<div class="prod-cat">${escHtml(cat)}</div>...`;
 
 **Causa raíz:** `'Foto del Producto'` no está en el array `fields`. Tampoco hay lógica para renderizar `multipleAttachments` en la card.
 
-**Solución:** 
+**Solución:**
 1. Agregar `'Foto del Producto'` al array `fields`
 2. Procesar el attachment en la card:
 ```javascript
@@ -239,7 +239,7 @@ const imgHtml = imgUrl ? `<img src="${imgUrl}" alt="${name}" class="prod-img">` 
 
 **Causa raíz:** `renderDashboard()` no hace distinción entre "API exitosa con 0 registros" (negocio nuevo/sin datos hoy) y "API falló" (el catch captura el error pero ya se renderizaron los KPIs vacíos).
 
-**Solución:** 
+**Solución:**
 1. Agregar un flag `dataLoaded` que solo se pone `true` si las llamadas API fueron exitosas
 2. Si `dataLoaded && totalRecords === 0`, mostrar mensaje "Sin actividad hoy — ¡comienza agregando tu primera cita!"
 3. Si `!dataLoaded`, mantener el estado de loading/error
@@ -268,7 +268,7 @@ const imgHtml = imgUrl ? `<img src="${imgUrl}" alt="${name}" class="prod-img">` 
 - "Calculando desde datos del mes..." (línea 1453)
 - "📊 Ingresos vs Gastos — Últimos 30 días" (línea 1460)
 
-**Solución:** 
+**Solución:**
 1. Calcular servicios más frecuentes desde los datos de citas del mes
 2. Renderizar un chart simple con canvas o SVG inline para ingresos vs gastos
 
@@ -400,3 +400,15 @@ console.log('🏪 Salón Pro — Conectado a Airtable (app93Vhy56KrxNhwe)');
 ---
 
 *Reporte generado por Docs / Progress Manager — Fase Maestra Completa.*
+
+---
+
+## 2026-06-24 — FIXED: `/api/clientes/me/citas` retornaba `total: 0`
+
+**Estado:** Cerrado en commit `2678c30`.
+
+**Causa raíz:** Airtable REST devuelve linked records como IDs (`rec...`). El backend comparaba el nombre visible del cliente contra el campo `CLIENTE` de CITAS, que en realidad venía como `['recE9NNLvCgpOFxZU']`.
+
+**Fix:** `backend/routes/clientes.py` ahora normaliza linked-record fields y filtra por el CLIENTE record ID real. También se reemplazaron chequeos de conflicto dependientes de `page_size`/fórmulas frágiles por validación contra CITAS activas.
+
+**QA:** Railway `/api/clientes/me/citas` responde `200` con `total=6`, `proximas=3`, `historial=3` para el usuario QA. Cancelar/reprogramar pasó QA mutante con fixtures restaurados.

@@ -1,12 +1,16 @@
 {
   "project": "sistema-marca-blanca-multirrubro",
-  "fase_actual": "FASE_3C2 — CERRADA",
-  "fase_siguiente": "FASE_3C3/3D — Cancelación/Reprogramación o Portal Profesional (pendiente)",
+  "fase_actual": "FASE_3C3 — CERRADA",
+  "fase_siguiente": "FASE_3D — Portal Profesional / Notificaciones n8n (pendiente)",
   "tareas": {
     "FASE_3B_PORTAL_CLIENTE": {
       "status": "completed",
       "closed_at": "2026-06-23",
-      "commits": ["3a2ccfe", "6a24163", "215a7a2"],
+      "commits": [
+        "3a2ccfe",
+        "6a24163",
+        "215a7a2"
+      ],
       "deliverables": [
         "backend/routes/clientes.py",
         "backend/auth/security.py",
@@ -19,7 +23,9 @@
     "FASE_3C2_CONFIRMACION_REAL": {
       "status": "completed",
       "closed_at": "2026-06-24",
-      "commits": ["215a7a2"],
+      "commits": [
+        "215a7a2"
+      ],
       "deliverables": [
         "backend/routes/clientes.py (endpoint confirmar)",
         "frontend/src/components/ReservaTurnoModal.jsx (botón Confirmar)"
@@ -29,15 +35,54 @@
         "doble_confirmacion": "REJECTED_OK",
         "sin_auth": "401_PASS",
         "rol_no_cliente": "403_PASS",
-        "citas_creadas": ["recNs56fLrTNwUapu", "recntUAKMplMksSOz"],
-        "slots_reservados": ["rec6BySZS6eFHSz2c", "rec8aizNCf4PNWMCk"]
+        "citas_creadas": [
+          "recNs56fLrTNwUapu",
+          "recntUAKMplMksSOz"
+        ],
+        "slots_reservados": [
+          "rec6BySZS6eFHSz2c",
+          "rec8aizNCf4PNWMCk"
+        ]
       },
       "smoke_passed": true,
       "secrets_free": true
+    },
+    "FASE_3C3_CANCELAR_REPROGRAMAR": {
+      "status": "completed",
+      "closed_at": "2026-06-24",
+      "commits": [
+        "2678c30"
+      ],
+      "deliverables": [
+        "backend/routes/clientes.py (/me/citas por linked ID, cancelar, reprogramar, rollback compensatorio)"
+      ],
+      "qa_results": {
+        "me_citas": "PASS_200_TOTAL_6",
+        "cancelar_sin_auth": "401_PASS",
+        "cancelar_cita_ajena": "403_PASS",
+        "cancelar_cita_propia": "200_PASS_SLOT_LIBERADO",
+        "reprogramar_slot_ocupado": "409_PASS",
+        "reprogramar_slot_valido": "200_PASS_SWAP_VERIFICADO",
+        "fixtures_restaurados": "PASS"
+      },
+      "smoke_passed": true,
+      "secrets_free": true,
+      "deploy": {
+        "backend_railway": "PASS_/api/clientes/me/citas_TOTAL_6",
+        "frontend_surge": [
+          "https://belleza-demo.surge.sh",
+          "https://sistema-multirrubro-demo.surge.sh",
+          "https://bellezapro-demo.surge.sh"
+        ]
+      }
     }
   },
   "deploys_activos": {
     "backend": "https://earnest-comfort-production-3d75.up.railway.app",
-    "frontend": "https://sistema-multirrubro-demo.surge.sh"
+    "frontend": "https://sistema-multirrubro-demo.surge.sh",
+    "frontend_variantes": [
+      "https://belleza-demo.surge.sh",
+      "https://bellezapro-demo.surge.sh"
+    ]
   }
 }
