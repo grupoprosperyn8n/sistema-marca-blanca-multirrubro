@@ -7,6 +7,91 @@ import SectionHeader from "../components/ui/SectionHeader";
 
 const API = import.meta.env.VITE_API_BASE_URL || "";
 
+function todayISO() {
+  const now = new Date();
+  const offset = now.getTimezoneOffset();
+  return new Date(now.getTime() - offset * 60000).toISOString().slice(0, 10);
+}
+
+function formatDateLabel(iso) {
+  if (!iso) return "";
+  const [year, month, day] = String(iso).split("-").map(Number);
+  const date = new Date(year, month - 1, day);
+  return date.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" });
+}
+
+function formatShortDate(iso) {
+  if (!iso) return "";
+  const [year, month, day] = String(iso).split("-").map(Number);
+  const date = new Date(year, month - 1, day);
+  return date.toLocaleDateString("es-AR", { weekday: "short", day: "numeric", month: "short" });
+}
+
+function getLinkedIds(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+function normalizeTime(raw) {
+  return String(raw || "").slice(0, 5);
+}
+
+function getServiceDuration(servicio) {
+  const raw = servicio?.DURACION_MINUTOS_WEB ?? servicio?.DURACION_MINUTOS ?? servicio?.duracion_minutos;
+  const value = Number(raw);
+  return Number.isFinite(value) && value > 0 ? value : null;
+}
+
+function normalizeAvailableSlots(slotsRaw, sucursal, servicio) {
+  const selectedSucursalId = sucursal?.id;
+  const minDuration = getServiceDuration(servicio);
+  const today = todayISO();
+  const byVisibleSlot = new Map();
+
+  slotsRaw
+    .filter((slot) => {
+      const estado = String(slot.ESTADO_SLOT || "").toUpperCase();
+      const capacidad = Number(slot.CAPACIDAD_DISPONIBLE || 0);
+      const fecha = String(slot.FECHA_SLOT || "");
+      const sucursales = getLinkedIds(slot.SUCURSAL);
+      const duracion = Number(slot.DURACION_MINUTOS || 0);
+
+      if (estado !== "DISPONIBLE") return false;
+      if (capacidad <= 0) return false;
+      if (slot.PERMITE_RESERVA_WEB === false || slot.ACTIVO === false) return false;
+      if (!fecha || fecha < today) return false;
+      if (selectedSucursalId && !sucursales.includes(selectedSucursalId)) return false;
+      if (minDuration && duracion && duracion < minDuration) return false;
+      return true;
+    })
+    .forEach((slot) => {
+      const fecha = String(slot.FECHA_SLOT || "");
+      const horaInicio = normalizeTime(slot.HORA_INICIO);
+      const horaFin = normalizeTime(slot.HORA_FIN);
+      const key = `${fecha}|${horaInicio}|${horaFin}|${selectedSucursalId || getLinkedIds(slot.SUCURSAL).join(",")}`;
+      const capacidad = Number(slot.CAPACIDAD_DISPONIBLE || 0);
+      const existing = byVisibleSlot.get(key);
+      if (existing) {
+        existing.capacidad += capacidad;
+        existing.slotIds.push(slot.id);
+        return;
+      }
+      byVisibleSlot.set(key, {
+        id: slot.id,
+        slotIds: [slot.id],
+        fecha,
+        fechaLabel: formatDateLabel(fecha),
+        fechaCorta: formatShortDate(fecha),
+        horaInicio,
+        horaFin,
+        capacidad,
+        duracion: slot.DURACION_MINUTOS,
+        label: `${horaInicio} — ${horaFin}`,
+      });
+    });
+
+  return Array.from(byVisibleSlot.values()).sort((a, b) => `${a.fecha}${a.horaInicio}`.localeCompare(`${b.fecha}${b.horaInicio}`));
+}
+
 export default function Reserva() {
   const { config } = useBrandConfig();
   const [step, setStep] = useState(1);
@@ -50,28 +135,20 @@ export default function Reserva() {
     cargar();
   }, []);
 
-  const cargarHorarios = async (sucursal) => {
+  const cargarHorarios = async (sucursal, servicio = servicioSel) => {
     try {
-      const res = await fetch(`${API}/api/agenda-slots`);
+      const params = new URLSearchParams({
+        disponible: "true",
+        future_only: "true",
+      });
+      if (sucursal?.id) params.set("sucursal_id", sucursal.id);
+      const duracion = getServiceDuration(servicio);
+      if (duracion) params.set("min_duration", String(duracion));
+
+      const res = await fetch(`${API}/api/agenda-slots?${params.toString()}`);
       const data = await res.json();
       const slotsRaw = Array.isArray(data) ? data : data.agenda_slots || [];
-      // Filtrar solo slots DISPONIBLE, mapear a formato usable
-      const slots = slotsRaw
-        .filter(s => s.ESTADO_SLOT === "DISPONIBLE" && s.CAPACIDAD_DISPONIBLE > 0)
-        .map(s => {
-          const fecha = s.FECHA_SLOT ? new Date(s.FECHA_SLOT).toLocaleDateString("es-AR", { weekday: 'short', day: 'numeric', month: 'short' }) : '';
-          const tieneSucursal = Array.isArray(s.SUCURSAL) && s.SUCURSAL.length > 0;
-          const horaInfo = `${s.HORA_INICIO || ""} — ${s.HORA_FIN || ""}`;
-          return {
-            id: s.id,
-            fecha: s.FECHA_SLOT,
-            horaInicio: s.HORA_INICIO,
-            horaFin: s.HORA_FIN,
-            capacidad: s.CAPACIDAD_DISPONIBLE,
-            tieneSucursal,
-            label: `${horaInfo}${fecha ? ' · ' + fecha : ''} (${s.CAPACIDAD_DISPONIBLE || 0} cupos)${!tieneSucursal ? ' · A confirmar' : ''}`,
-          };
-        });
+      const slots = normalizeAvailableSlots(slotsRaw, sucursal, servicio);
       setHorarios(slots);
     } catch {
       setHorarios([]);
@@ -81,7 +158,7 @@ export default function Reserva() {
   const handleSucursalSelect = (suc) => {
     setSucursalSel(suc);
     setHorarioSel(null);
-    cargarHorarios(suc);
+    cargarHorarios(suc, servicioSel);
   };
 
   const formatearMoneda = (v) => {
@@ -90,6 +167,13 @@ export default function Reserva() {
     if (isNaN(n)) return "";
     return "$" + n.toLocaleString("es-AR", { minimumFractionDigits: 2 });
   };
+
+  const horariosPorFecha = horarios.reduce((acc, horario) => {
+    const key = horario.fecha || "sin_fecha";
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(horario);
+    return acc;
+  }, {});
 
   if (loading) return (
     <div className="max-w-5xl mx-auto px-4 py-20 text-center">
@@ -150,7 +234,13 @@ export default function Reserva() {
                     return (
                       <button
                         key={i}
-                        onClick={() => { setServicioSel(s); setStep(2); }}
+                        onClick={() => {
+                          setServicioSel(s);
+                          setSucursalSel(null);
+                          setHorarioSel(null);
+                          setHorarios([]);
+                          setStep(2);
+                        }}
                         className={`w-full text-left p-4 rounded-xl transition-all duration-300 border ${
                           servicioSel === s ? 'border-primary shadow-md' : 'border-white/40 hover:shadow-md hover:-translate-y-0.5'
                         }`}
@@ -194,8 +284,8 @@ export default function Reserva() {
                 <div className="grid gap-3">
                   {sucursales.map((suc, i) => {
                     const nombre = formatPublicName(suc.NOMBRE_SUCURSAL || suc.NOMBRE_CORTO_SUCURSAL || "");
-                    const dir = suc.DIRECCION_SUCURSAL || "";
-                    const ciudad = suc.CIUDAD_SUCURSAL || "";
+                    const dir = suc.DIRECCION_SUCURSAL || suc["CALLE Y N°"] || "";
+                    const ciudad = suc.CIUDAD_SUCURSAL || suc.LOCALIDAD || "";
                     return (
                       <button
                         key={i}
@@ -248,18 +338,28 @@ export default function Reserva() {
                   </div>
                 </GlassCard>
               ) : (
-                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                  {horarios.map((h, i) => (
-                    <button
-                      key={i}
-                      onClick={() => { setHorarioSel(h); setStep(4); }}
-                      className={`py-3 px-2 rounded-lg text-sm font-medium transition-all ${
-                        horarioSel === h ? 'text-white shadow-md' : 'hover:bg-white/80 border border-gray-200'
-                      }`}
-                      style={horarioSel === h ? { background: 'linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))' } : { background: 'rgba(255,255,255,0.5)' }}
-                    >
-                      <span className="block">{h.horaInicio || h.label}</span>
-                    </button>
+                <div className="space-y-5">
+                  {Object.entries(horariosPorFecha).map(([fecha, items]) => (
+                    <div key={fecha} className="rounded-2xl border border-white/40 bg-white/40 p-4">
+                      <h4 className="mb-3 text-sm font-semibold capitalize" style={{ color: 'var(--brand-text)' }}>
+                        {items[0]?.fechaLabel || fecha}
+                      </h4>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {items.map((h) => (
+                          <button
+                            key={`${h.fecha}-${h.horaInicio}-${h.horaFin}-${h.id}`}
+                            onClick={() => { setHorarioSel(h); setStep(4); }}
+                            className={`py-3 px-2 rounded-lg text-sm font-medium transition-all ${
+                              horarioSel?.id === h.id ? 'text-white shadow-md' : 'hover:bg-white/80 border border-gray-200'
+                            }`}
+                            style={horarioSel?.id === h.id ? { background: 'linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))' } : { background: 'rgba(255,255,255,0.5)' }}
+                          >
+                            <span className="block">{h.label}</span>
+                            <span className="block text-[11px] opacity-70">{h.capacidad} cupo{h.capacidad === 1 ? "" : "s"}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   ))}
                 </div>
               )}
@@ -335,7 +435,7 @@ export default function Reserva() {
               <div>
                 <span className="opacity-50" style={{ color: 'var(--brand-text-secondary)' }}>Horario</span>
                 <p className="font-medium" style={{ color: 'var(--brand-text)' }}>
-                  {horarioSel ? (horarioSel.label || horarioSel.horaInicio || 'Seleccionado') : '—'}
+                  {horarioSel ? `${horarioSel.fechaCorta || ""} · ${horarioSel.label || horarioSel.horaInicio}` : '—'}
                 </p>
               </div>
               <div className="border-t border-gray-200 pt-3 mt-3">

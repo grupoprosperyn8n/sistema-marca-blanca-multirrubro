@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 
-const API = import.meta.env.VITE_API_BASE_URL || "/api";
+const API = import.meta.env.VITE_API_BASE_URL || "";
 
 const STEPS = [
   { key: "servicio", label: "Servicio", icon: "\ud83d\udc87" },
@@ -9,6 +9,26 @@ const STEPS = [
   { key: "slot",     label: "Horario", icon: "\ud83d\udd50" },
   { key: "confirmar",label: "Confirmar", icon: "\u2705" },
 ];
+
+function getServiceDuration(servicio) {
+  const raw = servicio?.DURACION_MINUTOS_WEB ?? servicio?.DURACION_MINUTOS;
+  const value = Number(raw);
+  return Number.isFinite(value) && value > 0 ? value : null;
+}
+
+function dedupeSlots(slots) {
+  const map = new Map();
+  slots.forEach((slot) => {
+    const key = `${slot.FECHA_SLOT || ""}|${slot.HORA_INICIO || ""}|${slot.HORA_FIN || ""}|${(slot.SUCURSAL || []).join(",")}`;
+    const existing = map.get(key);
+    if (existing) {
+      existing.CAPACIDAD_DISPONIBLE = Number(existing.CAPACIDAD_DISPONIBLE || 0) + Number(slot.CAPACIDAD_DISPONIBLE || 0);
+      return;
+    }
+    map.set(key, { ...slot });
+  });
+  return Array.from(map.values());
+}
 
 export default function ReservaTurnoModal({ onClose }) {
   const { logout } = useAuth();
@@ -81,18 +101,19 @@ export default function ReservaTurnoModal({ onClose }) {
 
   // Load slots when step changes
   useEffect(() => {
-    if (step !== 2 || slots.length > 0) return;
+    if (step !== 2 || !selectedSucursal) return;
     (async () => {
       setLoadingOptions(true);
       try {
-        const data = await fetchWithCookie("/api/agenda-slots");
-        const available = (data.agenda_slots || data.slots || []).filter(
-          (s) =>
-            s.ESTADO_SLOT === "DISPONIBLE" &&
-            s.PERMITE_RESERVA_WEB &&
-            s.ACTIVO &&
-            s.CAPACIDAD_DISPONIBLE > 0
-        );
+        const params = new URLSearchParams({
+          disponible: "true",
+          future_only: "true",
+          sucursal_id: selectedSucursal.id,
+        });
+        const duration = getServiceDuration(selectedServicio);
+        if (duration) params.set("min_duration", String(duration));
+        const data = await fetchWithCookie(`/api/agenda-slots?${params.toString()}`);
+        const available = dedupeSlots(data.agenda_slots || data.slots || []);
         // Sort by date then time
         available.sort((a, b) => {
           const da = `${a.FECHA_SLOT || ""}${a.HORA_INICIO || ""}`;
@@ -106,7 +127,7 @@ export default function ReservaTurnoModal({ onClose }) {
         setLoadingOptions(false);
       }
     })();
-  }, [step, slots.length, fetchWithCookie]);
+  }, [step, selectedSucursal, selectedServicio, fetchWithCookie]);
 
   const handleNext = () => {
     if (step === 0 && !selectedServicio) return;
@@ -243,7 +264,12 @@ export default function ReservaTurnoModal({ onClose }) {
                   {servicios.map((svc) => (
                     <div
                       key={svc.id}
-                      onClick={() => setSelectedServicio(svc)}
+                      onClick={() => {
+                        setSelectedServicio(svc);
+                        setSelectedSucursal(null);
+                        setSelectedSlot(null);
+                        setSlots([]);
+                      }}
                       style={optionStyle(svc.id === selectedServicio?.id)}
                     >
                       <div style={{ fontWeight: 600 }}>
@@ -281,7 +307,11 @@ export default function ReservaTurnoModal({ onClose }) {
                   {sucursales.map((suc) => (
                     <div
                       key={suc.id}
-                      onClick={() => setSelectedSucursal(suc)}
+                      onClick={() => {
+                        setSelectedSucursal(suc);
+                        setSelectedSlot(null);
+                        setSlots([]);
+                      }}
                       style={optionStyle(suc.id === selectedSucursal?.id)}
                     >
                       <div style={{ fontWeight: 600 }}>
