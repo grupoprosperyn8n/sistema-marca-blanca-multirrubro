@@ -29,6 +29,9 @@ export default function ReservaTurnoModal({ onClose }) {
   const [dryRunResult, setDryRunResult] = useState(null);
   const [dryRunLoading, setDryRunLoading] = useState(false);
   const [dryRunError, setDryRunError] = useState(null);
+  const [confirmLoading, setConfirmLoading] = useState(false);
+  const [confirmResult, setConfirmResult] = useState(null);
+  const [confirmError, setConfirmError] = useState(null);
 
   const fetchWithCookie = useCallback(async (url, options = {}) => {
     const resp = await fetch(`${API}${url}`, {
@@ -83,7 +86,7 @@ export default function ReservaTurnoModal({ onClose }) {
       setLoadingOptions(true);
       try {
         const data = await fetchWithCookie("/api/agenda-slots");
-        const available = (data.slots || []).filter(
+        const available = (data.agenda_slots || data.slots || []).filter(
           (s) =>
             s.ESTADO_SLOT === "DISPONIBLE" &&
             s.PERMITE_RESERVA_WEB &&
@@ -141,6 +144,30 @@ export default function ReservaTurnoModal({ onClose }) {
       setDryRunError(e.message);
     } finally {
       setDryRunLoading(false);
+    }
+  };
+
+  const runConfirm = async () => {
+    setConfirmLoading(true);
+    setConfirmError(null);
+    setConfirmResult(null);
+    try {
+      const result = await fetchWithCookie("/api/clientes/citas/confirmar", {
+        method: "POST",
+        body: JSON.stringify({
+          slot_id: selectedSlot.id,
+          servicio_web_id: selectedServicio.id,
+          sucursal_id: selectedSucursal.id,
+        }),
+      });
+      setConfirmResult(result);
+      if (result.confirmado) {
+        setDryRunResult({ ...dryRunResult, _confirmed: true });
+      }
+    } catch (e) {
+      setConfirmError(e.message);
+    } finally {
+      setConfirmLoading(false);
     }
   };
 
@@ -366,13 +393,80 @@ export default function ReservaTurnoModal({ onClose }) {
 
               {dryRunResult?.disponible && (
                 <div style={resultBox("#ecfdf5", "#10b981")}>
-                  <div style={{ fontSize: "1.5rem", marginBottom: ".5rem" }}>\u2705</div>
+                  <div style={{ fontSize: "1.5rem", marginBottom: ".5rem" }}>✅</div>
                   <div style={{ fontWeight: 700, fontSize: "1.1rem" }}>
-                    Turno disponible. Listo para confirmar en la pr\u00f3xima etapa.
+                    Turno disponible. Listo para confirmar.
                   </div>
                   <div style={{ fontSize: ".85rem", color: "#6b7280", marginTop: ".5rem" }}>
                     {dryRunResult.nota || dryRunResult.mensaje}
                   </div>
+                </div>
+              )}
+
+              {/* Boton Confirmar — solo si dry-run fue exitoso y no se confirmo aun */}
+              {dryRunResult?.disponible && !confirmResult?.confirmado && !confirmLoading && (
+                <button onClick={runConfirm} style={{
+                  width: "100%", background: "linear-gradient(135deg, #10b981, #059669)",
+                  color: "#fff", border: "none", borderRadius: 10,
+                  padding: ".85rem", fontWeight: 700, cursor: "pointer",
+                  fontSize: "1rem", marginTop: ".75rem",
+                }}>
+                  ✅ Confirmar Turno
+                </button>
+              )}
+
+              {confirmLoading && (
+                <div style={centerMsgStyle}>
+                  Confirmando turno…
+                </div>
+              )}
+
+              {confirmError && (
+                <div style={resultBox("#fef2f2", "#ef4444")}>
+                  ⚠️ Error: {confirmError}
+                </div>
+              )}
+
+              {confirmResult?.confirmado && (
+                <div style={resultBox("#ecfdf5", "#10b981")}>
+                  <div style={{ fontSize: "2rem", marginBottom: ".5rem" }}>🎉</div>
+                  <div style={{ fontWeight: 700, fontSize: "1.1rem" }}>
+                    ¡Turno confirmado!
+                  </div>
+                  <div style={{ fontSize: ".85rem", color: "#6b7280", marginTop: ".5rem" }}>
+                    {confirmResult.mensaje}
+                  </div>
+                  {confirmResult.cita && (
+                    <div style={{
+                      marginTop: ".75rem", padding: ".75rem",
+                      backgroundColor: "#d1fae5", borderRadius: 8,
+                      fontSize: ".85rem", textAlign: "left",
+                    }}>
+                      <div>📋 <strong>{confirmResult.cita.nombre_cita}</strong></div>
+                      <div>📅 {confirmResult.cita.fecha_cita} · 🕐 {confirmResult.cita.hora_inicio} – {confirmResult.cita.hora_fin}</div>
+                      <div>📍 {confirmResult.sucursal.nombre}</div>
+                      <div>💇 {confirmResult.servicio.nombre}</div>
+                      {confirmResult.servicio.precio_web && (
+                        <div style={{ fontWeight: 600, color: "#10b981", marginTop: ".25rem" }}>
+                          ${Number(confirmResult.servicio.precio_web).toLocaleString("es-AR")}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {confirmResult && !confirmResult.confirmado && !confirmError && (
+                <div style={resultBox("#fef2f2", "#ef4444")}>
+                  <div style={{ fontSize: "1.5rem", marginBottom: ".5rem" }}>❌</div>
+                  <div style={{ fontWeight: 700 }}>{confirmResult.mensaje}</div>
+                  {confirmResult.errores && (
+                    <ul style={{ marginTop: ".5rem", paddingLeft: "1.25rem", fontSize: ".85rem", textAlign: "left" }}>
+                      {confirmResult.errores.map((err, i) => (
+                        <li key={i}>{err}</li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
               )}
 

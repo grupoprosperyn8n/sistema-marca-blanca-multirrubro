@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+// X icon as inline SVG to avoid extra dependency
 import { useBrandConfig } from "../context/BrandConfigContext";
 
 const API = import.meta.env.VITE_API_BASE_URL || "";
@@ -14,6 +15,9 @@ export default function AnnouncementBar() {
   const [messages, setMessages] = useState(DEMO_MESSAGES);
   const [current, setCurrent] = useState(0);
   const [exiting, setExiting] = useState(false);
+  const [dismissed, setDismissed] = useState(() => {
+    try { return localStorage.getItem("banner-dismissed") === "1"; } catch { return false; }
+  });
 
   useEffect(() => {
     // Si MARCAS tiene banner activo, usarlo como prioridad
@@ -49,6 +53,11 @@ export default function AnnouncementBar() {
     cargar();
   }, [config.bannerActive, config.bannerMessage, config.bannerTitle, config.bannerCtaText, config.bannerCtaUrl]);
 
+  const dismiss = useCallback(() => {
+    setDismissed(true);
+    try { localStorage.setItem("banner-dismissed", "1"); } catch {}
+  }, []);
+
   const rotate = useCallback(() => {
     setExiting(true);
     setTimeout(() => {
@@ -63,13 +72,14 @@ export default function AnnouncementBar() {
     return () => clearInterval(timer);
   }, [rotate, messages.length]);
 
-  if (messages.length === 0) return null;
+  if (messages.length === 0 || dismissed) return null;
 
   const msg = messages[current];
 
   return (
-    <div className="relative overflow-hidden" style={{ background: "linear-gradient(135deg, var(--brand-primary) 0%, #0b4d6a 100%)" }}>
+    <div className="relative overflow-hidden" style={{ position: "relative", background: "linear-gradient(135deg, var(--brand-primary) 0%, #0b4d6a 100%)" }}>
       <div className="max-w-7xl mx-auto px-4 py-2.5 flex items-center justify-center gap-3 text-center">
+        <button onClick={dismiss} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 hover:text-white transition-colors" aria-label="Cerrar banner"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
         <div className={`transition-all duration-300 ${exiting ? "opacity-0 -translate-y-2" : "opacity-100 translate-y-0"}`}>
           <p className="text-sm sm:text-base text-white font-medium">
             {msg.texto}

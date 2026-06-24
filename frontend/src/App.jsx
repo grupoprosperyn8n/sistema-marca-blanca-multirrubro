@@ -68,6 +68,12 @@ export default function App() {
         <Route path="/reserva" element={<Reserva />} />
         <Route path="/servicios/:slug" element={<ServicioDetalle />} />
         <Route path="/productos/:slug" element={<ProductoDetalle />} />
+
+        {/* Legacy redirects — URLs that users commonly try */}
+        <Route path="/servicios" element={<Navigate to="/catalogo" replace />} />
+        <Route path="/reservar" element={<Navigate to="/reserva" replace />} />
+        <Route path="/acceder" element={<Navigate to="/login" replace />} />
+        <Route path="/admin" element={<Navigate to="/login" replace />} />
       </Route>
 
       <Route element={<AuthLayout />}>

@@ -64,3 +64,74 @@
   - Reserva de turnos reales (CITAS + AGENDA_SLOTS)
   - Vista de citas por sucursal/profesional
   - Confirmación y cancelación de citas
+
+---
+
+# CIERRE FASE 3C2 — Confirmación Real de Turno
+
+**Fecha:** 2026-06-24
+**Fase:** FASE_3C2 — Confirmación de turno (backend + frontend + QA)
+**Estado:** CERRADA
+
+---
+
+## Resumen
+
+Implementado endpoint `POST /api/clientes/citas/confirmar` y botón "Confirmar Turno" en `ReservaTurnoModal.jsx`. 
+El endpoint crea una CITA real en Airtable, marca el AGENDA_SLOT como RESERVADO y valida:
+autenticación (JWT), rol CLIENTE, disponibilidad del slot, servicio web activo, sucursal activa,
+y previene doble confirmación.
+
+---
+
+## Archivos modificados
+
+| Archivo | Cambio |
+|---------|--------|
+| `backend/routes/clientes.py` | +130 líneas: endpoint `POST /api/clientes/citas/confirmar` |
+| `frontend/src/components/ReservaTurnoModal.jsx` | +45 líneas: estados (`confirmando`, `confirmado`, `errorConfirmacion`), handler `runConfirm()`, botón "Confirmar Turno" con estados loading/error/éxito |
+
+---
+
+## QA Funcional
+
+| Prueba | Resultado |
+|--------|-----------|
+| Confirmación real (slot DISPONIBLE) | ✅ CITA creada `recNs56fLrTNwUapu`, slot → RESERVADO |
+| Confirmación adicional (otro slot) | ✅ CITA creada `recntUAKMplMksSOz`, slot → RESERVADO |
+| Slot marcado RESERVADO en Airtable | ✅ ESTADO_SLOT=RESERVADO, CAPACIDAD_OCUPADA=1, CITAS linkeada |
+| CITA con datos completos | ✅ ESTADO_CITA=CONFIRMADA, CLIENTE/SERVICIO/SLOT vinculados |
+
+## QA Seguridad
+
+| Prueba | HTTP | Resultado |
+|--------|------|-----------|
+| Sin auth (sin cookie) | **401** | ✅ "No autenticado: cookie auth_token ausente" |
+| Rol no CLIENTE (ADMIN) | **403** | ✅ "Solo clientes pueden confirmar turnos" |
+| Doble confirmación mismo slot | 200, `confirmado:false` | ✅ Rechazada: slot RESERVADO + sin capacidad |
+
+---
+
+## Build & Deploy
+
+| Artefacto | Estado |
+|-----------|--------|
+| Backend Railway | ✅ Deployado (`215a7a2`) |
+| Frontend Surge | ✅ `sistema-multirrubro-demo.surge.sh` — build limpio (312KB JS) |
+
+---
+
+## Usuarios QA
+
+| Usuario | Email | Password | Rol |
+|---------|-------|----------|-----|
+| QA Cliente | `qaportal3b@bellezapro.test` | `qatest99` | CLIENTE |
+| Admin | `admin@salon.com` | `admintest99` | ADMINISTRADOR |
+
+---
+
+## Recomendaciones para FASE_3C3/3D
+
+- FASE_3C2 cerrada con todas las verificaciones
+- Endpoint confirmar listo para producción
+- Próximo: cancelación/reprogramación de citas, o portal de profesional

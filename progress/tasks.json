@@ -1,7 +1,7 @@
 {
   "project": "sistema-marca-blanca-multirrubro",
-  "fase_actual": "FASE_3B — CERRADA",
-  "fase_siguiente": "FASE_3C — Reservas Reales (pendiente aprobación)",
+  "fase_actual": "FASE_3C2 — CERRADA",
+  "fase_siguiente": "FASE_3C3/3D — Cancelación/Reprogramación o Portal Profesional (pendiente)",
   "tareas": {
     "FASE_3B_PORTAL_CLIENTE": {
       "status": "completed",
@@ -13,6 +13,25 @@
         "frontend/src/pages/PortalCliente.jsx",
         "progress/FASE_3B_PORTAL_CLIENTE.md"
       ],
+      "smoke_passed": true,
+      "secrets_free": true
+    },
+    "FASE_3C2_CONFIRMACION_REAL": {
+      "status": "completed",
+      "closed_at": "2026-06-24",
+      "commits": ["215a7a2"],
+      "deliverables": [
+        "backend/routes/clientes.py (endpoint confirmar)",
+        "frontend/src/components/ReservaTurnoModal.jsx (botón Confirmar)"
+      ],
+      "qa_results": {
+        "confirmacion_real": "PASS",
+        "doble_confirmacion": "REJECTED_OK",
+        "sin_auth": "401_PASS",
+        "rol_no_cliente": "403_PASS",
+        "citas_creadas": ["recNs56fLrTNwUapu", "recntUAKMplMksSOz"],
+        "slots_reservados": ["rec6BySZS6eFHSz2c", "rec8aizNCf4PNWMCk"]
+      },
       "smoke_passed": true,
       "secrets_free": true
     }

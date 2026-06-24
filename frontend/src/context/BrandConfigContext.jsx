@@ -18,7 +18,7 @@ const FALLBACK = {
   glassBorderColor: "rgba(255,255,255,0.2)",
   heroBadge: "Nuevo",
   heroTitle: "Belleza, bienestar y reservas simples en un solo lugar.",
-  heroSubtitle: "{marca} te conecta con servicios profesionales de salón.",
+  heroSubtitle: "BellezaPro Demo te conecta con servicios profesionales de salón.",
   heroCtaPrimary: "Reservar turno",
   heroCtaPrimaryUrl: "/reserva",
   heroCtaSecondary: "Ver servicios",

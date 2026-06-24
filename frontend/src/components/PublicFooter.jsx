@@ -18,6 +18,7 @@ export default function PublicFooter() {
             <div className="flex flex-col gap-2">
               <Link to="/" className="text-sm opacity-60 hover:opacity-100" style={{ color: 'var(--brand-primary)' }}>Inicio</Link>
               <Link to="/catalogo" className="text-sm opacity-60 hover:opacity-100" style={{ color: 'var(--brand-primary)' }}>Catálogo</Link>
+              <Link to="/productos" className="text-sm opacity-60 hover:opacity-100" style={{ color: 'var(--brand-primary)' }}>Productos</Link>
               <Link to="/reserva" className="text-sm opacity-60 hover:opacity-100" style={{ color: 'var(--brand-primary)' }}>Reservar</Link>
             </div>
           </div>
