@@ -51,7 +51,7 @@ app = FastAPI(
 # CORS para desarrollo local
 # CORS: frontend Surge + desarrollo local
 # Configurar via CORS_ORIGINS (coma-separado) o usa defaults
-_cors_origins = os.getenv("CORS_ORIGINS", "https://bellezapro-demo.surge.sh,https://sistema-multirrubro-demo.surge.sh,http://localhost:5173").split(",")
+_cors_origins = os.getenv("CORS_ORIGINS", "https://belleza-demo.surge.sh,https://bellezapro-demo.surge.sh,https://sistema-multirrubro-demo.surge.sh,http://localhost:5173").split(",")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[o.strip() for o in _cors_origins],
