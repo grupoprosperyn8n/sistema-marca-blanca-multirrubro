@@ -92,7 +92,8 @@ async def get_my_citas(user: dict = Depends(get_current_user)):
         raise HTTPException(status_code=404, detail="No tenes un perfil de cliente vinculado.")
     try:
         at = AirtableClient()
-        formula = "SEARCH('" + cliente_id + "', ARRAYJOIN({CLIENTE}))"
+        # Airtable: {CLIENTE} & '' convierte linked-records a string separado por comas
+        formula = f"SEARCH('{cliente_id}', {{CLIENTE}} & '')"
         records = at.list_records("CITAS", filter_formula=formula, by_name=True)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al obtener citas: {str(e)}")
