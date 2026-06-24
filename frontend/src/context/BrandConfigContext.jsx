@@ -65,6 +65,81 @@ const FALLBACK = {
   registroActivo: true,
 };
 
+const DOMAIN_VARIANTS = {
+  "belleza-demo.surge.sh": {
+    brandName: "Belleza Demo",
+    brandLegalName: "Belleza Demo",
+    rubro: "Salón de Belleza",
+    marcaId: "belleza-demo",
+    brandPrimary: "#006686",
+    brandSecondary: "#7DD3FC",
+    brandAccent: "#38BDF8",
+    brandText: "#0B1C30",
+    brandSurface: "#F8F9FF",
+    brandTextSecondary: "#3F484E",
+    heroBadge: "Demo piloto",
+    heroTitle: "Gestión de salones de belleza lista para vender.",
+    heroSubtitle: "Reservas, portal cliente, catálogo y backoffice en una demo operativa.",
+    heroCtaPrimary: "Reservar turno",
+    heroCtaSecondary: "Ver catálogo",
+    seoTitle: "Belleza Demo",
+    seoDescription: "Demo piloto para gestión de salones de belleza.",
+    legalAviso: "Demo operativa con datos QA. No usar para reservas reales.",
+  },
+  "sistema-multirrubro-demo.surge.sh": {
+    brandName: "Sistema Multirrubro",
+    brandLegalName: "Sistema Marca Blanca Multirrubro",
+    rubro: "Marca blanca",
+    marcaId: "sistema-multirrubro-demo",
+    brandPrimary: "#334155",
+    brandSecondary: "#22C55E",
+    brandAccent: "#14B8A6",
+    brandText: "#0F172A",
+    brandSurface: "#F8FAFC",
+    brandTextSecondary: "#475569",
+    heroBadge: "Marca blanca",
+    heroTitle: "Un sistema base para lanzar demos por rubro.",
+    heroSubtitle: "La misma arquitectura adaptable a belleza, servicios, retail, gastronomía y más.",
+    heroCtaPrimary: "Ver módulos",
+    heroCtaPrimaryUrl: "/catalogo",
+    heroCtaSecondary: "Probar reserva",
+    heroCtaSecondaryUrl: "/reserva",
+    catalogTitle: "Módulos y servicios demo",
+    catalogSubtitle: "Componentes reutilizables para adaptar el sistema a cada negocio.",
+    productsTitle: "Catálogo comercial",
+    productsSubtitle: "Ejemplo de productos o ítems vendibles según el rubro.",
+    sucursalesTitle: "Unidades operativas",
+    sucursalesSubtitle: "Sucursales, sedes o puntos de atención.",
+    seoTitle: "Sistema Multirrubro Demo",
+    seoDescription: "Demo marca blanca preparada para múltiples rubros.",
+    legalAviso: "Demo marca blanca. Los datos son de prueba.",
+  },
+  "bellezapro-demo.surge.sh": {
+    brandName: "BellezaPro",
+    brandLegalName: "BellezaPro",
+    rubro: "Beauty Pro",
+    marcaId: "bellezapro-demo",
+    brandPrimary: "#7C3AED",
+    brandSecondary: "#F0ABFC",
+    brandAccent: "#EC4899",
+    brandText: "#1F1235",
+    brandSurface: "#FDF4FF",
+    brandTextSecondary: "#6B4A7A",
+    heroBadge: "Variante Pro",
+    heroTitle: "Una experiencia premium para salones modernos.",
+    heroSubtitle: "Turnos online, portal cliente y operación diaria con estética de marca profesional.",
+    heroCtaPrimary: "Agendar experiencia",
+    heroCtaSecondary: "Explorar servicios",
+    catalogTitle: "Servicios Pro",
+    catalogSubtitle: "Tratamientos destacados para una experiencia premium.",
+    productsTitle: "Productos Pro",
+    productsSubtitle: "Selección profesional para cuidado y venta complementaria.",
+    seoTitle: "BellezaPro Demo",
+    seoDescription: "Variante Pro de la demo de salones de belleza.",
+    legalAviso: "Demo comercial. No se procesan reservas reales.",
+  },
+};
+
 function normalizeHex(raw) {
   if (!raw) return null;
   const s = String(raw).trim().replace("#", "");
@@ -102,6 +177,25 @@ function hexToRgba(hex, alpha = 1) {
   return `rgba(${r},${g},${b},${alpha})`;
 }
 
+function getDomainVariant() {
+  if (typeof window === "undefined") return null;
+  const hostname = window.location.hostname.replace(/^www\./, "");
+  return DOMAIN_VARIANTS[hostname] || null;
+}
+
+function applyDomainVariant(config) {
+  const variant = getDomainVariant();
+  if (!variant) return config;
+  return {
+    ...config,
+    ...variant,
+    seccionesVisibles: {
+      ...(config.seccionesVisibles || {}),
+      ...(variant.seccionesVisibles || {}),
+    },
+  };
+}
+
 function applyCssVariables(config) {
   const root = document.documentElement;
   if (!root) return;
@@ -125,6 +219,7 @@ function applyCssVariables(config) {
   root.style.setProperty("--glass-background", `rgba(255,255,255,${config.glassOpacity})`);
   root.style.setProperty("--glass-surface", hexToRgba(config.brandSurface, parseFloat(config.glassOpacity) || 0.6));
   root.style.setProperty("--brand-name", `"${config.brandName}"`);
+  if (config.seoTitle) document.title = config.seoTitle;
 }
 
 function transformMarcaBlanca(data, base = FALLBACK) {
@@ -214,7 +309,7 @@ function transformMarcaBlanca(data, base = FALLBACK) {
 const BrandConfigContext = createContext(null);
 
 export function BrandConfigProvider({ children }) {
-  const [config, setConfig] = useState(() => FALLBACK);
+  const [config, setConfig] = useState(() => applyDomainVariant(FALLBACK));
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -227,7 +322,7 @@ export function BrandConfigProvider({ children }) {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         if (cancelled) return;
-        const transformed = transformMarcaBlanca(data);
+        const transformed = applyDomainVariant(transformMarcaBlanca(data));
         applyCssVariables(transformed);
         setConfig(transformed);
         setError(null);
