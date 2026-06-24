@@ -12,6 +12,7 @@ import Home from "./pages/Home";
 import Catalogo from "./pages/Catalogo";
 import Productos from "./pages/Productos";
 import Reserva from "./pages/Reserva";
+import SucursalesPublicas from "./pages/SucursalesPublicas";
 import ServicioDetalle from "./pages/ServicioDetalle";
 import ProductoDetalle from "./pages/ProductoDetalle";
 
@@ -30,6 +31,7 @@ import Clientes from "./pages/Clientes";
 import Servicios from "./pages/Servicios";
 import Sucursales from "./pages/Sucursales";
 import Citas from "./pages/Citas";
+import Configuracion from "./pages/Configuracion";
 
 // Professional
 import Profesional from "./pages/Profesional";
@@ -41,6 +43,7 @@ import PortalCliente from "./pages/PortalCliente";
 // Roles con acceso a gestion
 const ROLES_GESTION = [ROLES.ADMINISTRADOR, ROLES.GERENTE, ROLES.EMPLEADO_GESTION, ROLES.SOLO_LECTURA];
 const ROLES_SUCURSALES = [ROLES.ADMINISTRADOR, ROLES.GERENTE, ROLES.SOLO_LECTURA]; // EMPLEADO_GESTION.sucursales=false
+const ROLES_CONFIGURACION = [ROLES.ADMINISTRADOR, ROLES.SOLO_LECTURA]; // coincide con permisos.configuracion actuales
 const ROLES_BACKOFFICE = [...ROLES_GESTION, ROLES.PROFESIONAL];
 
 function ProtectedRoute({ children, roles }) {
@@ -66,6 +69,7 @@ export default function App() {
         <Route path="/catalogo" element={<Catalogo />} />
         <Route path="/productos" element={<Productos />} />
         <Route path="/reserva" element={<Reserva />} />
+        <Route path="/sucursales" element={<SucursalesPublicas />} />
         <Route path="/servicios/:slug" element={<ServicioDetalle />} />
         <Route path="/productos/:slug" element={<ProductoDetalle />} />
 
@@ -101,6 +105,10 @@ export default function App() {
 
       <Route element={<ProtectedRoute roles={ROLES_SUCURSALES}><BackofficeLayout /></ProtectedRoute>}>
         <Route path="/backoffice/sucursales" element={<Sucursales />} />
+      </Route>
+
+      <Route element={<ProtectedRoute roles={ROLES_CONFIGURACION}><BackofficeLayout /></ProtectedRoute>}>
+        <Route path="/backoffice/configuracion" element={<Configuracion />} />
       </Route>
 
       <Route element={<ProtectedRoute roles={[ROLES.PROFESIONAL, ROLES.ADMINISTRADOR, ROLES.GERENTE]}><ProfessionalLayout /></ProtectedRoute>}>

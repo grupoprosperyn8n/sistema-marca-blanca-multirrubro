@@ -1,19 +1,13 @@
 import React, { useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { useBrandConfig } from '../context/BrandConfigContext';
-
-const publicLinks = [
-  { to: '/', label: 'Inicio' },
-  { to: '/catalogo', label: 'Servicios' },
-  { to: '/productos', label: 'Productos' },
-  { to: '/reserva', label: 'Reservar' },
-];
+import { getPublicNavigation, useBrandConfig } from '../context/BrandConfigContext';
 
 export default function PublicNavbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const { usuario } = useAuth();
   const { config } = useBrandConfig();
+  const publicLinks = getPublicNavigation(config);
 
   return (
     <header className="sticky top-0 z-50 border-b border-white/10" style={{ background: 'var(--glass-surface, rgba(248,249,255,0.85))', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}>

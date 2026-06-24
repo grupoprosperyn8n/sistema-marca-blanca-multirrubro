@@ -45,6 +45,31 @@ export default function Home() {
   const iconos = ["content_cut", "spa", "brush", "face", "style", "auto_awesome"];
 
   const sec = config.seccionesVisibles || {};
+  const business = config.business || {};
+  const showServices = business.usesServices !== false && sec.mostrar_servicios !== false;
+  const showProducts = business.usesProducts !== false && sec.mostrar_productos !== false;
+  const showBranches = business.usesBranches !== false && sec.mostrar_sucursales !== false;
+  const showVisitCard = business.showContactAddress && (config.address || config.phone || config.email);
+  const primaryActionUrl = business.primaryFlow === "RESERVA" && business.usesAppointments
+    ? (config.heroCtaPrimaryUrl || "/reserva")
+    : (business.usesProducts && !business.usesServices ? "/productos" : "/catalogo");
+  const primaryActionText = business.primaryFlow === "RESERVA" && business.usesAppointments
+    ? (config.heroCtaPrimary || "Reservar")
+    : `Ver ${String(business.catalogLabel || "catálogo").toLowerCase()}`;
+  const finalCtaUrl = business.usesAppointments ? "/reserva" : primaryActionUrl;
+  const finalCtaText = business.usesAppointments ? "Reservar turno" : primaryActionText;
+  const heroSecondaryUrl = config.heroCtaSecondaryUrl || "/catalogo";
+  const showSecondaryAction = Boolean(config.heroCtaSecondary) &&
+    (business.usesAppointments !== false || !heroSecondaryUrl.startsWith("/reserva"));
+  const howItWorks = business.usesAppointments ? [
+    { num: "1", icon: "search", title: "Explorá", desc: "Navegá las opciones disponibles y elegí la que más te sirve." },
+    { num: "2", icon: "event_available", title: "Reservá", desc: "Seleccioná sucursal, día y horario si el negocio trabaja con turnos." },
+    { num: "3", icon: "check_circle", title: "Confirmá", desc: "Ingresá al portal y seguí el estado de tu reserva." },
+  ] : [
+    { num: "1", icon: "search", title: "Explorá", desc: "Navegá el catálogo publicado por el negocio." },
+    { num: "2", icon: "shopping_bag", title: "Elegí", desc: "Compará productos, servicios o packs disponibles." },
+    { num: "3", icon: "support_agent", title: "Coordiná", desc: "Contactá o comprá según el canal configurado." },
+  ];
   const ordenSecciones = (sec.orden_secciones || "hero,servicios,como_funciona,productos,visitanos,cta_final")
     .split(",").map(s => s.trim());
 
@@ -71,12 +96,12 @@ export default function Home() {
               {config.heroSubtitle || `${config.brandName} te conecta con servicios profesionales de salón. Reservá tu turno en segundos, sin llamadas ni mensajes.`}
             </p>
             <div className="flex flex-wrap gap-4">
-              <Link to={config.heroCtaPrimaryUrl || "/reserva"} className="btn-primary inline-flex items-center gap-2 text-base px-8 py-4 rounded-xl">
-                <span className="material-symbols-outlined">calendar_month</span>
-                {config.heroCtaPrimary || "Reservar turno"}
+              <Link to={primaryActionUrl} className="btn-primary inline-flex items-center gap-2 text-base px-8 py-4 rounded-xl">
+                <span className="material-symbols-outlined">{business.usesAppointments ? "calendar_month" : "storefront"}</span>
+                {primaryActionText}
               </Link>
-              {config.heroCtaSecondary && (
-                <Link to={config.heroCtaSecondaryUrl || "/catalogo"} className="btn-secondary inline-flex items-center gap-2 text-base px-8 py-4 rounded-xl">
+              {showSecondaryAction && (
+                <Link to={heroSecondaryUrl} className="btn-secondary inline-flex items-center gap-2 text-base px-8 py-4 rounded-xl">
                   <span className="material-symbols-outlined">spa</span>
                   {config.heroCtaSecondary}
                 </Link>
@@ -91,8 +116,10 @@ export default function Home() {
                 <div className="text-center space-y-4">
                   <span className="material-symbols-outlined text-6xl" style={{ color: 'var(--brand-primary)' }}>spa</span>
                   <div>
-                    <p className="text-xs font-medium opacity-50" style={{ color: 'var(--brand-primary)' }}>AGENDÁ EN 3 PASOS</p>
-                    {["Elegí servicio", "Seleccioná horario", "Confirmá y listo"].map((step, i) => (
+                    <p className="text-xs font-medium opacity-50" style={{ color: 'var(--brand-primary)' }}>
+                      {business.usesAppointments ? "AGENDÁ EN 3 PASOS" : "OPERÁ EN 3 PASOS"}
+                    </p>
+                    {(business.usesAppointments ? ["Elegí opción", "Seleccioná horario", "Confirmá y listo"] : ["Explorá catálogo", "Elegí canal", "Contactá o comprá"]).map((step, i) => (
                       <div key={i} className="flex items-center gap-3 mt-2">
                         <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs text-white font-bold" style={{ background: 'linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))' }}>{i+1}</div>
                         <span className="text-sm" style={{ color: 'var(--brand-text)' }}>{step}</span>
@@ -108,12 +135,12 @@ export default function Home() {
       </section>
 
       {/* Servicios destacados */}
-      {sec.mostrar_servicios !== false && (
+      {showServices && (
         <section className="relative z-10 max-w-7xl mx-auto px-4 sm:px-8 pb-20">
           <div className="text-center mb-12">
             <h2 className="headline-lg mb-3" style={{ color: 'var(--brand-text)' }}>Servicios destacados</h2>
             <p className="text-base max-w-lg mx-auto" style={{ color: 'var(--brand-text-secondary)' }}>
-              Los tratamientos más elegidos por nuestras clientas
+              Opciones destacadas publicadas por el negocio
             </p>
           </div>
 
@@ -166,12 +193,12 @@ export default function Home() {
       )}
 
       {/* Productos destacados */}
-      {sec.mostrar_productos !== false && productos.length > 0 && (
+      {showProducts && productos.length > 0 && (
         <section className="relative z-10 max-w-7xl mx-auto px-4 sm:px-8 pb-20">
           <div className="text-center mb-12">
             <h2 className="headline-lg mb-3" style={{ color: "var(--brand-text)" }}>Productos destacados</h2>
             <p className="text-base max-w-lg mx-auto" style={{ color: "var(--brand-text-secondary)" }}>
-              Productos profesionales para el cuidado diario
+              Ítems publicados para venta, consulta o promoción
             </p>
           </div>
 
@@ -236,11 +263,7 @@ export default function Home() {
               </p>
             </div>
             <div className="grid sm:grid-cols-3 gap-8">
-              {[
-                { num: "1", icon: "search", title: "Explorá", desc: "Navegá los servicios disponibles y elegí el que más te guste." },
-                { num: "2", icon: "event_available", title: "Reservá", desc: "Seleccioná sucursal, día y horario. Sin vueltas." },
-                { num: "3", icon: "self_improvement", title: "Disfrutá", desc: "Llegá el día de tu turno y dejate mimar por profesionales." },
-              ].map((item, i) => (
+              {howItWorks.map((item, i) => (
                 <div key={i} className="text-center group">
                   <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 text-white shadow-lg group-hover:scale-110 transition-transform"
                     style={{ background: 'linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))' }}>
@@ -255,41 +278,49 @@ export default function Home() {
         </section>
       )}
 
-      {/* Visitanos + CTA final */}
-      <section className="relative z-10 max-w-7xl mx-auto px-4 sm:px-8 pb-20">
-        <div className="grid lg:grid-cols-2 gap-8">
-          <div className="glass-panel p-8 sm:p-12 rounded-3xl">
-            <span className="material-symbols-outlined text-3xl mb-4 block" style={{ color: 'var(--brand-primary)' }}>location_on</span>
-            <h3 className="text-xl font-semibold mb-3" style={{ color: 'var(--brand-text)' }}>Visitanos</h3>
-            {config.address && (
-              <p className="text-sm mb-2" style={{ color: 'var(--brand-text-secondary)' }}>📍 {config.address}</p>
+      {/* Contacto + CTA final */}
+      {(showVisitCard || business.usesAppointments || business.usesProducts || business.usesServices) && (
+        <section className="relative z-10 max-w-7xl mx-auto px-4 sm:px-8 pb-20">
+          <div className={`grid gap-8 ${showVisitCard ? "lg:grid-cols-2" : "lg:grid-cols-1"}`}>
+            {showVisitCard && (
+              <div className="glass-panel p-8 sm:p-12 rounded-3xl">
+                <span className="material-symbols-outlined text-3xl mb-4 block" style={{ color: 'var(--brand-primary)' }}>location_on</span>
+                <h3 className="text-xl font-semibold mb-3" style={{ color: 'var(--brand-text)' }}>Ubicación y contacto</h3>
+                {config.address && (
+                  <p className="text-sm mb-2" style={{ color: 'var(--brand-text-secondary)' }}>📍 {config.address}</p>
+                )}
+                {config.phone && (
+                  <p className="text-sm mb-2" style={{ color: 'var(--brand-text-secondary)' }}>📞 {config.phone}</p>
+                )}
+                {config.email && (
+                  <p className="text-sm mb-4" style={{ color: 'var(--brand-text-secondary)' }}>✉️ {config.email}</p>
+                )}
+                {showBranches && (
+                  <Link to="/sucursales" className="text-sm font-medium inline-flex items-center gap-1" style={{ color: 'var(--brand-primary)' }}>
+                    Ver sucursales
+                    <span className="material-symbols-outlined text-base">arrow_forward</span>
+                  </Link>
+                )}
+              </div>
             )}
-            {config.phone && (
-              <p className="text-sm mb-2" style={{ color: 'var(--brand-text-secondary)' }}>📞 {config.phone}</p>
-            )}
-            {config.email && (
-              <p className="text-sm mb-4" style={{ color: 'var(--brand-text-secondary)' }}>✉️ {config.email}</p>
-            )}
-            <Link to="/reserva" className="text-sm font-medium inline-flex items-center gap-1" style={{ color: 'var(--brand-primary)' }}>
-              Ver sucursales
-              <span className="material-symbols-outlined text-base">arrow_forward</span>
-            </Link>
+            <div className="glass-panel p-8 sm:p-12 rounded-3xl flex flex-col justify-center text-center"
+              style={{ background: 'linear-gradient(135deg, rgba(125,211,252,0.2), rgba(220,233,255,0.2))' }}>
+              <h3 className="text-2xl font-bold mb-2" style={{ color: 'var(--brand-text)' }}>
+                {business.usesAppointments ? "¿Listo para coordinar tu turno?" : `Explorá ${String(business.catalogLabel || "el catálogo").toLowerCase()}`}
+              </h3>
+              <p className="text-sm mb-6 max-w-xs mx-auto" style={{ color: 'var(--brand-text-secondary)' }}>
+                {business.usesAppointments ? "Reservá ahora y seguí el estado desde tu portal." : "La experiencia se adapta al canal configurado por cada negocio."}
+              </p>
+              <Link to={finalCtaUrl} className="btn-primary inline-flex items-center gap-2 text-base px-10 py-4 rounded-xl mx-auto">
+                <span className="material-symbols-outlined">{business.usesAppointments ? "calendar_month" : "storefront"}</span>
+                {finalCtaText}
+              </Link>
+            </div>
           </div>
-          <div className="glass-panel p-8 sm:p-12 rounded-3xl flex flex-col justify-center text-center"
-            style={{ background: 'linear-gradient(135deg, rgba(125,211,252,0.2), rgba(220,233,255,0.2))' }}>
-            <h3 className="text-2xl font-bold mb-2" style={{ color: 'var(--brand-text)' }}>¿Lista para tu próximo turno?</h3>
-            <p className="text-sm mb-6 max-w-xs mx-auto" style={{ color: 'var(--brand-text-secondary)' }}>
-              Reservá ahora y asegurate tu espacio.
-            </p>
-            <Link to="/reserva" className="btn-primary inline-flex items-center gap-2 text-base px-10 py-4 rounded-xl mx-auto">
-              <span className="material-symbols-outlined">calendar_month</span>
-              Reservar turno
-            </Link>
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
 
-      {sec.mostrar_sucursales !== false && <SucursalesPublicas />}
+      {showBranches && <SucursalesPublicas />}
     </div>
   );
 }

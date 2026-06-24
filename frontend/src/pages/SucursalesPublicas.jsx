@@ -6,6 +6,7 @@ const API = import.meta.env.VITE_API_BASE_URL || "";
 
 export default function SucursalesPublicas() {
   const { config } = useBrandConfig();
+  const business = config.business || {};
   const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -27,6 +28,7 @@ export default function SucursalesPublicas() {
   }, []);
 
   if (loading) return null;
+  if (business.usesBranches === false && business.showContactAddress === false) return null;
   if (branches.length === 0) return null;
 
   return (
@@ -50,7 +52,7 @@ export default function SucursalesPublicas() {
             <h3 className="text-lg font-bold mb-3" style={{ color: "var(--brand-primary)" }}>
               {b.NOMBRE_SUCURSAL || b.NOMBRE_CORTO_SUCURSAL || "Sucursal"}
             </h3>
-            {b.DIRECCION_SUCURSAL && (
+            {business.showContactAddress !== false && b.DIRECCION_SUCURSAL && (
               <p className="text-sm mb-1 opacity-70" style={{ color: "var(--brand-text)" }}>
                 📍 {b.DIRECCION_SUCURSAL}
               </p>
@@ -70,15 +72,17 @@ export default function SucursalesPublicas() {
                 🕐 {b.HORARIO_APERTURA} – {b.HORARIO_CIERRE}
               </p>
             )}
-            <div className="mt-auto pt-4">
-              <a
-                href={b.SLUG_SUCURSAL ? `/reserva?sucursal=${b.SLUG_SUCURSAL}` : "/reserva"}
-                className="block w-full text-center px-4 py-2.5 rounded-xl text-sm font-semibold transition-all hover:opacity-90"
-                style={{ background: "linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))", color: "#fff" }}
-              >
-                Reservar en esta sucursal
-              </a>
-            </div>
+            {business.usesAppointments !== false && (
+              <div className="mt-auto pt-4">
+                <a
+                  href={b.SLUG_SUCURSAL ? `/reserva?sucursal=${b.SLUG_SUCURSAL}` : "/reserva"}
+                  className="block w-full text-center px-4 py-2.5 rounded-xl text-sm font-semibold transition-all hover:opacity-90"
+                  style={{ background: "linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))", color: "#fff" }}
+                >
+                  Reservar en esta sucursal
+                </a>
+              </div>
+            )}
           </div>
         ))}
       </div>

@@ -1,9 +1,10 @@
 """
 Rutas FastAPI para MODULOS y MARCA_BLANCA — /api/modulos, /api/marca-blanca
-Fase 1A: solo lectura. Sin escrituras.
+Solo lectura. Sin escrituras.
 """
 import sys
 from pathlib import Path
+from unicodedata import normalize
 from fastapi import APIRouter, HTTPException
 
 _BACKEND = Path(__file__).resolve().parent.parent
@@ -13,6 +14,156 @@ if str(_BACKEND) not in sys.path:
 from airtable_adapter import AirtableClient
 
 router = APIRouter(prefix="/api", tags=["modulos"])
+
+
+def _to_bool(value, default=False):
+    """Convierte valores Airtable/JSON a booleano sin romper ante nulos."""
+    if value is None or value == "":
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return value != 0
+    text = str(value).strip().lower()
+    if text in {"true", "1", "si", "sí", "yes", "y", "activo", "activa", "habilitado", "habilitada"}:
+        return True
+    if text in {"false", "0", "no", "n", "inactivo", "inactiva", "deshabilitado", "deshabilitada"}:
+        return False
+    return default
+
+
+def _clean_token(value):
+    text = str(value or "").strip().upper()
+    text = normalize("NFKD", text).encode("ascii", "ignore").decode("ascii")
+    return text.replace("-", "_").replace(" ", "_")
+
+
+def _active_module_names(modulos):
+    return {
+        _clean_token(modulo.get("nombre"))
+        for modulo in modulos
+        if _to_bool(modulo.get("activo"), True) and modulo.get("nombre")
+    }
+
+
+def _has_module(active_names, *needles):
+    normalized_needles = [_clean_token(needle) for needle in needles]
+    return any(
+        any(needle in module_name for needle in normalized_needles)
+        for module_name in active_names
+    )
+
+
+def _pick_text(fields, *keys, default=None):
+    for key in keys:
+        value = fields.get(key)
+        if value is not None and str(value).strip() != "":
+            return str(value).strip()
+    return default
+
+
+def _offer_mode(uses_products, uses_services):
+    if uses_products and uses_services:
+        return "PRODUCTOS_SERVICIOS"
+    if uses_products:
+        return "SOLO_PRODUCTOS"
+    if uses_services:
+        return "SOLO_SERVICIOS"
+    return "SIN_CATALOGO"
+
+
+def _business_config_from_marca(marca_fields, modulos_activos):
+    """
+    Contrato P0 de marca blanca.
+
+    Traduce MARCAS + MODULOS en comportamiento usable por frontend/backoffice,
+    sin exigir todavía campos nuevos en Airtable.
+    """
+    active_names = _active_module_names(modulos_activos)
+
+    uses_services = _to_bool(
+        marca_fields.get("MOSTRAR_SERVICIOS"),
+        default=_has_module(active_names, "SERVICIOS", "SERVICIOS_WEB"),
+    )
+    uses_products = _to_bool(
+        marca_fields.get("MOSTRAR_PRODUCTOS"),
+        default=_has_module(active_names, "PRODUCTOS", "PRODUCTOS_WEB"),
+    )
+    uses_branches = _to_bool(
+        marca_fields.get("MOSTRAR_SUCURSALES"),
+        default=_has_module(active_names, "SUCURSALES"),
+    )
+    uses_appointments = _to_bool(
+        marca_fields.get("USA_TURNOS"),
+        default=_has_module(active_names, "CITAS", "AGENDA", "AGENDA_SLOTS"),
+    )
+    uses_cart = _to_bool(
+        marca_fields.get("USA_CARRITO"),
+        default=_has_module(active_names, "CARRITOS", "CARRITO_ITEMS"),
+    )
+    uses_pos = _to_bool(
+        marca_fields.get("USA_CAJA_FISICA"),
+        default=_has_module(active_names, "VENTAS", "ITEMS_VENTA"),
+    )
+    uses_online_payments = _to_bool(marca_fields.get("USA_PAGO_ONLINE"), default=False)
+
+    channel = _pick_text(marca_fields, "CANAL_OPERACION", default=None)
+    if not channel:
+        if uses_branches and uses_cart:
+            channel = "MIXTO"
+        elif uses_branches:
+            channel = "FISICO"
+        else:
+            channel = "ONLINE"
+    channel = _clean_token(channel)
+
+    show_contact_address = _to_bool(
+        marca_fields.get("MOSTRAR_DIRECCION_CONTACTO"),
+        default=channel in {"FISICO", "MIXTO"} and bool(marca_fields.get("DIRECCION_PUBLICA")),
+    )
+    show_map = _to_bool(
+        marca_fields.get("MOSTRAR_MAPA"),
+        default=show_contact_address and bool(marca_fields.get("GOOGLE_MAPS_URL")),
+    )
+
+    offer_mode = _pick_text(marca_fields, "MODO_OFERTA", default=None)
+    offer_mode = _clean_token(offer_mode) if offer_mode else _offer_mode(uses_products, uses_services)
+
+    if offer_mode == "SOLO_PRODUCTOS":
+        catalog_label = "Productos"
+        primary_flow = "CATALOGO"
+    elif offer_mode == "SOLO_SERVICIOS":
+        catalog_label = "Servicios"
+        primary_flow = "RESERVA" if uses_appointments else "CATALOGO"
+    elif offer_mode == "PRODUCTOS_SERVICIOS":
+        catalog_label = "Catálogo"
+        primary_flow = "RESERVA" if uses_appointments else "CATALOGO"
+    else:
+        catalog_label = "Inicio"
+        primary_flow = "CONTACTO"
+
+    return {
+        "contract_version": "P0.1",
+        "modo_oferta": offer_mode,
+        "usa_productos": uses_products,
+        "usa_servicios": uses_services,
+        "usa_turnos": uses_appointments,
+        "usa_sucursales": uses_branches,
+        "usa_multi_sucursal": _to_bool(marca_fields.get("USA_MULTI_SUCURSAL"), default=uses_branches),
+        "canal_operacion": channel,
+        "mostrar_direccion_contacto": show_contact_address,
+        "mostrar_mapa": show_map,
+        "usa_carrito": uses_cart,
+        "usa_checkout": uses_cart and uses_online_payments,
+        "usa_pago_online": uses_online_payments,
+        "usa_caja_fisica": uses_pos and channel in {"FISICO", "MIXTO"},
+        "payment_gateway_status": "PENDIENTE" if not uses_online_payments else "CONFIG_REQUERIDA",
+        "fondo_tipo": _clean_token(_pick_text(marca_fields, "FONDO_TIPO", default="SOLIDO")),
+        "fondo_url": _pick_text(marca_fields, "FONDO_URL", "HERO_IMAGEN_URL", default=None),
+        "contraste_tema": _clean_token(_pick_text(marca_fields, "CONTRASTE_TEMA", default="AUTO")),
+        "catalog_label": catalog_label,
+        "primary_flow": primary_flow,
+    }
 
 
 @router.get("/modulos")
@@ -45,13 +196,16 @@ async def datos_marca_blanca():
             "textos_publicos": None,
             "secciones_visibles": None,
             "modulos_activos": [],
+            "business_config": None,
             "faltantes": [],
         }
+        marca_fields = {}
         # MARCAS (nueva tabla unificada de marca blanca)
         try:
             marca_records = client.list_records("MARCAS")
             if marca_records:
                 mf = marca_records[0].get("fields", {})
+                marca_fields = mf
 
                 # Nombre
                 result["nombre_sistema"] = mf.get("NOMBRE_MARCA")
@@ -160,6 +314,11 @@ async def datos_marca_blanca():
                 })
         except Exception as e:
             result["faltantes"].append(f"MODULOS (error): {str(e)}")
+
+        result["business_config"] = _business_config_from_marca(
+            marca_fields,
+            result["modulos_activos"],
+        )
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")

@@ -1,5 +1,28 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
+const DEFAULT_BUSINESS = {
+  contractVersion: "P0.1",
+  offerMode: "PRODUCTOS_SERVICIOS",
+  usesProducts: true,
+  usesServices: true,
+  usesAppointments: true,
+  usesBranches: true,
+  usesMultiBranch: true,
+  operationChannel: "MIXTO",
+  showContactAddress: true,
+  showMap: false,
+  usesCart: true,
+  usesCheckout: false,
+  usesOnlinePayments: false,
+  usesPhysicalPOS: true,
+  paymentGatewayStatus: "PENDIENTE",
+  backgroundType: "SOLIDO",
+  backgroundUrl: "",
+  contrastTheme: "AUTO",
+  catalogLabel: "Catálogo",
+  primaryFlow: "RESERVA",
+};
+
 const FALLBACK = {
   brandName: "BellezaPro Demo",
   brandLegalName: "BellezaPro",
@@ -56,6 +79,7 @@ const FALLBACK = {
     mostrar_sucursales: true,
     mostrar_como_funciona: true,
   },
+  business: DEFAULT_BUSINESS,
   seoTitle: "BellezaPro Demo",
   seoDescription: "Reservá turnos de belleza online.",
   legalAviso: "Sistema de demostración. No se realizan reservas reales.",
@@ -82,6 +106,11 @@ const DOMAIN_VARIANTS = {
     heroSubtitle: "Reservas, portal cliente, catálogo y backoffice en una demo operativa.",
     heroCtaPrimary: "Reservar turno",
     heroCtaSecondary: "Ver catálogo",
+    business: {
+      offerMode: "PRODUCTOS_SERVICIOS",
+      catalogLabel: "Catálogo",
+      primaryFlow: "RESERVA",
+    },
     seoTitle: "Belleza Demo",
     seoDescription: "Demo piloto para gestión de salones de belleza.",
     legalAviso: "Demo operativa con datos QA. No usar para reservas reales.",
@@ -110,6 +139,12 @@ const DOMAIN_VARIANTS = {
     productsSubtitle: "Ejemplo de productos o ítems vendibles según el rubro.",
     sucursalesTitle: "Unidades operativas",
     sucursalesSubtitle: "Sucursales, sedes o puntos de atención.",
+    business: {
+      offerMode: "PRODUCTOS_SERVICIOS",
+      operationChannel: "MIXTO",
+      catalogLabel: "Módulos",
+      primaryFlow: "CATALOGO",
+    },
     seoTitle: "Sistema Multirrubro Demo",
     seoDescription: "Demo marca blanca preparada para múltiples rubros.",
     legalAviso: "Demo marca blanca. Los datos son de prueba.",
@@ -134,6 +169,11 @@ const DOMAIN_VARIANTS = {
     catalogSubtitle: "Tratamientos destacados para una experiencia premium.",
     productsTitle: "Productos Pro",
     productsSubtitle: "Selección profesional para cuidado y venta complementaria.",
+    business: {
+      offerMode: "PRODUCTOS_SERVICIOS",
+      catalogLabel: "Servicios Pro",
+      primaryFlow: "RESERVA",
+    },
     seoTitle: "BellezaPro Demo",
     seoDescription: "Variante Pro de la demo de salones de belleza.",
     legalAviso: "Demo comercial. No se procesan reservas reales.",
@@ -152,10 +192,14 @@ function normalizeText(raw) {
   return String(raw).trim();
 }
 
-function normalizeBool(raw) {
+function normalizeBool(raw, defaultValue = false) {
+  if (raw === null || raw === undefined || raw === "") return defaultValue;
   if (raw === true || raw === "true" || raw === "True" || raw === 1) return true;
   if (raw === false || raw === "false" || raw === "False" || raw === 0) return false;
-  return Boolean(raw);
+  const text = String(raw).trim().toLowerCase();
+  if (["1", "si", "sí", "yes", "activo", "activa", "habilitado", "habilitada"].includes(text)) return true;
+  if (["0", "no", "inactivo", "inactiva", "deshabilitado", "deshabilitada"].includes(text)) return false;
+  return defaultValue;
 }
 
 function resolvePlaceholders(text, config) {
@@ -193,6 +237,10 @@ function applyDomainVariant(config) {
       ...(config.seccionesVisibles || {}),
       ...(variant.seccionesVisibles || {}),
     },
+    business: {
+      ...(config.business || DEFAULT_BUSINESS),
+      ...(variant.business || {}),
+    },
   };
 }
 
@@ -222,11 +270,64 @@ function applyCssVariables(config) {
   if (config.seoTitle) document.title = config.seoTitle;
 }
 
+function deriveOfferMode(usesProducts, usesServices) {
+  if (usesProducts && usesServices) return "PRODUCTOS_SERVICIOS";
+  if (usesProducts) return "SOLO_PRODUCTOS";
+  if (usesServices) return "SOLO_SERVICIOS";
+  return "SIN_CATALOGO";
+}
+
+function normalizeMode(raw, fallback) {
+  const value = normalizeText(raw);
+  return value ? value.toUpperCase().replaceAll("-", "_").replaceAll(" ", "_") : fallback;
+}
+
+function normalizeBusiness(raw = {}, base = DEFAULT_BUSINESS, secciones = {}) {
+  const usesProducts = normalizeBool(raw.usa_productos, normalizeBool(secciones.mostrar_productos, base.usesProducts));
+  const usesServices = normalizeBool(raw.usa_servicios, normalizeBool(secciones.mostrar_servicios, base.usesServices));
+  const usesAppointments = normalizeBool(raw.usa_turnos, base.usesAppointments);
+  const usesBranches = normalizeBool(raw.usa_sucursales, normalizeBool(secciones.mostrar_sucursales, base.usesBranches));
+  const offerMode = normalizeMode(raw.modo_oferta, deriveOfferMode(usesProducts, usesServices));
+  const primaryFlow = normalizeMode(raw.primary_flow, usesAppointments ? "RESERVA" : "CATALOGO");
+  const catalogLabel = normalizeText(raw.catalog_label) ||
+    (offerMode === "SOLO_PRODUCTOS" ? "Productos" : offerMode === "SOLO_SERVICIOS" ? "Servicios" : base.catalogLabel);
+
+  return {
+    contractVersion: normalizeText(raw.contract_version) || base.contractVersion,
+    offerMode,
+    usesProducts,
+    usesServices,
+    usesAppointments,
+    usesBranches,
+    usesMultiBranch: normalizeBool(raw.usa_multi_sucursal, usesBranches),
+    operationChannel: normalizeMode(raw.canal_operacion, base.operationChannel),
+    showContactAddress: normalizeBool(raw.mostrar_direccion_contacto, base.showContactAddress),
+    showMap: normalizeBool(raw.mostrar_mapa, base.showMap),
+    usesCart: normalizeBool(raw.usa_carrito, base.usesCart),
+    usesCheckout: normalizeBool(raw.usa_checkout, base.usesCheckout),
+    usesOnlinePayments: normalizeBool(raw.usa_pago_online, base.usesOnlinePayments),
+    usesPhysicalPOS: normalizeBool(raw.usa_caja_fisica, base.usesPhysicalPOS),
+    paymentGatewayStatus: normalizeMode(raw.payment_gateway_status, base.paymentGatewayStatus),
+    backgroundType: normalizeMode(raw.fondo_tipo, base.backgroundType),
+    backgroundUrl: normalizeText(raw.fondo_url) || base.backgroundUrl,
+    contrastTheme: normalizeMode(raw.contraste_tema, base.contrastTheme),
+    catalogLabel,
+    primaryFlow,
+  };
+}
+
 function transformMarcaBlanca(data, base = FALLBACK) {
   if (!data || typeof data !== "object" || data.error) return base;
   const colores = data.colores || {};
   const textos = data.textos_publicos || {};
   const secciones = data.secciones_visibles || {};
+  const seccionesVisibles = {
+    mostrar_servicios: normalizeBool(secciones.mostrar_servicios, base.seccionesVisibles?.mostrar_servicios ?? true),
+    mostrar_productos: normalizeBool(secciones.mostrar_productos, base.seccionesVisibles?.mostrar_productos ?? true),
+    mostrar_sucursales: normalizeBool(secciones.mostrar_sucursales, base.seccionesVisibles?.mostrar_sucursales ?? true),
+    mostrar_como_funciona: normalizeBool(secciones.mostrar_como_funciona, base.seccionesVisibles?.mostrar_como_funciona ?? true),
+    orden_secciones: normalizeText(secciones.orden_secciones) || base.seccionesVisibles?.orden_secciones || "hero,servicios,como_funciona,productos,visitanos,cta_final",
+  };
   const config = {
     brandName: normalizeText(data.nombre_sistema) || base.brandName,
     brandLegalName: normalizeText(data.nombre_negocio) || normalizeText(data.nombre_sistema) || base.brandLegalName,
@@ -250,7 +351,7 @@ function transformMarcaBlanca(data, base = FALLBACK) {
     heroCtaPrimaryUrl: normalizeText(textos.hero_cta_primario_url) || base.heroCtaPrimaryUrl,
     heroCtaSecondary: normalizeText(textos.hero_cta_secundario) || base.heroCtaSecondary,
     heroCtaSecondaryUrl: normalizeText(textos.hero_cta_secundario_url) || base.heroCtaSecondaryUrl,
-    bannerActive: normalizeBool(textos.banner_activo),
+    bannerActive: normalizeBool(textos.banner_activo, base.bannerActive),
     bannerTitle: normalizeText(textos.banner_titulo) || base.bannerTitle,
     bannerMessage: normalizeText(textos.banner_mensaje) || base.bannerMessage,
     bannerCtaText: normalizeText(textos.banner_cta_texto) || base.bannerCtaText,
@@ -259,7 +360,7 @@ function transformMarcaBlanca(data, base = FALLBACK) {
     reservaSubtitulo: normalizeText(textos.reserva_subtitulo) || base.reservaSubtitulo,
     reservaTitle: normalizeText(textos.reserva_titulo) || base.reservaTitle,
     reservaSubtitle: normalizeText(textos.reserva_subtitulo) || base.reservaSubtitle,
-    reservaRequiereLogin: normalizeBool(textos.reserva_requiere_login),
+    reservaRequiereLogin: normalizeBool(textos.reserva_requiere_login, base.reservaRequiereLogin),
     catalogTitle: normalizeText(textos.catalogo_titulo) || base.catalogTitle,
     catalogSubtitle: normalizeText(textos.catalogo_subtitulo) || base.catalogSubtitle,
     productsTitle: normalizeText(textos.productos_titulo) || base.productsTitle,
@@ -277,13 +378,8 @@ function transformMarcaBlanca(data, base = FALLBACK) {
     facebook: normalizeText(textos.redes_facebook) || base.facebook,
     tiktok: normalizeText(textos.redes_tiktok) || base.tiktok,
     googleMaps: normalizeText(textos.redes_maps) || base.googleMaps,
-    seccionesVisibles: {
-      mostrar_servicios: normalizeBool(secciones.mostrar_servicios),
-      mostrar_productos: normalizeBool(secciones.mostrar_productos),
-      mostrar_sucursales: normalizeBool(secciones.mostrar_sucursales),
-      mostrar_como_funciona: normalizeBool(secciones.mostrar_como_funciona),
-      orden_secciones: normalizeText(secciones.orden_secciones) || "hero,servicios,como_funciona,productos,visitanos,cta_final",
-    },
+    seccionesVisibles,
+    business: normalizeBusiness(data.business_config || {}, base.business || DEFAULT_BUSINESS, seccionesVisibles),
     seoTitle: normalizeText(data.seo_title) || base.seoTitle,
     seoDescription: normalizeText(data.seo_description) || base.seoDescription,
     legalAviso: normalizeText(data.legal_aviso) || base.legalAviso,
@@ -351,6 +447,30 @@ export function useBrandConfig() {
     return { config: FALLBACK, loading: false, error: null };
   }
   return ctx;
+}
+
+export function getPublicNavigation(config = FALLBACK) {
+  const business = config.business || DEFAULT_BUSINESS;
+  const links = [{ to: '/', label: 'Inicio' }];
+
+  if (business.usesServices && business.usesProducts) {
+    links.push({ to: '/catalogo', label: business.catalogLabel || 'Catálogo' });
+    links.push({ to: '/productos', label: 'Productos' });
+  } else if (business.usesServices) {
+    links.push({ to: '/catalogo', label: business.catalogLabel || 'Servicios' });
+  } else if (business.usesProducts) {
+    links.push({ to: '/productos', label: business.catalogLabel || 'Productos' });
+  }
+
+  if (business.usesBranches || business.showContactAddress) {
+    links.push({ to: '/sucursales', label: business.usesMultiBranch ? 'Sucursales' : 'Ubicación' });
+  }
+
+  if (business.usesAppointments) {
+    links.push({ to: '/reserva', label: 'Reservar' });
+  }
+
+  return links;
 }
 
 export default BrandConfigContext;
