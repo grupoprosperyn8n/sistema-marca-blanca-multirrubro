@@ -11,7 +11,7 @@ export const ROLES = {
   PUBLICO: "PUBLICO",
 };
 
-// Permisos por rol (sin cambios)
+// Fallback legacy: se usa solo si Airtable RBAC no trae el módulo.
 const PERMISOS = {
   [ROLES.ADMINISTRADOR]: {
     backoffice: true, configuracion: true, sucursales: true,
@@ -50,8 +50,57 @@ const PERMISOS = {
   },
 };
 
-// Links de navegacion por rol (sin cambios)
-export function getNavLinks(role) {
+const MODULE_BY_PERMISSION = {
+  agenda: ["CITAS"],
+  citas: ["CITAS"],
+  clientes: ["CLIENTES"],
+  configuracion: ["MARCA_BLANCA", "CONFIGURACION"],
+  servicios: ["SERVICIOS", "SERVICIOS_WEB"],
+  sucursales: ["SUCURSALES"],
+  usuarios: ["USUARIOS"],
+};
+
+const LEGACY_PERMISSION_BY_MODULE = {
+  CITAS: "citas",
+  CLIENTES: "clientes",
+  CONFIGURACION: "configuracion",
+  MARCA_BLANCA: "configuracion",
+  SERVICIOS: "servicios",
+  SERVICIOS_WEB: "servicios",
+  SUCURSALES: "sucursales",
+  USUARIOS: "usuarios",
+};
+
+function modulePermission(access, moduleNames = []) {
+  const byModule = access?.permissions_by_module || {};
+  for (const name of moduleNames) {
+    const permission = byModule[name];
+    if (permission) return permission;
+  }
+  return null;
+}
+
+function buildPermisos(role, access) {
+  const base = { ...(PERMISOS[role] || PERMISOS[ROLES.PUBLICO]) };
+  if (!access?.permissions_by_module) return base;
+
+  const next = { ...base };
+  for (const [legacyKey, modules] of Object.entries(MODULE_BY_PERMISSION)) {
+    const permission = modulePermission(access, modules);
+    if (permission) {
+      next[legacyKey] = !!permission.view;
+    }
+  }
+  next.backoffice = role !== ROLES.CLIENTE && role !== ROLES.PUBLICO && (
+    (access.menu || []).length > 0 || Object.values(next).some(Boolean)
+  );
+  next.editar = Object.values(access.permissions_by_module || {}).some((permission) => permission?.edit);
+  next.verAdministrativo = next.backoffice;
+  return next;
+}
+
+// Links de navegación por rol + contrato RBAC de Airtable.
+export function getNavLinks(role, access = null) {
   if (role === ROLES.CLIENTE) {
     return [
       { to: "/portal", label: "Mi Portal" },
@@ -66,6 +115,25 @@ export function getNavLinks(role) {
       { to: "/reserva", label: "Reserva" },
     ];
   }
+  if (access?.menu?.length) {
+    const links = [
+      { to: "/backoffice", label: "Dashboard" },
+      ...access.menu.map((item) => ({
+        to: item.to,
+        label: item.label,
+        module: item.module,
+        icon: item.icon,
+        can: item.can,
+        description: item.description,
+      })),
+    ];
+    const routes = new Set(links.map((item) => item.to));
+    const permisos = buildPermisos(role, access);
+    if (permisos.sucursales && !routes.has("/backoffice/sucursales")) {
+      links.push({ to: "/backoffice/sucursales", label: "Sucursales" });
+    }
+    return links;
+  }
   const p = PERMISOS[role] || PERMISOS[ROLES.PUBLICO];
   const links = [{ to: "/backoffice", label: "Dashboard" }];
   if (p.sucursales) links.push({ to: "/backoffice/sucursales", label: "Sucursales" });
@@ -78,7 +146,22 @@ export function getNavLinks(role) {
   return links;
 }
 
-export function getDashboardCards(role) {
+export function getDashboardCards(role, access = null) {
+  if (access?.menu?.length) {
+    const cards = access.menu.map((item) => ({
+      title: item.label,
+      desc: item.description || `Módulo ${item.module}`,
+      to: item.to,
+      module: item.module,
+      can: item.can,
+    }));
+    const routes = new Set(cards.map((item) => item.to));
+    const permisos = buildPermisos(role, access);
+    if (permisos.sucursales && !routes.has("/backoffice/sucursales")) {
+      cards.push({ title: "Sucursales", desc: "Unidades operativas activas", to: "/backoffice/sucursales" });
+    }
+    return cards;
+  }
   const p = PERMISOS[role] || PERMISOS[ROLES.PUBLICO];
   const cards = [];
   if (p.sucursales) cards.push({ title: "Sucursales", desc: "Unidades operativas activas", to: "/backoffice/sucursales" });
@@ -91,9 +174,15 @@ export function getDashboardCards(role) {
   return cards;
 }
 
-export function canAccess(role, permiso) {
+export function canAccess(role, permiso, access = null, action = "view") {
+  const legacyKey = LEGACY_PERMISSION_BY_MODULE[permiso] || permiso;
+  if (access?.permissions_by_module) {
+    const modules = MODULE_BY_PERMISSION[legacyKey] || [permiso];
+    const permission = modulePermission(access, modules);
+    if (permission) return !!permission[action];
+  }
   const p = PERMISOS[role] || PERMISOS[ROLES.PUBLICO];
-  return !!p[permiso];
+  return !!p[legacyKey];
 }
 
 // Contexto
@@ -104,6 +193,7 @@ export function AuthProvider({ children }) {
   const [usuario, setUsuario] = useState(null);
   const [debeCambiar, setDebeCambiar] = useState(false);
   const [role, setRole] = useState(ROLES.PUBLICO);
+  const [access, setAccess] = useState(null);
   const [loading, setLoading] = useState(true);
 
   // Verificar sesion existente al montar (cookie HttpOnly via /me)
@@ -116,11 +206,13 @@ export function AuthProvider({ children }) {
           if (data.debe_cambiar_password) {
             setUsuario(null);
             setRole(ROLES.PUBLICO);
+            setAccess(null);
             setDebeCambiar(true);
           } else {
             setDebeCambiar(false);
             setUsuario(data);
             setRole(data.rol || ROLES.PUBLICO);
+            setAccess(data.access || null);
           }
         }
       })
@@ -153,8 +245,12 @@ export function AuthProvider({ children }) {
     const debeCambiar = data.debe_cambiar_password || false;
     // Solo setear usuario si NO debe cambiar (no esta autenticado hasta cambiar)
     if (!debeCambiar) {
-      setUsuario(user);
-      setRole(user.rol || ROLES.PUBLICO);
+      const meRes = await fetch(`${API}/api/auth/me`, { credentials: "include" });
+      const meData = meRes.ok ? await meRes.json() : user;
+      setUsuario(meData);
+      setRole(meData.rol || ROLES.PUBLICO);
+      setAccess(meData.access || null);
+      return { user: meData, debeCambiar, estado_acceso: data.estado_acceso || "" };
     }
     return { user, debeCambiar, estado_acceso: data.estado_acceso || "" };
   }, []);
@@ -168,12 +264,13 @@ export function AuthProvider({ children }) {
     } catch (_) {}
     setUsuario(null);
     setRole(ROLES.PUBLICO);
+    setAccess(null);
   }, []);
 
-  const permisos = PERMISOS[role] || PERMISOS[ROLES.PUBLICO];
+  const permisos = buildPermisos(role, access);
 
   return (
-    <AuthContext.Provider value={{ role, usuario, permisos, login, logout, loading, ROLES, debeCambiar }}>
+    <AuthContext.Provider value={{ role, usuario, permisos, access, login, logout, loading, ROLES, debeCambiar }}>
       {children}
     </AuthContext.Provider>
   );

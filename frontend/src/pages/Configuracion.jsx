@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useAuth } from "../context/AuthContext";
+import { canAccess, useAuth } from "../context/AuthContext";
 import { useBrandConfig } from "../context/BrandConfigContext";
 
 const API = import.meta.env.VITE_API_BASE_URL || "";
@@ -124,7 +124,7 @@ function InfoCard({ label, value, hint }) {
 }
 
 export default function Configuracion() {
-  const { role, permisos } = useAuth();
+  const { role, permisos, access } = useAuth();
   const { config: liveConfig, refresh } = useBrandConfig();
   const [state, setState] = useState({
     loading: true,
@@ -186,7 +186,7 @@ export default function Configuracion() {
   const rawBusiness = marca.business_config || {};
   const activeModules = state.modulos.filter((m) => m.ACTIVO === true || m.activo === true);
   const faltantes = marca.faltantes || [];
-  const canEdit = !!(permisos?.configuracion && permisos?.editar);
+  const canEdit = canAccess(role, "configuracion", access, "edit");
 
   function updateRoot(key, value) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -249,7 +249,7 @@ export default function Configuracion() {
             Rol: {role}
           </span>
           <span className="rounded-full bg-white/70 px-3 py-1 text-xs font-semibold" style={{ color: "var(--brand-text)" }}>
-            {permisos?.editar ? "Edición habilitada por rol" : "Solo lectura"}
+            {canEdit ? "Edición habilitada por permisos" : "Solo lectura"}
           </span>
         </div>
       </div>

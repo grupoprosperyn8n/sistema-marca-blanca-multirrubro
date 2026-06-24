@@ -12,6 +12,7 @@ if str(_BACKEND) not in sys.path:
     sys.path.insert(0, str(_BACKEND))
 
 from airtable_adapter import AirtableClient
+from auth.access_contract import can_module
 from auth.dependencies import get_current_user
 
 router = APIRouter(prefix="/api", tags=["modulos"])
@@ -122,11 +123,14 @@ def _to_bool(value, default=False):
 
 def _require_config_editor(user: dict):
     rol = (user.get("rol") or "").upper()
-    if rol not in {"ADMINISTRADOR", "ADMIN_SISTEMA"}:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Acceso restringido a administradores para editar marca blanca.",
-        )
+    if rol in {"ADMINISTRADOR", "ADMIN_SISTEMA"}:
+        return
+    if can_module(rol, "MARCA_BLANCA", "edit") or can_module(rol, "CONFIGURACION", "edit"):
+        return
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Acceso restringido por permisos de marca blanca.",
+    )
 
 
 def _normalize_edit_value(field_name, value):

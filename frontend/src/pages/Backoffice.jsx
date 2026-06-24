@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import GlassCard from "../components/ui/GlassCard";
-import Badge from "../components/ui/Badge";
+import { getDashboardCards, useAuth } from "../context/AuthContext";
 
 const API = import.meta.env.VITE_API_BASE_URL || "";
 
 export default function Backoffice() {
+  const { role, access } = useAuth();
   const [stats, setStats] = useState({ servicios: 0, clientes: 0, citas: 0, sucursales: 0 });
   const [loading, setLoading] = useState(true);
 
@@ -31,12 +32,27 @@ export default function Backoffice() {
 
   if (loading) return <p className="opacity-50 text-center py-12">Cargando...</p>;
 
-  const cards = [
-    { label: "Servicios", value: stats.servicios, icon: "💇" },
-    { label: "Clientes", value: stats.clientes, icon: "👥" },
-    { label: "Citas", value: stats.citas, icon: "📋" },
-    { label: "Sucursales", value: stats.sucursales, icon: "📍" },
-  ];
+  const statByRoute = {
+    "/backoffice/servicios": stats.servicios,
+    "/backoffice/clientes": stats.clientes,
+    "/backoffice/citas": stats.citas,
+    "/backoffice/sucursales": stats.sucursales,
+  };
+  const iconByRoute = {
+    "/backoffice/agenda": "📅",
+    "/backoffice/citas": "📋",
+    "/backoffice/clientes": "👥",
+    "/backoffice/configuracion": "⚙️",
+    "/backoffice/servicios": "💇",
+    "/backoffice/sucursales": "📍",
+    "/backoffice/usuarios": "🔐",
+  };
+  const cards = getDashboardCards(role, access).map((card) => ({
+    ...card,
+    label: card.title,
+    icon: iconByRoute[card.to] || "📄",
+    value: statByRoute[card.to] ?? "→",
+  }));
 
   return (
     <div>

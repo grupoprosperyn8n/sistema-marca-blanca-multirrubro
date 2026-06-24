@@ -15,6 +15,7 @@ from fastapi import APIRouter, Cookie, HTTPException, Request, Response, status
 from pydantic import BaseModel, EmailStr
 
 from airtable_adapter import AirtableClient
+from .access_contract import build_access_contract
 from .rate_limit import check_rate_limit
 
 logger = logging.getLogger(__name__)
@@ -234,7 +235,17 @@ async def me(request: Request, auth_token: str = Cookie(default=None)):
         **user,
         "debe_cambiar_password": requiere,
         "estado_acceso": estado,
+        "access": build_access_contract(user.get("rol", "")),
     }
+
+
+@router.get("/access")
+async def access_contract(request: Request, auth_token: str = Cookie(default=None)):
+    """Return Airtable-derived access/menu contract for the current user role."""
+    from .dependencies import get_current_user
+
+    user = await get_current_user(request, auth_token)
+    return build_access_contract(user.get("rol", ""))
 
 
 # ── POST /api/auth/logout ─────────────────────

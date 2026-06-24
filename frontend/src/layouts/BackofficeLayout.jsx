@@ -14,15 +14,15 @@ const ICON_MAP = {
 };
 
 export default function BackofficeLayout() {
-  const { role, usuario, logout } = useAuth();
+  const { role, usuario, logout, access } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
 
   // Links filtrados por rol + iconos
-  const navItems = getNavLinks(role).map(link => ({
+  const navItems = getNavLinks(role, access).map(link => ({
     ...link,
-    icon: ICON_MAP[link.to] || '\ud83d\udcc4',
+    icon: link.icon || ICON_MAP[link.to] || '\ud83d\udcc4',
     end: link.to === '/backoffice',
   }));
 

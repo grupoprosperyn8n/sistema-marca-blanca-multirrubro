@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate } from "react-router-dom";
-import { useAuth, ROLES } from "./context/AuthContext";
+import { useAuth, ROLES, canAccess } from "./context/AuthContext";
 
 // Layouts
 import PublicLayout from "./layouts/PublicLayout";
@@ -42,12 +42,10 @@ import PortalCliente from "./pages/PortalCliente";
 
 // Roles con acceso a gestion
 const ROLES_GESTION = [ROLES.ADMINISTRADOR, ROLES.GERENTE, ROLES.EMPLEADO_GESTION, ROLES.SOLO_LECTURA];
-const ROLES_SUCURSALES = [ROLES.ADMINISTRADOR, ROLES.GERENTE, ROLES.SOLO_LECTURA]; // EMPLEADO_GESTION.sucursales=false
-const ROLES_CONFIGURACION = [ROLES.ADMINISTRADOR, ROLES.SOLO_LECTURA]; // coincide con permisos.configuracion actuales
 const ROLES_BACKOFFICE = [...ROLES_GESTION, ROLES.PROFESIONAL];
 
-function ProtectedRoute({ children, roles }) {
-  const { role, usuario, permisos, loading } = useAuth();
+function ProtectedRoute({ children, roles, module, action = "view" }) {
+  const { role, usuario, permisos, access, loading } = useAuth();
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center bg-[var(--brand-surface,#f8f9ff)]"><div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-600 border-t-transparent"></div></div>;
   }
@@ -57,6 +55,9 @@ function ProtectedRoute({ children, roles }) {
     if (role === ROLES.PROFESIONAL) return <Navigate to="/profesional" replace />;
     if (role === ROLES.CLIENTE) return <Navigate to="/portal" replace />;
     return <Navigate to="/" replace />;
+  }
+  if (module && !canAccess(role, module, access, action)) {
+    return <Navigate to="/backoffice" replace />;
   }
   return children;
 }
@@ -90,25 +91,25 @@ export default function App() {
 
       <Route element={<ProtectedRoute roles={ROLES_BACKOFFICE}><BackofficeLayout /></ProtectedRoute>}>
         <Route path="/backoffice" element={<Backoffice />} />
-        <Route path="/backoffice/agenda" element={<Agenda />} />
-        <Route path="/backoffice/citas" element={<Citas />} />
+        <Route path="/backoffice/agenda" element={<ProtectedRoute roles={ROLES_BACKOFFICE} module="agenda"><Agenda /></ProtectedRoute>} />
+        <Route path="/backoffice/citas" element={<ProtectedRoute roles={ROLES_BACKOFFICE} module="citas"><Citas /></ProtectedRoute>} />
       </Route>
 
-      <Route element={<ProtectedRoute roles={[ROLES.ADMINISTRADOR]}><BackofficeLayout /></ProtectedRoute>}>
-        <Route path="/backoffice/usuarios" element={<UsersAdmin />} />
+      <Route element={<ProtectedRoute roles={ROLES_BACKOFFICE}><BackofficeLayout /></ProtectedRoute>}>
+        <Route path="/backoffice/usuarios" element={<ProtectedRoute roles={[ROLES.ADMINISTRADOR]} module="usuarios"><UsersAdmin /></ProtectedRoute>} />
       </Route>
 
-      <Route element={<ProtectedRoute roles={ROLES_GESTION}><BackofficeLayout /></ProtectedRoute>}>
-        <Route path="/backoffice/clientes" element={<Clientes />} />
-        <Route path="/backoffice/servicios" element={<Servicios />} />
+      <Route element={<ProtectedRoute roles={ROLES_BACKOFFICE}><BackofficeLayout /></ProtectedRoute>}>
+        <Route path="/backoffice/clientes" element={<ProtectedRoute roles={ROLES_BACKOFFICE} module="clientes"><Clientes /></ProtectedRoute>} />
+        <Route path="/backoffice/servicios" element={<ProtectedRoute roles={ROLES_BACKOFFICE} module="servicios"><Servicios /></ProtectedRoute>} />
       </Route>
 
-      <Route element={<ProtectedRoute roles={ROLES_SUCURSALES}><BackofficeLayout /></ProtectedRoute>}>
-        <Route path="/backoffice/sucursales" element={<Sucursales />} />
+      <Route element={<ProtectedRoute roles={ROLES_BACKOFFICE}><BackofficeLayout /></ProtectedRoute>}>
+        <Route path="/backoffice/sucursales" element={<ProtectedRoute roles={ROLES_BACKOFFICE} module="sucursales"><Sucursales /></ProtectedRoute>} />
       </Route>
 
-      <Route element={<ProtectedRoute roles={ROLES_CONFIGURACION}><BackofficeLayout /></ProtectedRoute>}>
-        <Route path="/backoffice/configuracion" element={<Configuracion />} />
+      <Route element={<ProtectedRoute roles={ROLES_BACKOFFICE}><BackofficeLayout /></ProtectedRoute>}>
+        <Route path="/backoffice/configuracion" element={<ProtectedRoute roles={ROLES_BACKOFFICE} module="configuracion"><Configuracion /></ProtectedRoute>} />
       </Route>
 
       <Route element={<ProtectedRoute roles={[ROLES.PROFESIONAL, ROLES.ADMINISTRADOR, ROLES.GERENTE]}><ProfessionalLayout /></ProtectedRoute>}>
