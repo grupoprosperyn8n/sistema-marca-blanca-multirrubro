@@ -124,7 +124,7 @@ function InfoCard({ label, value, hint }) {
 }
 
 export default function Configuracion() {
-  const { role, permisos, access } = useAuth();
+  const { role, access } = useAuth();
   const { config: liveConfig, refresh } = useBrandConfig();
   const [state, setState] = useState({
     loading: true,

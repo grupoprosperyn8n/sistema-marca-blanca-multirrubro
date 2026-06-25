@@ -1,16 +1,18 @@
 import { useState, useEffect } from "react";
 import DataTable from "../components/ui/DataTable";
 import Badge from "../components/ui/Badge";
+import ModuleActionBar from "../components/backoffice/ModuleActionBar";
+import { filterColumnsByAccess, useAuth } from "../context/AuthContext";
 
 const API = import.meta.env.VITE_API_BASE_URL || "";
 
-const columns = [
-  { header: "Nombre", field: "NOMBRE_SUCURSAL", render: (row) => (
+const allColumns = [
+  { header: "Nombre", field: "NOMBRE_SUCURSAL", fields: ["NOMBRE_SUCURSAL"], render: (row) => (
     <span className="font-medium" style={{ color: 'var(--brand-text)' }}>{row.NOMBRE_SUCURSAL || row.nombre || "—"}</span>
   )},
-  { header: "Direccion", field: "DIRECCION" },
-  { header: "Telefono", field: "TELEFONO_SUCURSAL", render: (row) => row.TELEFONO_SUCURSAL || row.telefono || "—" },
-  { header: "Estado", field: "ACTIVA", render: (row) => (
+  { header: "Direccion", field: "DIRECCION", fields: ["DIRECCION"] },
+  { header: "Telefono", field: "TELEFONO_SUCURSAL", fields: ["TELEFONO_SUCURSAL"], render: (row) => row.TELEFONO_SUCURSAL || row.telefono || "—" },
+  { header: "Estado", field: "ACTIVA", fields: ["ACTIVA"], render: (row) => (
     <Badge variant={row.ACTIVA !== false ? 'success' : 'error'}>
       {row.ACTIVA !== false ? 'Activa' : 'Inactiva'}
     </Badge>
@@ -18,8 +20,10 @@ const columns = [
 ];
 
 export default function Sucursales() {
+  const { access } = useAuth();
   const [sucursales, setSucursales] = useState([]);
   const [loading, setLoading] = useState(true);
+  const columns = filterColumnsByAccess(allColumns, access, "SUCURSALES");
 
   useEffect(() => {
     fetch(`${API}/api/sucursales`)
@@ -32,9 +36,15 @@ export default function Sucursales() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <h2 className="text-2xl font-bold" style={{ fontFamily: 'var(--font-heading, Manrope)', color: 'var(--brand-text)' }}>Sucursales</h2>
-        <Badge>{sucursales.length} registros</Badge>
+        <ModuleActionBar
+          moduleKey="sucursales"
+          count={sucursales.length}
+          rows={sucursales}
+          columns={columns}
+          filename="sucursales.csv"
+        />
       </div>
       <DataTable columns={columns} data={sucursales} />
     </div>

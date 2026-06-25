@@ -71,10 +71,19 @@ const LEGACY_PERMISSION_BY_MODULE = {
   USUARIOS: "usuarios",
 };
 
+function normalizeKey(value) {
+  return String(value || "")
+    .trim()
+    .toUpperCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[-\s]+/g, "_");
+}
+
 function modulePermission(access, moduleNames = []) {
   const byModule = access?.permissions_by_module || {};
   for (const name of moduleNames) {
-    const permission = byModule[name];
+    const permission = byModule[normalizeKey(name)];
     if (permission) return permission;
   }
   return null;
@@ -183,6 +192,66 @@ export function canAccess(role, permiso, access = null, action = "view") {
   }
   const p = PERMISOS[role] || PERMISOS[ROLES.PUBLICO];
   return !!p[legacyKey];
+}
+
+export function getModuleActions(role, permiso, access = null) {
+  const legacyKey = LEGACY_PERMISSION_BY_MODULE[permiso] || permiso;
+  const modules = MODULE_BY_PERMISSION[legacyKey] || [permiso];
+  const permission = access?.permissions_by_module ? modulePermission(access, modules) : null;
+
+  if (permission) {
+    return {
+      view: !!permission.view,
+      create: !!permission.create,
+      edit: !!permission.edit,
+      delete: !!permission.delete,
+      export: !!permission.export,
+      scope: permission.scope || "",
+    };
+  }
+
+  const p = PERMISOS[role] || PERMISOS[ROLES.PUBLICO];
+  const canView = !!p[legacyKey];
+  const canEdit = !!p.editar && canView;
+  return {
+    view: canView,
+    create: canEdit,
+    edit: canEdit,
+    delete: false,
+    export: canView && !!p.verAdministrativo,
+    scope: "",
+  };
+}
+
+export function getFieldPermission(access, table, field) {
+  const tableKey = normalizeKey(table);
+  const fieldKey = normalizeKey(field);
+  const fields = access?.field_permissions?.[tableKey] || {};
+  return fields[field] || fields[fieldKey] || null;
+}
+
+export function canViewField(access, table, fields) {
+  const fieldList = Array.isArray(fields) ? fields : [fields];
+  const tableFields = access?.field_permissions?.[normalizeKey(table)];
+  if (!tableFields) return true;
+
+  let foundExplicitPermission = false;
+  for (const field of fieldList) {
+    const permission = getFieldPermission(access, table, field);
+    if (!permission) continue;
+    foundExplicitPermission = true;
+    if (permission.visible) return true;
+  }
+  return !foundExplicitPermission;
+}
+
+export function canEditField(access, table, field) {
+  const permission = getFieldPermission(access, table, field);
+  return permission ? !!permission.editable : true;
+}
+
+export function filterColumnsByAccess(columns, access, table) {
+  return columns.filter((column) => canViewField(access, table, column.fields || column.field));
 }
 
 // Contexto

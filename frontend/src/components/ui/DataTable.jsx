@@ -1,6 +1,14 @@
 import React from 'react';
 
 export default function DataTable({ columns, data, className = '', onRowClick, emptyMessage = 'Sin datos' }) {
+  if (columns.length === 0) {
+    return (
+      <div className={`glass-card p-8 text-center text-sm opacity-60 ${className}`}>
+        Sin columnas visibles para tu rol.
+      </div>
+    );
+  }
+
   return (
     <div className={`overflow-x-auto glass-card p-0 ${className}`}>
       <table className="w-full text-left">

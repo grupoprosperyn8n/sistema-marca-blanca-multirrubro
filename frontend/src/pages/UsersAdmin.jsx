@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { useAuth } from "../context/AuthContext";
-import { useBrandConfig } from "../context/BrandConfigContext";
+import { canViewField, getModuleActions, useAuth } from "../context/AuthContext";
 import GlassCard from "../components/ui/GlassCard";
 import PrimaryButton from "../components/ui/PrimaryButton";
 
@@ -24,8 +23,13 @@ const ROL_COLORS = {
 };
 
 export default function UsersAdmin() {
-  const { usuario } = useAuth();
-  const { config } = useBrandConfig();
+  const { role, access } = useAuth();
+  const actions = getModuleActions(role, "usuarios", access);
+  const canCreate = actions.create;
+  const canEdit = actions.edit;
+  const showEmail = canViewField(access, "USUARIOS", "EMAIL_LOGIN");
+  const showPasswordFlags = canViewField(access, "USUARIOS", "REQUIERE_CAMBIO_CLAVE");
+  const showLastLogin = canViewField(access, "USUARIOS", "ULTIMO_LOGIN");
 
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -69,6 +73,7 @@ export default function UsersAdmin() {
   const handleCreate = async (e) => {
     e.preventDefault();
     setCreateError("");
+    if (!canCreate) { setCreateError("Tu rol no tiene permiso para crear usuarios."); return; }
     if (!newName.trim() || !newEmail.trim()) { setCreateError("Completá todos los campos"); return; }
 
     setCreating(true);
@@ -95,6 +100,7 @@ export default function UsersAdmin() {
 
   // ── Reset Password ──
   const handleReset = async (user) => {
+    if (!canEdit) { setError("Tu rol no tiene permiso para resetear contraseñas."); return; }
     setResetTarget(user);
     setResetPwd("");
     setResetting(true);
@@ -106,7 +112,7 @@ export default function UsersAdmin() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || "Error al resetear contraseña");
       setResetPwd(data.temp_password || "");
-      setSuccess(`Contraseña reseteada para ${user.nombre_usuario || user.email}`);
+      setSuccess(`Contraseña reseteada para ${user.nombre || user.nombre_usuario || user.email}`);
     } catch (err) {
       setError(err.message);
       setResetTarget(null);
@@ -117,13 +123,14 @@ export default function UsersAdmin() {
 
   // ── Force Password Change ──
   const handleForce = async (user) => {
+    if (!canEdit) { setError("Tu rol no tiene permiso para forzar cambio de contraseña."); return; }
     try {
       const res = await fetch(`${API}/api/auth/admin/users/${user.id}/force-password-change`, {
         method: "POST",
         credentials: "include",
       });
       if (!res.ok) throw new Error((await res.json()).detail || "Error");
-      setSuccess(`${user.nombre_usuario || user.email} debe cambiar contraseña en próximo login`);
+      setSuccess(`${user.nombre || user.nombre_usuario || user.email} debe cambiar contraseña en próximo login`);
       fetchUsers();
     } catch (err) {
       setError(err.message);
@@ -132,6 +139,7 @@ export default function UsersAdmin() {
 
   // ── Block / Unblock ──
   const handleToggleBlock = async (user) => {
+    if (!canEdit) { setError("Tu rol no tiene permiso para bloquear o desbloquear usuarios."); return; }
     const isBlocked = user.estado_acceso === "BLOQUEADO";
     const endpoint = isBlocked ? "unblock" : "block";
     try {
@@ -141,8 +149,8 @@ export default function UsersAdmin() {
       });
       if (!res.ok) throw new Error((await res.json()).detail || "Error");
       setSuccess(isBlocked
-        ? `${user.nombre_usuario || user.email} desbloqueado`
-        : `${user.nombre_usuario || user.email} bloqueado`);
+        ? `${user.nombre || user.nombre_usuario || user.email} desbloqueado`
+        : `${user.nombre || user.nombre_usuario || user.email} bloqueado`);
       fetchUsers();
     } catch (err) {
       setError(err.message);
@@ -153,7 +161,7 @@ export default function UsersAdmin() {
   const filteredUsers = users.filter(u => {
     const s = search.toLowerCase().trim();
     if (s) {
-      const name = (u.nombre_usuario || "").toLowerCase();
+      const name = (u.nombre || u.nombre_usuario || "").toLowerCase();
       const email = (u.email || "").toLowerCase();
       if (!name.includes(s) && !email.includes(s)) return false;
     }
@@ -170,10 +178,14 @@ export default function UsersAdmin() {
         <div>
           <h1 className="text-2xl font-bold" style={{ color: "var(--brand-text)" }}>Gestión de Usuarios</h1>
           <p className="text-xs mt-0.5" style={{ color: "var(--brand-text-secondary)" }}>
-            Crear, resetear contraseñas, forzar cambios, bloquear y desbloquear
+            Crear, resetear contraseñas, forzar cambios, bloquear y desbloquear según permisos del rol
           </p>
         </div>
-        <PrimaryButton onClick={() => { setShowCreate(true); setTempPwd(""); setCreateError(""); }}>
+        <PrimaryButton
+          disabled={!canCreate}
+          title={!canCreate ? "Sin permiso para crear usuarios" : ""}
+          onClick={() => { setShowCreate(true); setTempPwd(""); setCreateError(""); }}
+        >
           + Nuevo Usuario
         </PrimaryButton>
       </div>
@@ -214,26 +226,27 @@ export default function UsersAdmin() {
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50/50">
                   <th className="text-left px-4 py-3 font-semibold text-xs" style={{ color: "var(--brand-text)" }}>Usuario</th>
-                  <th className="text-left px-4 py-3 font-semibold text-xs hidden sm:table-cell" style={{ color: "var(--brand-text)" }}>Email</th>
+                  {showEmail && <th className="text-left px-4 py-3 font-semibold text-xs hidden sm:table-cell" style={{ color: "var(--brand-text)" }}>Email</th>}
                   <th className="text-left px-4 py-3 font-semibold text-xs" style={{ color: "var(--brand-text)" }}>Rol</th>
                   <th className="text-left px-4 py-3 font-semibold text-xs" style={{ color: "var(--brand-text)" }}>Estado</th>
-                  <th className="text-left px-4 py-3 font-semibold text-xs hidden md:table-cell" style={{ color: "var(--brand-text)" }}>Último Login</th>
+                  {showLastLogin && <th className="text-left px-4 py-3 font-semibold text-xs hidden md:table-cell" style={{ color: "var(--brand-text)" }}>Último Login</th>}
                   <th className="text-right px-4 py-3 font-semibold text-xs" style={{ color: "var(--brand-text)" }}>Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredUsers.length === 0 ? (
-                  <tr><td colSpan={6} className="text-center py-8 text-xs" style={{ color: "var(--brand-text-secondary)" }}>No se encontraron usuarios</td></tr>
+                  <tr><td colSpan={4 + (showEmail ? 1 : 0) + (showLastLogin ? 1 : 0)} className="text-center py-8 text-xs" style={{ color: "var(--brand-text-secondary)" }}>No se encontraron usuarios</td></tr>
                 ) : filteredUsers.map(u => {
                   const isBlocked = u.estado_acceso === "BLOQUEADO";
-                  const requiere = u.requiere_cambio_clave;
+                  const requiere = u.requiere_cambio_clave || u.debe_cambiar_password;
+                  const displayName = u.nombre || u.nombre_usuario || "—";
                   return (
                     <tr key={u.id} className="border-b border-gray-50 hover:bg-gray-50/30 transition-colors">
                       <td className="px-4 py-3 font-medium" style={{ color: "var(--brand-text)" }}>
-                        {u.nombre_usuario || "—"}
-                        {requiere && <span className="ml-2 text-xs px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">🔑 debe cambiar</span>}
+                        {displayName}
+                        {showPasswordFlags && requiere && <span className="ml-2 text-xs px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">🔑 debe cambiar</span>}
                       </td>
-                      <td className="px-4 py-3 hidden sm:table-cell" style={{ color: "var(--brand-text-secondary)" }}>{u.email || "—"}</td>
+                      {showEmail && <td className="px-4 py-3 hidden sm:table-cell" style={{ color: "var(--brand-text-secondary)" }}>{u.email || "—"}</td>}
                       <td className="px-4 py-3">
                         <span className={`text-xs px-2 py-0.5 rounded border font-medium ${ROL_COLORS[u.rol] || "bg-gray-100 text-gray-600 border-gray-200"}`}>
                           {u.rol || "—"}
@@ -244,19 +257,19 @@ export default function UsersAdmin() {
                           {u.estado_acceso || "PENDIENTE"}
                         </span>
                       </td>
-                      <td className="px-4 py-3 hidden md:table-cell text-xs" style={{ color: "var(--brand-text-secondary)" }}>
+                      {showLastLogin && <td className="px-4 py-3 hidden md:table-cell text-xs" style={{ color: "var(--brand-text-secondary)" }}>
                         {u.ultimo_login || "—"}
-                      </td>
+                      </td>}
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-1.5 flex-wrap">
-                          <button onClick={() => handleReset(u)} disabled={resetting && resetTarget?.id === u.id}
+                          <button onClick={() => handleReset(u)} disabled={!canEdit || (resetting && resetTarget?.id === u.id)}
                             className="text-xs px-2 py-1 rounded border border-gray-200 hover:bg-gray-100 disabled:opacity-50"
                             title="Resetear contraseña">🔑</button>
-                          <button onClick={() => handleForce(u)}
-                            className="text-xs px-2 py-1 rounded border border-amber-200 hover:bg-amber-50 text-amber-700"
+                          <button onClick={() => handleForce(u)} disabled={!canEdit}
+                            className="text-xs px-2 py-1 rounded border border-amber-200 hover:bg-amber-50 text-amber-700 disabled:opacity-50"
                             title="Forzar cambio">⚠️</button>
-                          <button onClick={() => handleToggleBlock(u)}
-                            className={`text-xs px-2 py-1 rounded border ${isBlocked ? 'border-emerald-200 hover:bg-emerald-50 text-emerald-700' : 'border-rose-200 hover:bg-rose-50 text-rose-700'}`}
+                          <button onClick={() => handleToggleBlock(u)} disabled={!canEdit}
+                            className={`text-xs px-2 py-1 rounded border disabled:opacity-50 ${isBlocked ? 'border-emerald-200 hover:bg-emerald-50 text-emerald-700' : 'border-rose-200 hover:bg-rose-50 text-rose-700'}`}
                             title={isBlocked ? "Desbloquear" : "Bloquear"}>
                             {isBlocked ? "🔓" : "🔒"}
                           </button>
@@ -331,7 +344,7 @@ export default function UsersAdmin() {
           <GlassCard className="w-full max-w-md m-4 p-6" onClick={e => e.stopPropagation()}>
             <h2 className="text-lg font-bold mb-4" style={{ color: "var(--brand-text)" }}>Contraseña Reseteada</h2>
             <div className="px-4 py-3 rounded-lg bg-amber-50 border border-amber-200 text-sm">
-              <p className="font-semibold text-amber-800">{resetTarget.nombre_usuario || resetTarget.email}</p>
+              <p className="font-semibold text-amber-800">{resetTarget.nombre || resetTarget.nombre_usuario || resetTarget.email}</p>
               <p className="mt-2 text-xs text-amber-600">Nueva contraseña temporal (solo se muestra una vez):</p>
               <code className="block mt-1 px-3 py-2 bg-white rounded border border-amber-200 font-mono text-sm select-all">{resetPwd}</code>
             </div>
