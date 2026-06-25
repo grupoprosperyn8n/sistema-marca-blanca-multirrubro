@@ -7,16 +7,35 @@ Fase 3C2: confirmacion real de cita (crea CITA + marca AGENDA_SLOT).
 import sys
 from pathlib import Path
 from datetime import date
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 _BACKEND = Path(__file__).resolve().parent.parent
 if str(_BACKEND) not in sys.path:
     sys.path.insert(0, str(_BACKEND))
 
 from airtable_adapter import AirtableClient
+from auth.access_contract import can_edit_field, can_module
 from auth.dependencies import get_current_user
 
 router = APIRouter(prefix="/api", tags=["clientes"])
+
+_BACKOFFICE_CLIENTES_FIELDS = {
+    "NOMBRE_CLIENTE",
+    "EMAIL",
+    "TELEFONO",
+    "DOCUMENTO_IDENTIDAD",
+    "FECHA_NACIMIENTO",
+    "CALLE_Y_N°",
+    "LOCALIDAD",
+    "PROVINCIA/PAIS",
+    "CODIGO POSTAL",
+    "PREFERENCIAS_SERVICIOS",
+    "ACEPTA_COMUNICACIONES",
+    "ESTADO_COMERCIAL",
+    "CALIFICACION",
+    "FICHA_TECNICA",
+    "ACTIVO",
+}
 
 _CAMPOS_EDITABLES_CLIENTE = {
     "NOMBRE_CLIENTE", "TELEFONO", "DOCUMENTO_IDENTIDAD",
@@ -84,6 +103,62 @@ def _rollback_payload(fields: dict, field_names: list[str]) -> dict:
     return {field_name: fields.get(field_name, None) for field_name in field_names}
 
 
+def _require_clientes_action(user: dict, action: str):
+    rol = user.get("rol") or ""
+    if can_module(rol, "CLIENTES", action):
+        return
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail=f"Sin permiso para {action} CLIENTES.",
+    )
+
+
+def _collect_clientes_patch(payload: dict, role_name: str, partial: bool = True) -> dict:
+    if not isinstance(payload, dict):
+        raise HTTPException(status_code=400, detail="Payload inválido.")
+
+    unknown = sorted(set(payload) - _BACKOFFICE_CLIENTES_FIELDS)
+    if unknown:
+        raise HTTPException(
+            status_code=400,
+            detail={"message": "Campos no permitidos para CLIENTES.", "fields": unknown},
+        )
+
+    patch = {}
+    forbidden = []
+    for field_name, value in payload.items():
+        if not can_edit_field(role_name, "CLIENTES", field_name):
+            forbidden.append(field_name)
+            continue
+        if isinstance(value, str):
+            value = value.strip()
+        if value == "":
+            value = None
+        patch[field_name] = value
+
+    if forbidden:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"message": "Campos no editables para tu rol.", "fields": forbidden},
+        )
+    if not patch:
+        raise HTTPException(status_code=400, detail="No se enviaron campos editables.")
+    if not partial and not str(patch.get("NOMBRE_CLIENTE") or "").strip():
+        raise HTTPException(status_code=400, detail="NOMBRE_CLIENTE es obligatorio.")
+    return patch
+
+
+def _format_cliente_record(record: dict, extra: dict | None = None) -> dict:
+    """Normaliza la respuesta backoffice; Airtable omite checkboxes false."""
+    fields = dict(record.get("fields", {}))
+    fields.setdefault("ACTIVO", False)
+    data = {"id": record.get("id"), "createdTime": record.get("createdTime")}
+    if extra:
+        data.update(extra)
+    data.update(fields)
+    return data
+
+
 @router.get("/clientes")
 async def listar_clientes():
     """Lista todos los clientes (uso administrativo)."""
@@ -92,13 +167,60 @@ async def listar_clientes():
         records = client.list_records("CLIENTES", by_name=True)
         items = []
         for r in records:
-            fields = r.get("fields", {})
-            items.append({"id": r.get("id"), "createdTime": r.get("createdTime"), **fields})
+            items.append(_format_cliente_record(r))
         return {"total": len(items), "clientes": items}
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+
+
+@router.post("/backoffice/clientes")
+async def crear_cliente_backoffice(payload: dict, user: dict = Depends(get_current_user)):
+    """Crea un CLIENTE desde backoffice con RBAC y campos seguros."""
+    _require_clientes_action(user, "create")
+    fields = _collect_clientes_patch(payload, user.get("rol") or "", partial=False)
+    fields.setdefault("ACTIVO", True)
+    try:
+        at = AirtableClient()
+        record = at.create_record("CLIENTES", fields)
+        return _format_cliente_record(record)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al crear cliente: {str(e)}")
+
+
+@router.patch("/backoffice/clientes/{cliente_id}")
+async def actualizar_cliente_backoffice(cliente_id: str, payload: dict, user: dict = Depends(get_current_user)):
+    """Actualiza campos permitidos de CLIENTES desde backoffice."""
+    _require_clientes_action(user, "edit")
+    fields = _collect_clientes_patch(payload, user.get("rol") or "", partial=True)
+    try:
+        at = AirtableClient()
+        at.get_record("CLIENTES", cliente_id)
+        at.patch_record("CLIENTES", cliente_id, fields)
+        updated = at.get_record("CLIENTES", cliente_id)
+        return _format_cliente_record(updated, {"actualizados": list(fields.keys())})
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al actualizar cliente: {str(e)}")
+
+
+@router.delete("/backoffice/clientes/{cliente_id}")
+async def baja_logica_cliente_backoffice(cliente_id: str, user: dict = Depends(get_current_user)):
+    """Baja lógica: nunca borra físico; marca ACTIVO=false."""
+    _require_clientes_action(user, "delete")
+    try:
+        at = AirtableClient()
+        at.get_record("CLIENTES", cliente_id)
+        at.patch_record("CLIENTES", cliente_id, {"ACTIVO": False})
+        updated = at.get_record("CLIENTES", cliente_id)
+        return _format_cliente_record(
+            updated,
+            {"deleted": False, "baja_logica": True, "actualizados": ["ACTIVO"]},
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al dar de baja cliente: {str(e)}")
 
 
 @router.get("/clientes/me")

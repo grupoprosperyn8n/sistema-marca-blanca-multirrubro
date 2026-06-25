@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function DataTable({ columns, data, className = '', onRowClick, emptyMessage = 'Sin datos' }) {
+export default function DataTable({ columns, data, className = '', onRowClick, emptyMessage = 'Sin datos', selectedRowId = '' }) {
   if (columns.length === 0) {
     return (
       <div className={`glass-card p-8 text-center text-sm opacity-60 ${className}`}>
@@ -26,7 +26,11 @@ export default function DataTable({ columns, data, className = '', onRowClick, e
             <tr><td colSpan={columns.length} className="px-4 py-8 text-center opacity-50">{emptyMessage}</td></tr>
           ) : (
             data.map((row, ri) => (
-              <tr key={row.id || ri} className={`border-b border-white/5 transition-colors ${onRowClick ? 'cursor-pointer hover:bg-white/5' : ''}`} onClick={() => onRowClick?.(row)}>
+              <tr
+                key={row.id || ri}
+                className={`border-b border-white/5 transition-colors ${selectedRowId === row.id ? 'bg-white/40' : ''} ${onRowClick ? 'cursor-pointer hover:bg-white/5' : ''}`}
+                onClick={() => onRowClick?.(row)}
+              >
                 {columns.map((col, ci) => (
                   <td key={ci} className="px-4 py-3 text-sm">{col.render ? col.render(row) : row[col.field]}</td>
                 ))}

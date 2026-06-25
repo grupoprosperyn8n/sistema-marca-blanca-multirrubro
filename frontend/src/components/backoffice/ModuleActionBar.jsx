@@ -24,8 +24,9 @@ function exportCsv(filename, rows, columns) {
 }
 
 function ActionButton({ children, allowed, implemented = true, onClick, title, unavailableReason }) {
+  if (!allowed) return null;
   const enabled = allowed && implemented;
-  const reason = !allowed ? "Sin permiso para esta acción" : (unavailableReason || "Acción pendiente de conectar a endpoint");
+  const reason = unavailableReason || "Acción pendiente de conectar a endpoint";
   return (
     <button
       type="button"

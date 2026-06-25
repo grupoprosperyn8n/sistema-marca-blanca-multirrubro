@@ -328,3 +328,23 @@ def can_module(role_name: str, module_name: str, action: str = "view") -> bool:
         "export": "export",
     }.get(action, action)
     return bool(module.get(action_key))
+
+
+def field_permission(role_name: str, table_name: str, field_name: str) -> dict | None:
+    contract = build_access_contract(role_name)
+    table_permissions = contract.get("field_permissions", {}).get(normalize_key(table_name), {})
+    return table_permissions.get(field_name) or table_permissions.get(normalize_key(field_name))
+
+
+def can_edit_field(role_name: str, table_name: str, field_name: str) -> bool:
+    permission = field_permission(role_name, table_name, field_name)
+    if permission is None:
+        return True
+    return bool(permission.get("editable"))
+
+
+def can_view_field(role_name: str, table_name: str, field_name: str) -> bool:
+    permission = field_permission(role_name, table_name, field_name)
+    if permission is None:
+        return True
+    return bool(permission.get("visible"))
