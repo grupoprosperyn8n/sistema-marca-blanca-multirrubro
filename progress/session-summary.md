@@ -269,3 +269,65 @@ Commit: `1a0d602 fix(frontend): diferenciar branding por dominio`
 - No se tocaron `CITAS`, `AGENDA_SLOTS` ni `SUCURSALES` en P0.
 - No hubo delete físico.
 - Build frontend OK.
+
+---
+
+# CIERRE — BACKOFFICE CRUD P1 Sucursales
+
+**Fecha:** 2026-06-25
+**Estado:** CERRADO
+
+## Alcance cerrado
+
+- Configuración Airtable autorizada:
+  - `MODULOS`: creado `SUCURSALES`.
+  - `PERMISOS_MODULO`: configurado para `ADMINISTRADOR`, `GERENTE`, `EMPLEADO_GESTION`, `PROFESIONAL`, `SOLO_LECTURA`.
+- CRUD backoffice real para `SUCURSALES`.
+- Baja lógica, sin DELETE físico:
+  - `ACTIVO=false`.
+  - `ESTADO_SUCURSAL=INACTIVA`.
+  - `PUBLICAR_WEB=false`.
+  - `VISIBILIDAD_WEB=OCULTA`.
+- Frontend backoffice conectado con modal Crear/Editar, selección de fila y baja lógica.
+- Filtro público actualizado para no mostrar sucursales inactivas/ocultas.
+
+## RBAC
+
+| Rol | Resultado |
+|-----|-----------|
+| ADMINISTRADOR | crear/editar/baja lógica |
+| GERENTE | crear/editar; delete bloqueado |
+| EMPLEADO_GESTION | sin acceso/mutaciones 403 |
+| PROFESIONAL | sin acceso/mutaciones 403 |
+| SOLO_LECTURA | lectura; mutaciones 403 |
+
+## PERMISOS_CAMPO
+
+No se crearon `PERMISOS_CAMPO` para `SUCURSALES` porque `PERMISOS_CAMPO.TABLA` no contiene la opción `SUCURSALES`. Agregar esa opción sería modificar schema Airtable. La protección P1 queda aplicada por:
+
+- RBAC de módulo con `PERMISOS_MODULO`.
+- Allowlist segura en backend.
+- Payload frontend filtrado por campos editables.
+
+## QA
+
+| Prueba | Resultado |
+|--------|-----------|
+| Backend local /health | ✅ 200 |
+| Sin auth create | ✅ 401 |
+| ADMINISTRADOR create/edit/delete lógico | ✅ |
+| GERENTE create/edit/delete 403 | ✅ |
+| EMPLEADO_GESTION mutaciones 403 | ✅ |
+| PROFESIONAL mutaciones 403 | ✅ |
+| SOLO_LECTURA mutaciones 403 | ✅ |
+| Registros QA sucursales | ✅ 2 creados y baja lógica |
+| Build frontend | ✅ Vite build OK |
+| DELETE físico | ✅ No usado |
+
+## Garantías
+
+- No se modificó schema Airtable.
+- No se tocaron `.env`, `backend/.env`, `frontend/.env` ni `CREDENCIALES.md`.
+- No se tocaron `CITAS` ni `AGENDA_SLOTS`.
+- No se creó tabla `RESERVAS`.
+- No se implementaron pagos, checkout ni caja/POS.

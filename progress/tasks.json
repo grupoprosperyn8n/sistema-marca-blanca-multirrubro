@@ -1,7 +1,7 @@
 {
   "project": "sistema-marca-blanca-multirrubro",
-  "fase_actual": "FASE_3C3 — CERRADA",
-  "fase_siguiente": "FASE_3D — Portal Profesional / Notificaciones n8n (pendiente)",
+  "fase_actual": "BACKOFFICE_CRUD_P1_SUCURSALES — CERRADA",
+  "fase_siguiente": "BACKOFFICE_CRUD_P2_CITAS (pendiente de aprobación)",
   "tareas": {
     "FASE_3B_PORTAL_CLIENTE": {
       "status": "completed",
@@ -104,6 +104,33 @@
       "secrets_free": true,
       "delete_fisico": false,
       "schema_changes": false
+    },
+    "BACKOFFICE_CRUD_P1_SUCURSALES": {
+      "status": "completed",
+      "closed_at": "2026-06-25",
+      "commits": [],
+      "deliverables": [
+        "Airtable MODULOS: SUCURSALES creado con aprobación explícita",
+        "Airtable PERMISOS_MODULO: SUCURSALES configurado por rol",
+        "backend/routes/sucursales.py (/api/backoffice/sucursales CRUD lógico)",
+        "frontend/src/pages/Sucursales.jsx (CRUD conectado)",
+        "frontend/src/pages/SucursalesPublicas.jsx (campos reales de sucursales)",
+        "frontend/src/utils/publicDataFilters.js (filtro público por estado/visibilidad)"
+      ],
+      "qa_results": {
+        "sin_auth": "401_PASS",
+        "admin": "CREATE_EDIT_DELETE_LOGICO_PASS",
+        "gerente": "CREATE_EDIT_PASS_DELETE_403",
+        "empleado_gestion": "MUTATIONS_403_PASS_NO_ACCESS",
+        "profesional": "MUTATIONS_403_PASS",
+        "solo_lectura": "MUTATIONS_403_PASS",
+        "sucursales_qa_creadas_baja_logica": 2
+      },
+      "smoke_passed": true,
+      "secrets_free": true,
+      "delete_fisico": false,
+      "schema_changes": false,
+      "notes": "PERMISOS_CAMPO no se creó porque TABLA no contiene SUCURSALES y agregar la opción sería cambio de schema; se usó allowlist backend/frontend."
     }
   },
   "deploys_activos": {

@@ -23,6 +23,12 @@ const CATEGORIA_INTERNA_BLACKLIST = [
 
 export function isPublicBranch(branch) {
   if (!branch || !branch.NOMBRE_SUCURSAL) return false;
+  if (branch.ACTIVO === false) return false;
+  if (branch.PUBLICAR_WEB === false) return false;
+  const estado = String(branch.ESTADO_SUCURSAL || '').toUpperCase().trim();
+  if (['INACTIVA', 'CERRADA', 'BORRADOR'].includes(estado)) return false;
+  const visibilidad = String(branch.VISIBILIDAD_WEB || '').toUpperCase().trim();
+  if (['OCULTA', 'INTERNA', 'SOLO_INTERNA', 'BORRADOR'].includes(visibilidad)) return false;
   const nombre = String(branch.NOMBRE_SUCURSAL || '').toUpperCase();
   const nombreCorto = String(branch.NOMBRE_CORTO_SUCURSAL || '').toUpperCase();
   for (const word of SUCURSAL_BLACKLIST) {

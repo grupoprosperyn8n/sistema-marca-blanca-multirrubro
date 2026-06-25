@@ -43,48 +43,64 @@ export default function SucursalesPublicas() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {branches.map((b) => (
-          <div
-            key={b.id}
-            className="glass-panel p-6 rounded-2xl flex flex-col"
-            style={{ background: "rgba(255,255,255,0.75)" }}
-          >
-            <h3 className="text-lg font-bold mb-3" style={{ color: "var(--brand-primary)" }}>
-              {b.NOMBRE_SUCURSAL || b.NOMBRE_CORTO_SUCURSAL || "Sucursal"}
-            </h3>
-            {business.showContactAddress !== false && b.DIRECCION_SUCURSAL && (
-              <p className="text-sm mb-1 opacity-70" style={{ color: "var(--brand-text)" }}>
-                📍 {b.DIRECCION_SUCURSAL}
-              </p>
-            )}
-            {b.LOCALIDAD && (
-              <p className="text-sm mb-1 opacity-60" style={{ color: "var(--brand-text)" }}>
-                {b.LOCALIDAD}{b.PROVINCIA ? `, ${b.PROVINCIA}` : ""}
-              </p>
-            )}
-            {b.WHATSAPP_SUCURSAL && b.WHATSAPP_SUCURSAL !== "0000000005" && (
-              <p className="text-sm mb-1 opacity-60" style={{ color: "var(--brand-text)" }}>
-                📱 {b.WHATSAPP_SUCURSAL}
-              </p>
-            )}
-            {b.HORARIO_APERTURA && b.HORARIO_CIERRE && (
-              <p className="text-sm mb-4 opacity-60" style={{ color: "var(--brand-text)" }}>
-                🕐 {b.HORARIO_APERTURA} – {b.HORARIO_CIERRE}
-              </p>
-            )}
-            {business.usesAppointments !== false && (
-              <div className="mt-auto pt-4">
+        {branches.map((b) => {
+          const address = b.DIRECCION_SUCURSAL || b["CALLE Y N°"];
+          const phone = b.WHATSAPP_SUCURSAL || b.TELEFONO_CONTACTO;
+          const hours = b.HORARIO_REFERENCIA || (b.HORARIO_APERTURA && b.HORARIO_CIERRE ? `${b.HORARIO_APERTURA} – ${b.HORARIO_CIERRE}` : "");
+          return (
+            <div
+              key={b.id}
+              className="glass-panel p-6 rounded-2xl flex flex-col"
+              style={{ background: "rgba(255,255,255,0.75)" }}
+            >
+              <h3 className="text-lg font-bold mb-3" style={{ color: "var(--brand-primary)" }}>
+                {b.NOMBRE_SUCURSAL || b.NOMBRE_CORTO_SUCURSAL || "Sucursal"}
+              </h3>
+              {business.showContactAddress !== false && address && (
+                <p className="text-sm mb-1 opacity-70" style={{ color: "var(--brand-text)" }}>
+                  📍 {address}
+                </p>
+              )}
+              {b.LOCALIDAD && (
+                <p className="text-sm mb-1 opacity-60" style={{ color: "var(--brand-text)" }}>
+                  {b.LOCALIDAD}{b.PROVINCIA ? `, ${b.PROVINCIA}` : ""}
+                </p>
+              )}
+              {phone && phone !== "0000000005" && (
+                <p className="text-sm mb-1 opacity-60" style={{ color: "var(--brand-text)" }}>
+                  📱 {phone}
+                </p>
+              )}
+              {hours && (
+                <p className="text-sm mb-4 opacity-60" style={{ color: "var(--brand-text)" }}>
+                  🕐 {hours}
+                </p>
+              )}
+              {b.MAPA_UBICACION_URL && business.showContactAddress !== false && (
                 <a
-                  href={b.SLUG_SUCURSAL ? `/reserva?sucursal=${b.SLUG_SUCURSAL}` : "/reserva"}
-                  className="block w-full text-center px-4 py-2.5 rounded-xl text-sm font-semibold transition-all hover:opacity-90"
-                  style={{ background: "linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))", color: "#fff" }}
+                  href={b.MAPA_UBICACION_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mb-4 text-sm font-semibold"
+                  style={{ color: "var(--brand-primary)" }}
                 >
-                  Reservar en esta sucursal
+                  Ver mapa
                 </a>
-              </div>
-            )}
-          </div>
-        ))}
+              )}
+              {business.usesAppointments !== false && (
+                <div className="mt-auto pt-4">
+                  <a
+                    href={b.SLUG_SUCURSAL ? `/reserva?sucursal=${b.SLUG_SUCURSAL}` : "/reserva"}
+                    className="block w-full text-center px-4 py-2.5 rounded-xl text-sm font-semibold transition-all hover:opacity-90"
+                    style={{ background: "linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))", color: "#fff" }}
+                  >
+                    Reservar en esta sucursal
+                  </a>
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </section>
   );
