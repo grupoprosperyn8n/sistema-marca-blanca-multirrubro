@@ -75,6 +75,35 @@
           "https://bellezapro-demo.surge.sh"
         ]
       }
+    },
+    "BACKOFFICE_CRUD_P0_CLIENTES_SERVICIOS": {
+      "status": "completed",
+      "closed_at": "2026-06-25",
+      "commits": [
+        "5e7b5b8"
+      ],
+      "deliverables": [
+        "backend/auth/access_contract.py (can_edit_field/can_view_field)",
+        "backend/routes/clientes.py (/api/backoffice/clientes CRUD lógico)",
+        "backend/routes/servicios.py (/api/backoffice/servicios CRUD lógico)",
+        "frontend/src/pages/Clientes.jsx (CRUD conectado)",
+        "frontend/src/pages/Servicios.jsx (CRUD conectado)",
+        "frontend/src/components/backoffice/CrudFormModal.jsx"
+      ],
+      "qa_results": {
+        "sin_auth": "401_PASS",
+        "admin": "CREATE_EDIT_DELETE_LOGICO_PASS",
+        "gerente": "CREATE_EDIT_PASS_DELETE_403",
+        "empleado_gestion": "CREATE_EDIT_PASS_DELETE_403_FIELD_RESTRICTED_403",
+        "profesional": "MUTATIONS_403_PASS",
+        "solo_lectura": "MUTATIONS_403_PASS",
+        "clientes_qa_creados_baja_logica": 3,
+        "servicios_qa_creados_baja_logica": 3
+      },
+      "smoke_passed": true,
+      "secrets_free": true,
+      "delete_fisico": false,
+      "schema_changes": false
     }
   },
   "deploys_activos": {

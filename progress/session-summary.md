@@ -232,3 +232,40 @@ Chrome headless confirmó DOM renderizado distinto:
 | `bellezapro-demo.surge.sh` | `BellezaPro`, `experiencia premium` |
 
 Commit: `1a0d602 fix(frontend): diferenciar branding por dominio`
+
+---
+
+# CHECKPOINT — BACKOFFICE CRUD P0 Clientes + Servicios
+
+**Fecha:** 2026-06-25
+**Estado:** CERRADO
+**Commit:** `5e7b5b8 feat(backoffice): add clientes servicios CRUD P0`
+
+## Alcance cerrado
+
+- CRUD backoffice real para `CLIENTES` y `SERVICIOS`.
+- RBAC por `PERMISOS_MODULO`.
+- Permisos por campo con helper `can_edit_field` y allowlist segura por tabla.
+- Baja lógica, sin DELETE físico:
+  - `CLIENTES`: `ACTIVO=false`.
+  - `SERVICIOS`: `ACTIVO=false` + `ESTADO_SERVICIO=INACTIVO`.
+- Frontend conectado con modal Crear/Editar, selección de fila y baja lógica.
+
+## QA
+
+| Rol | Resultado |
+|-----|-----------|
+| Sin auth | ✅ 401 |
+| ADMINISTRADOR | ✅ crear/editar/baja lógica |
+| GERENTE | ✅ crear/editar; delete 403 |
+| EMPLEADO_GESTION | ✅ crear/editar; delete 403; campo restringido 403 |
+| PROFESIONAL | ✅ mutaciones 403 |
+| SOLO_LECTURA | ✅ mutaciones 403 |
+
+## Garantías
+
+- No se modificó schema Airtable.
+- No se tocaron `.env`, `backend/.env`, `frontend/.env` ni `CREDENCIALES.md`.
+- No se tocaron `CITAS`, `AGENDA_SLOTS` ni `SUCURSALES` en P0.
+- No hubo delete físico.
+- Build frontend OK.
