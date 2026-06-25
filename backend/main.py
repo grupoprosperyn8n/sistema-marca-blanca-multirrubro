@@ -117,6 +117,8 @@ async def health():
             "/api/clientes",
             "/api/agenda-slots",
             "/api/citas",
+            "/api/profesional/me",
+            "/api/profesional/citas",
         ],
         "nota": "Fase 1B — solo lectura. Sin escrituras a Airtable.",
     }

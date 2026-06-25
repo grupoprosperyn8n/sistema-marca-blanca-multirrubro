@@ -387,3 +387,58 @@ No se crearon `PERMISOS_CAMPO` para `SUCURSALES` porque `PERMISOS_CAMPO.TABLA` n
 - No se creó ni usó tabla `RESERVAS`.
 - No pagos, no checkout, no caja/POS.
 - No cambios auth/JWT/cookies.
+
+---
+
+# CIERRE — BACKOFFICE OPERATIVO P3 Profesional + Completar Cita
+
+**Fecha:** 2026-06-25
+**Estado:** CERRADO LOCAL QA
+
+## Alcance cerrado
+
+- Portal profesional conectado a backend real.
+- Agenda propia resuelta desde `USUARIOS.EMPLEADO` → `EMPLEADOS` → `CITAS.PROFESIONAL`.
+- Endpoints protegidos:
+  - `GET /api/profesional/me`.
+  - `GET /api/profesional/citas`.
+  - `PATCH /api/profesional/citas/{id}/estado`.
+- Acción profesional para marcar cita propia como `COMPLETADA`.
+- Frontend `/profesional` con resumen, filtros por estado/fecha, citas de hoy, próximas, completadas y acción de completar.
+- Optimización del DTO de Citas para evitar N+1 de Airtable con resolver bulk.
+
+## Reglas de negocio confirmadas
+
+- `CITAS.PROFESIONAL` linkea contra `EMPLEADOS`, no contra tabla `PROFESIONALES`.
+- Completar/atender usa el estado real existente `COMPLETADA`.
+- Completar NO libera `AGENDA_SLOTS`.
+- Cita cancelada no puede completarse.
+- Cita futura no puede completarse.
+- Profesional no puede ver ni operar citas ajenas.
+
+## QA local
+
+| Prueba | Resultado |
+|--------|-----------|
+| Sin auth profesional/citas | ✅ 401 |
+| Profesional /me | ✅ 200 + empleado resuelto |
+| Profesional agenda propia | ✅ total=2, sin citas ajenas |
+| SOLO_LECTURA portal profesional | ✅ 403 |
+| EMPLEADO_GESTION portal profesional | ✅ 403 |
+| Profesional completa cita ajena | ✅ 403 |
+| Cita cancelada no completa | ✅ 409 |
+| Cita futura no completa | ✅ 409 |
+| Profesional completa propia | ✅ 200 |
+| Completar no libera slot | ✅ PASS |
+| Completar idempotente | ✅ PASS |
+| Fixture QA restaurado | ✅ PASS |
+| Backoffice citas sigue OK | ✅ 200 |
+
+## Garantías
+
+- No DELETE físico.
+- No `RESERVAS`.
+- No pagos, checkout, caja/POS, ventas/cobros ni liquidaciones.
+- No schema Airtable.
+- No cambios auth/JWT/cookies.
+- No se tocaron `.env`, `backend/.env`, `frontend/.env` ni `CREDENCIALES.md`.

@@ -1,7 +1,7 @@
 {
   "project": "sistema-marca-blanca-multirrubro",
-  "fase_actual": "BACKOFFICE_OPERATIVO_P2_CITAS_AGENDA — CERRADA_LOCAL_QA",
-  "fase_siguiente": "BACKOFFICE_OPERATIVO_CONTINUIDAD (pendiente de definición)",
+  "fase_actual": "BACKOFFICE_OPERATIVO_P3_PROFESIONAL_Y_COMPLETAR_CITA — CERRADA_LOCAL_QA",
+  "fase_siguiente": "BACKOFFICE_OPERATIVO_P4_REPORTES_OPERATIVOS_O_UX_PUBLICA (pendiente de definición)",
   "tareas": {
     "FASE_3B_PORTAL_CLIENTE": {
       "status": "completed",
@@ -161,6 +161,39 @@
       "delete_fisico": false,
       "reservas_table_used": false,
       "schema_changes": false
+    },
+    "BACKOFFICE_OPERATIVO_P3_PROFESIONAL_Y_COMPLETAR_CITA": {
+      "status": "completed",
+      "closed_at": "2026-06-25",
+      "commits": [],
+      "deliverables": [
+        "backend/routes/citas.py (/api/profesional/me, /api/profesional/citas, /api/profesional/citas/{id}/estado)",
+        "frontend/src/pages/Profesional.jsx (agenda propia, filtros, completar cita)",
+        "backend/main.py (health endpoint list actualizado)"
+      ],
+      "estado_completar": "COMPLETADA",
+      "qa_results": {
+        "sin_auth": "401_PASS",
+        "profesional_me": "200_PASS_EMPLEADO_RESUELTO",
+        "profesional_agenda_propia": "PASS_TOTAL_2_SIN_AJENAS",
+        "solo_lectura": "403_PASS",
+        "empleado_gestion": "403_PASS",
+        "profesional_cita_ajena": "403_PASS",
+        "cita_cancelada_no_completa": "409_PASS",
+        "cita_futura_no_completa": "409_PASS",
+        "profesional_completa_propia": "200_PASS",
+        "completar_no_libera_slot": "PASS",
+        "completar_idempotente": "PASS",
+        "fixture_restaurado": "PASS",
+        "backoffice_citas_sigue_ok": "200_PASS"
+      },
+      "smoke_passed": true,
+      "secrets_free": true,
+      "delete_fisico": false,
+      "reservas_table_used": false,
+      "schema_changes": false,
+      "payments_checkout_pos": false,
+      "notes": "Completar cita actualiza solo CITAS (ESTADO_CITA=COMPLETADA, ASISTIO_CLIENTE=true, RESULTADO_CITA=SERVICIO_REALIZADO) y no toca/libera AGENDA_SLOTS. /api/citas fue optimizado con bulk resolver para evitar N+1 de Airtable."
     }
   },
   "deploys_activos": {

@@ -1,6 +1,7 @@
 """
 Rutas FastAPI para CITAS — /api/citas
 BACKOFFICE_OPERATIVO_P2_CITAS_AGENDA: CRUD controlado + consistencia con slots.
+BACKOFFICE_OPERATIVO_P3_PROFESIONAL_Y_COMPLETAR_CITA: agenda propia profesional.
 """
 import sys
 from datetime import date
@@ -19,6 +20,7 @@ from auth.dependencies import get_current_user
 router = APIRouter(prefix="/api", tags=["citas"])
 
 _ACTIVE_CITA_STATES = {"CONFIRMADA", "PENDIENTE_CONFIRMACION", "EN_CURSO", "REPROGRAMADA"}
+_PROFESSIONAL_SUPERIOR_ROLES = {"ADMINISTRADOR", "GERENTE"}
 _LINK_FIELDS = {"CLIENTE", "SERVICIO", "PROFESIONAL", "AGENDA_SLOT", "SUCURSAL_ATENCION"}
 _BACKOFFICE_CITAS_FIELDS = {
     "NOMBRE_CITA",
@@ -81,6 +83,23 @@ def _require_citas_action(user: dict, action: str):
     )
 
 
+def _role_key(user: dict) -> str:
+    return str(user.get("rol") or "").strip().upper()
+
+
+def _require_professional_portal(user: dict, action: str = "view"):
+    """Allow professional portal only to PROFESIONAL or explicitly superior roles."""
+    role = _role_key(user)
+    if role == "PROFESIONAL":
+        return
+    if role in _PROFESSIONAL_SUPERIOR_ROLES and can_module(role, "CITAS", action):
+        return
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Sin permiso para portal profesional.",
+    )
+
+
 def _normalize_field(field_name: str, value):
     if field_name in _LINK_FIELDS:
         record_id = _first_id(value)
@@ -129,13 +148,29 @@ def _collect_citas_patch(payload: dict, role_name: str, partial: bool = True) ->
 
 
 class _Resolver:
+    _BULK_TABLES = {"CLIENTES", "SERVICIOS", "EMPLEADOS", "SUCURSALES", "AGENDA_SLOTS"}
+
     def __init__(self, client: AirtableClient):
         self.client = client
         self.cache: dict[tuple[str, str], dict] = {}
+        self.bulk_cache: dict[str, dict[str, dict]] = {}
+
+    def _bulk_fields(self, table: str, record_id: str) -> dict:
+        if table not in self.bulk_cache:
+            try:
+                self.bulk_cache[table] = {
+                    record.get("id"): record.get("fields", {})
+                    for record in self.client.list_records(table, by_name=True)
+                }
+            except Exception:
+                self.bulk_cache[table] = {}
+        return self.bulk_cache[table].get(record_id, {})
 
     def fields(self, table: str, record_id: str) -> dict:
         if not record_id:
             return {}
+        if table in self._BULK_TABLES:
+            return self._bulk_fields(table, record_id)
         key = (table, record_id)
         if key not in self.cache:
             try:
@@ -256,6 +291,104 @@ def _format_cita_record(record: dict, resolver: _Resolver | None = None) -> dict
     }
 
 
+def _select_choices(at: AirtableClient, table_name: str, field_name: str) -> set[str]:
+    table = at.get_table(table_name)
+    if not table:
+        return set()
+    field = next((item for item in table.fields if item.name == field_name), None)
+    choices = ((field.options or {}).get("choices") if field else None) or []
+    return {str(choice.get("name") or "").strip().upper() for choice in choices}
+
+
+def _completion_state(at: AirtableClient) -> str:
+    """Return the real Airtable state used to mark an appointment as attended."""
+    choices = _select_choices(at, "CITAS", "ESTADO_CITA")
+    for candidate in ("COMPLETADA", "ATENDIDO", "ATENDIDA"):
+        if candidate in choices:
+            return candidate
+    raise HTTPException(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        detail="CITAS.ESTADO_CITA no tiene una opción compatible para completar/atender.",
+    )
+
+
+def _current_employee_context(at: AirtableClient, user: dict) -> dict:
+    """Resolve the EMPLEADOS record linked from the authenticated USUARIOS record."""
+    user_id = user.get("id")
+    if not user_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Usuario inválido.")
+    user_record = at.get_record("USUARIOS", user_id)
+    fields = user_record.get("fields", {})
+    employee_id = _first_id(fields.get("EMPLEADO"))
+    employee_fields = {}
+    if employee_id:
+        employee_fields = at.get_record("EMPLEADOS", employee_id).get("fields", {})
+    return {
+        "usuario_id": user_id,
+        "empleado_id": employee_id,
+        "nombre_empleado": employee_fields.get("NOMBRE_EMPLEADO") or user.get("nombre") or "",
+        "email_empleado": employee_fields.get("EMAIL") or user.get("email") or "",
+        "puesto": employee_fields.get("PUESTO") or "",
+        "estado_empleado": employee_fields.get("ESTADO_EMPLEADO") or "",
+        "especialidad": employee_fields.get("ESPECIALIDAD") or [],
+    }
+
+
+def _professional_scope(at: AirtableClient, user: dict) -> dict:
+    _require_professional_portal(user, "view")
+    role = _role_key(user)
+    employee = _current_employee_context(at, user)
+    if role == "PROFESIONAL" and not employee["empleado_id"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Usuario profesional sin EMPLEADO vinculado.",
+        )
+    return {**employee, "rol": role, "own_only": bool(employee["empleado_id"])}
+
+
+def _cita_employee_id(fields: dict) -> str:
+    return _first_id(fields.get("PROFESIONAL"))
+
+
+def _assert_cita_in_professional_scope(cita: dict, scope: dict):
+    employee_id = scope.get("empleado_id")
+    if not employee_id:
+        return
+    cita_employee_id = _cita_employee_id(cita.get("fields", {}))
+    if cita_employee_id != employee_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No podés operar citas de otro profesional.",
+        )
+
+
+def _format_professional_cita_record(record: dict, resolver: _Resolver | None = None) -> dict:
+    """Safe DTO for the professional portal. No internal notes or admin fields."""
+    full = _format_cita_record(record, resolver)
+    return {
+        "id": full.get("id"),
+        "NOMBRE_CLIENTE": full.get("NOMBRE_CLIENTE") or "",
+        "NOMBRE_SERVICIO": full.get("NOMBRE_SERVICIO") or "",
+        "NOMBRE_PROFESIONAL": full.get("NOMBRE_PROFESIONAL") or "",
+        "NOMBRE_SUCURSAL": full.get("NOMBRE_SUCURSAL") or "",
+        "FECHA_CITA": full.get("FECHA_CITA") or "",
+        "HORA_INICIO": full.get("HORA_INICIO") or "",
+        "HORA_FIN": full.get("HORA_FIN") or "",
+        "ESTADO_CITA": full.get("ESTADO_CITA") or "",
+        "ESTADO_SLOT": full.get("ESTADO_SLOT") or "",
+        "OBSERVACIONES_CLIENTE": full.get("OBSERVACIONES_CLIENTE") or "",
+        "CLIENTE_ID": full.get("CLIENTE_ID") or "",
+        "SERVICIO_ID": full.get("SERVICIO_ID") or "",
+        "PROFESIONAL_ID": full.get("PROFESIONAL_ID") or "",
+        "SUCURSAL_ID": full.get("SUCURSAL_ID") or "",
+        "AGENDA_SLOT_ID": full.get("AGENDA_SLOT_ID") or "",
+    }
+
+
+def _sort_citas_for_agenda(item: dict):
+    return (item.get("FECHA_CITA") or "9999-99-99", item.get("HORA_INICIO") or "99:99")
+
+
 @router.get("/citas")
 async def listar_citas():
     """Lista todas las citas con DTO enriquecido para backoffice."""
@@ -269,6 +402,106 @@ async def listar_citas():
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+
+
+@router.get("/profesional/me")
+async def obtener_profesional_actual(user: dict = Depends(get_current_user)):
+    """Perfil mínimo del profesional actual, resuelto desde USUARIOS → EMPLEADOS."""
+    at = AirtableClient()
+    scope = _professional_scope(at, user)
+    return {
+        "usuario_id": scope["usuario_id"],
+        "empleado_id": scope["empleado_id"],
+        "nombre": scope["nombre_empleado"],
+        "email": scope["email_empleado"],
+        "rol": scope["rol"],
+        "puesto": scope["puesto"],
+        "estado_empleado": scope["estado_empleado"],
+        "especialidad": scope["especialidad"],
+        "completion_state": _completion_state(at),
+    }
+
+
+@router.get("/profesional/citas")
+async def listar_citas_profesional(user: dict = Depends(get_current_user)):
+    """Agenda propia del profesional autenticado. PROFESIONAL no puede ver citas ajenas."""
+    at = AirtableClient()
+    scope = _professional_scope(at, user)
+    records = at.list_records("CITAS", by_name=True)
+    resolver = _Resolver(at)
+    items = []
+    for record in records:
+        fields = record.get("fields", {})
+        if scope.get("empleado_id") and _cita_employee_id(fields) != scope["empleado_id"]:
+            continue
+        items.append(_format_professional_cita_record(record, resolver))
+    items.sort(key=_sort_citas_for_agenda)
+    today = date.today().isoformat()
+    return {
+        "total": len(items),
+        "empleado_id": scope["empleado_id"],
+        "scope": "PROPIO" if scope.get("empleado_id") else "TODO",
+        "completion_state": _completion_state(at),
+        "citas": items,
+        "counts": {
+            "hoy": len([item for item in items if item.get("FECHA_CITA") == today]),
+            "proximas": len([
+                item for item in items
+                if item.get("FECHA_CITA", "") >= today
+                and str(item.get("ESTADO_CITA") or "").upper() not in {"CANCELADA", "COMPLETADA"}
+            ]),
+            "completadas": len([item for item in items if str(item.get("ESTADO_CITA") or "").upper() == "COMPLETADA"]),
+        },
+    }
+
+
+@router.patch("/profesional/citas/{cita_id}/estado")
+async def actualizar_estado_cita_profesional(
+    cita_id: str,
+    payload: dict | None = None,
+    user: dict = Depends(get_current_user),
+):
+    """Marca una cita propia como completada/atendida. No libera AGENDA_SLOT."""
+    at = AirtableClient()
+    _require_professional_portal(user, "edit" if _role_key(user) in _PROFESSIONAL_SUPERIOR_ROLES else "view")
+    scope = _professional_scope(at, user)
+    completion_state = _completion_state(at)
+    requested_state = str((payload or {}).get("estado") or completion_state).strip().upper()
+    if requested_state not in {completion_state, "COMPLETADA", "ATENDIDO", "ATENDIDA"}:
+        raise HTTPException(status_code=400, detail="Estado profesional no permitido.")
+
+    current = at.get_record("CITAS", cita_id)
+    _assert_cita_in_professional_scope(current, scope)
+    current_fields = current.get("fields", {})
+    current_state = str(current_fields.get("ESTADO_CITA") or "").upper()
+    if current_state == "CANCELADA":
+        raise HTTPException(status_code=409, detail="Una cita cancelada no puede completarse.")
+    if current_state == completion_state:
+        return {
+            **_format_professional_cita_record(current, _Resolver(at)),
+            "already_completed": True,
+            "updated": False,
+        }
+
+    fecha_cita = str(current_fields.get("FECHA_CITA") or "")
+    if fecha_cita and fecha_cita > date.today().isoformat():
+        raise HTTPException(status_code=409, detail="No se puede completar una cita futura.")
+
+    patch = {
+        "ESTADO_CITA": completion_state,
+        "ASISTIO_CLIENTE": True,
+        "RESULTADO_CITA": "SERVICIO_REALIZADO",
+    }
+    # Importante: no se toca AGENDA_SLOTS; completar no libera el slot.
+    at.patch_record("CITAS", cita_id, patch)
+    updated = at.get_record("CITAS", cita_id)
+    return {
+        **_format_professional_cita_record(updated, _Resolver(at)),
+        "already_completed": False,
+        "updated": True,
+        "actualizados": list(patch.keys()),
+        "slot_liberado": False,
+    }
 
 
 @router.post("/backoffice/citas")
