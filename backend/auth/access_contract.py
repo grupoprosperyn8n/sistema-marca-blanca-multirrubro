@@ -10,9 +10,14 @@ Source of truth:
 
 from __future__ import annotations
 
+import os
+from time import monotonic
 from unicodedata import normalize
 
 from airtable_adapter import AirtableClient
+
+ACCESS_SCHEMA_TTL_SECONDS = int(os.getenv("ACCESS_SCHEMA_TTL_SECONDS", "60") or "60")
+_SCHEMA_CACHE = {"expires_at": 0.0, "data": None}
 
 
 SUPPORTED_BACKOFFICE_ROUTES = {
@@ -77,19 +82,75 @@ def _format_label(module_name: str) -> str:
     return key.replace("_", " ").title()
 
 
+def _list_records(client: AirtableClient, table_name: str, fields: list[str]) -> list[dict]:
+    # Airtable expects repeated `fields[]` params; AirtableClient.list_records
+    # keeps the legacy `fields` shape for backwards compatibility.
+    return client._paginate(  # noqa: SLF001 - backend adapter internal pagination
+        f"{client.config.base_id}/{table_name}",
+        {"fields[]": fields},
+    )
+
+
 def _schema_snapshot():
+    now = monotonic()
+    if (
+        ACCESS_SCHEMA_TTL_SECONDS > 0
+        and _SCHEMA_CACHE["data"] is not None
+        and now < _SCHEMA_CACHE["expires_at"]
+    ):
+        return _SCHEMA_CACHE["data"]
+
     client = AirtableClient()
-    roles = client.list_records("ROLES", by_name=True)
-    modules = client.list_records("MODULOS", by_name=True)
-    categories = client.list_records("CATEGORIAS_MENU", by_name=True)
-    module_permissions = client.list_records("PERMISOS_MODULO", by_name=True)
-    field_permissions = client.list_records("PERMISOS_CAMPO", by_name=True)
-    return roles, modules, categories, module_permissions, field_permissions
+    roles = _list_records(client, "ROLES", ["NOMBRE_ROL"])
+    modules = _list_records(
+        client,
+        "MODULOS",
+        ["NOMBRE_MODULO", "DESCRIPCION", "RUTA", "ICONO", "CATEGORIA_MENU", "ORDEN", "ACTIVO"],
+    )
+    categories = _list_records(client, "CATEGORIAS_MENU", ["NOMBRE_CATEGORIA"])
+    module_permissions = _list_records(
+        client,
+        "PERMISOS_MODULO",
+        [
+            "ROL",
+            "MODULO",
+            "VISIBLE",
+            "VER",
+            "CREAR",
+            "EDITAR",
+            "ELIMINAR",
+            "EXPORTAR",
+            "ALCANCE_DATOS",
+            "VISTA_DEFECTO",
+            "ACTIVO",
+        ],
+    )
+    field_permissions = _list_records(
+        client,
+        "PERMISOS_CAMPO",
+        [
+            "ROL",
+            "MODULO",
+            "TABLA",
+            "CAMPO",
+            "VISIBLE",
+            "EDITABLE",
+            "SENSIBLE",
+            "NIVEL_SENSIBILIDAD",
+            "ACTIVO",
+        ],
+    )
+    data = roles, modules, categories, module_permissions, field_permissions
+    if ACCESS_SCHEMA_TTL_SECONDS > 0:
+        _SCHEMA_CACHE["data"] = data
+        _SCHEMA_CACHE["expires_at"] = now + ACCESS_SCHEMA_TTL_SECONDS
+    return data
 
 
 def clear_access_cache():
-    """Compatibility hook kept for callers; contract is intentionally live-read."""
-    return None
+    """Clear RBAC snapshot cache after tests/admin changes."""
+    _SCHEMA_CACHE["data"] = None
+    _SCHEMA_CACHE["expires_at"] = 0.0
 
 
 def _menu_item(permission: dict, route: str, label: str | None = None, icon: str | None = None) -> dict:
