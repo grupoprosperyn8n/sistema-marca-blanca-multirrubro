@@ -11,7 +11,7 @@ const exportColumns = [
   { header: "Cliente", field: "NOMBRE_CLIENTE" },
   { header: "Servicio", field: "NOMBRE_SERVICIO" },
   { header: "Fecha", field: "FECHA_CITA" },
-  { header: "Hora", field: "HORA_CITA" },
+  { header: "Hora", field: "HORA_INICIO" },
   { header: "Estado", field: "ESTADO_CITA" },
 ];
 
@@ -33,9 +33,9 @@ export default function Agenda() {
         setAppointments(citas.map((c, i) => ({
           id: c.id || i,
           day: c.FECHA_CITA ? new Date(c.FECHA_CITA).getDay() : 1,
-          hour: c.HORA_CITA || "09:00",
-          clientName: showClient ? (c.NOMBRE_CLIENTE || c.CLIENTE_NOMBRE || "") : "Reservado",
-          servicio: showService ? (c.NOMBRE_SERVICIO || c.SERVICIO || "") : "",
+          hour: c.HORA_INICIO || "09:00",
+          clientName: showClient ? (c.NOMBRE_CLIENTE || "") : "Reservado",
+          servicio: showService ? (c.NOMBRE_SERVICIO || "") : "",
         })));
         setLoading(false);
       })

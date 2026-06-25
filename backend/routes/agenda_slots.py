@@ -61,6 +61,46 @@ def _slot_matches_filters(fields: dict, sucursal_id: str | None, future_only: bo
     return True
 
 
+class _Resolver:
+    def __init__(self, client: AirtableClient):
+        self.client = client
+        self.cache: dict[tuple[str, str], dict] = {}
+
+    def fields(self, table: str, record_id: str) -> dict:
+        if not record_id:
+            return {}
+        key = (table, record_id)
+        if key not in self.cache:
+            try:
+                self.cache[key] = self.client.get_record(table, record_id).get("fields", {})
+            except Exception:
+                self.cache[key] = {}
+        return self.cache[key]
+
+
+def _first_id(value) -> str:
+    if isinstance(value, list) and value:
+        return str(value[0])
+    return str(value or "")
+
+
+def _format_slot_record(record: dict, resolver: _Resolver) -> dict:
+    fields = dict(record.get("fields", {}))
+    profesional_id = _first_id(fields.get("PROFESIONAL"))
+    sucursal_id = _first_id(fields.get("SUCURSAL"))
+    profesional = resolver.fields("EMPLEADOS", profesional_id)
+    sucursal = resolver.fields("SUCURSALES", sucursal_id)
+    return {
+        "id": record.get("id"),
+        "createdTime": record.get("createdTime"),
+        **fields,
+        "PROFESIONAL_ID": profesional_id,
+        "SUCURSAL_ID": sucursal_id,
+        "NOMBRE_PROFESIONAL": profesional.get("NOMBRE_EMPLEADO") or "",
+        "NOMBRE_SUCURSAL": sucursal.get("NOMBRE_SUCURSAL") or "",
+    }
+
+
 @router.get("/agenda-slots")
 async def listar_agenda_slots(
     sucursal_id: str | None = Query(default=None),
@@ -72,6 +112,7 @@ async def listar_agenda_slots(
     try:
         client = AirtableClient()
         records = client.list_records("AGENDA_SLOTS", by_name=True)
+        resolver = _Resolver(client)
         items = []
         for r in records:
             fields = r.get("fields", {})
@@ -79,7 +120,7 @@ async def listar_agenda_slots(
                 continue
             if not _slot_matches_filters(fields, sucursal_id, future_only, min_duration):
                 continue
-            items.append({"id": r.get("id"), "createdTime": r.get("createdTime"), **fields})
+            items.append(_format_slot_record(r, resolver))
         return {
             "total": len(items),
             "filters": {

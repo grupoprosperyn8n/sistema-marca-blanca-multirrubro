@@ -1,7 +1,7 @@
 {
   "project": "sistema-marca-blanca-multirrubro",
-  "fase_actual": "BACKOFFICE_CRUD_P1_SUCURSALES — CERRADA",
-  "fase_siguiente": "BACKOFFICE_CRUD_P2_CITAS (pendiente de aprobación)",
+  "fase_actual": "BACKOFFICE_OPERATIVO_P2_CITAS_AGENDA — CERRADA_LOCAL_QA",
+  "fase_siguiente": "BACKOFFICE_OPERATIVO_CONTINUIDAD (pendiente de definición)",
   "tareas": {
     "FASE_3B_PORTAL_CLIENTE": {
       "status": "completed",
@@ -131,6 +131,36 @@
       "delete_fisico": false,
       "schema_changes": false,
       "notes": "PERMISOS_CAMPO no se creó porque TABLA no contiene SUCURSALES y agregar la opción sería cambio de schema; se usó allowlist backend/frontend."
+    },
+    "BACKOFFICE_OPERATIVO_P2_CITAS_AGENDA": {
+      "status": "completed",
+      "closed_at": "2026-06-25",
+      "commits": [],
+      "deliverables": [
+        "backend/routes/citas.py (/api/backoffice/citas CRUD lógico + slot consistency)",
+        "backend/routes/agenda_slots.py (DTO slots con nombres humanos)",
+        "frontend/src/pages/Citas.jsx (CRUD/reprogramación/cancelación conectado)",
+        "frontend/src/pages/Agenda.jsx (DTO actualizado)",
+        "frontend/src/components/backoffice/CrudFormModal.jsx (select options value/label)"
+      ],
+      "qa_results": {
+        "sin_auth": "401_PASS",
+        "admin": "CREATE_EDIT_REPROGRAM_CANCEL_LOGICO_PASS",
+        "gerente": "CREATE_EDIT_PASS_DELETE_403",
+        "empleado_gestion": "CREATE_EDIT_PASS_DELETE_403",
+        "profesional": "MUTATIONS_403_PASS",
+        "solo_lectura": "MUTATIONS_403_PASS",
+        "duplicate_slot": "409_PASS",
+        "slot_old_released_on_reprogram": "PASS",
+        "slot_new_reserved_on_reprogram": "PASS",
+        "slot_released_on_cancel": "PASS",
+        "citas_qa_creadas_canceladas_logico": 3
+      },
+      "smoke_passed": true,
+      "secrets_free": true,
+      "delete_fisico": false,
+      "reservas_table_used": false,
+      "schema_changes": false
     }
   },
   "deploys_activos": {

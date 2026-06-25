@@ -331,3 +331,59 @@ No se crearon `PERMISOS_CAMPO` para `SUCURSALES` porque `PERMISOS_CAMPO.TABLA` n
 - No se tocaron `CITAS` ni `AGENDA_SLOTS`.
 - No se creó tabla `RESERVAS`.
 - No se implementaron pagos, checkout ni caja/POS.
+
+---
+
+# CIERRE — BACKOFFICE OPERATIVO P2 Citas + Agenda
+
+**Fecha:** 2026-06-25
+**Estado:** CERRADO LOCAL QA
+
+## Alcance cerrado
+
+- Push normal de commits pendientes P0/P1 y Railway auto-deploy verificado OK.
+- CRUD backoffice real para `CITAS`:
+  - `POST /api/backoffice/citas`.
+  - `PATCH /api/backoffice/citas/{id}`.
+  - `DELETE /api/backoffice/citas/{id}` como cancelación/baja lógica.
+- Integración con `AGENDA_SLOTS`:
+  - crear cita reserva slot.
+  - reprogramar libera slot anterior y reserva slot nuevo.
+  - cancelar libera slot.
+  - doble reserva rechazada con 409.
+- DTO backend enriquecido para backoffice: nombres humanos de cliente, servicio, profesional, sucursal y estado del slot.
+- Frontend backoffice de Citas conectado con modal Crear/Editar-Reprogramar/Cancelar.
+- Agenda actualizada para usar `HORA_INICIO` y nombres DTO.
+
+## Baja lógica
+
+- `CITAS`: `ESTADO_CITA=CANCELADA`, `ACTIVO=false`, `FECHA_CANCELACION`, `CANCELADO_POR=SALON`.
+- `AGENDA_SLOTS`: se libera con `ESTADO_SLOT=DISPONIBLE`, `TIPO_SLOT=DISPONIBLE`, `CAPACIDAD_OCUPADA=0` si no quedan citas activas.
+
+## QA local
+
+| Prueba | Resultado |
+|--------|-----------|
+| Sin auth create | ✅ 401 |
+| ADMINISTRADOR create/edit/reprogram/cancel | ✅ |
+| GERENTE create/edit/delete 403 | ✅ |
+| EMPLEADO_GESTION create/edit/delete 403 | ✅ |
+| PROFESIONAL mutaciones 403 | ✅ |
+| SOLO_LECTURA mutaciones 403 | ✅ |
+| Doble reserva mismo slot | ✅ 409 |
+| Reprogramación libera slot anterior | ✅ |
+| Reprogramación reserva slot nuevo | ✅ |
+| Cancelación libera slot | ✅ |
+| Registros QA CITAS | ✅ 3 creados y cancelados lógico |
+| Build frontend | ✅ Vite build OK |
+| Backend py_compile | ✅ OK |
+| DELETE físico | ✅ No usado |
+| RESERVAS | ✅ No usada/no creada |
+
+## Garantías
+
+- No se modificó schema Airtable.
+- No se tocaron `.env`, `backend/.env`, `frontend/.env` ni `CREDENCIALES.md`.
+- No se creó ni usó tabla `RESERVAS`.
+- No pagos, no checkout, no caja/POS.
+- No cambios auth/JWT/cookies.

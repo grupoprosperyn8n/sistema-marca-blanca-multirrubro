@@ -2,51 +2,226 @@ import { useState, useEffect } from "react";
 import DataTable from "../components/ui/DataTable";
 import Badge from "../components/ui/Badge";
 import ModuleActionBar from "../components/backoffice/ModuleActionBar";
-import { filterColumnsByAccess, useAuth } from "../context/AuthContext";
+import CrudFormModal from "../components/backoffice/CrudFormModal";
+import { canEditField, filterColumnsByAccess, useAuth } from "../context/AuthContext";
 
 const API = import.meta.env.VITE_API_BASE_URL || "";
 
 const allColumns = [
-  { header: "Cliente", field: "NOMBRE_CLIENTE", fields: ["NOMBRE_CLIENTE", "CLIENTE", "CLIENTE_NOMBRE"], render: (row) => (
-    <span className="font-medium" style={{ color: 'var(--brand-text)' }}>{row.NOMBRE_CLIENTE || row.CLIENTE_NOMBRE || "—"}</span>
+  { header: "Cliente", field: "NOMBRE_CLIENTE", fields: ["CLIENTE", "NOMBRE_CLIENTE"], render: (row) => (
+    <span className="font-medium" style={{ color: "var(--brand-text)" }}>{row.NOMBRE_CLIENTE || "—"}</span>
   )},
-  { header: "Servicio", field: "NOMBRE_SERVICIO", fields: ["NOMBRE_SERVICIO", "SERVICIO"] },
+  { header: "Servicio", field: "NOMBRE_SERVICIO", fields: ["SERVICIO", "NOMBRE_SERVICIO"] },
+  { header: "Profesional", field: "NOMBRE_PROFESIONAL", fields: ["PROFESIONAL", "NOMBRE_PROFESIONAL"] },
+  { header: "Sucursal", field: "NOMBRE_SUCURSAL", fields: ["SUCURSAL_ATENCION", "NOMBRE_SUCURSAL"] },
   { header: "Fecha", field: "FECHA_CITA", fields: ["FECHA_CITA"] },
-  { header: "Hora", field: "HORA_CITA", fields: ["HORA_CITA"] },
+  { header: "Hora", field: "HORA_INICIO", fields: ["HORA_INICIO", "HORA_FIN"], render: (row) => (
+    row.HORA_INICIO ? `${row.HORA_INICIO}${row.HORA_FIN ? ` – ${row.HORA_FIN}` : ""}` : "—"
+  )},
+  { header: "Slot", field: "ESTADO_SLOT", fields: ["AGENDA_SLOT", "ESTADO_SLOT"], render: (row) => row.ESTADO_SLOT || "—" },
   { header: "Estado", field: "ESTADO_CITA", fields: ["ESTADO_CITA"], render: (row) => {
-    const variants = { CONFIRMADA: 'success', PENDIENTE: 'warning', CANCELADA: 'error' };
-    return <Badge variant={variants[row.ESTADO_CITA] || 'neutral'}>{row.ESTADO_CITA || "—"}</Badge>;
+    const variants = { CONFIRMADA: "success", REPROGRAMADA: "warning", PENDIENTE_CONFIRMACION: "warning", CANCELADA: "error", COMPLETADA: "success" };
+    return <Badge variant={variants[row.ESTADO_CITA] || "neutral"}>{row.ESTADO_CITA || "—"}</Badge>;
   }},
 ];
+
+const emptyForm = {
+  CLIENTE: "",
+  SERVICIO: "",
+  AGENDA_SLOT: "",
+  ESTADO_CITA: "CONFIRMADA",
+  OBSERVACIONES_CLIENTE: "",
+  OBSERVACIONES_INTERNAS: "",
+};
+
+function option(value, label) {
+  return { value, label: label || value };
+}
 
 export default function Citas() {
   const { access } = useAuth();
   const [citas, setCitas] = useState([]);
+  const [clientes, setClientes] = useState([]);
+  const [servicios, setServicios] = useState([]);
+  const [slots, setSlots] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState(null);
+  const [modalMode, setModalMode] = useState("");
+  const [form, setForm] = useState(emptyForm);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
   const columns = filterColumnsByAccess(allColumns, access, "CITAS");
 
+  const slotOptions = slots.map((slot) => option(
+    slot.id,
+    `${slot.FECHA_SLOT || "s/f"} ${slot.HORA_INICIO || ""}${slot.NOMBRE_SUCURSAL ? ` · ${slot.NOMBRE_SUCURSAL}` : ""}${slot.NOMBRE_PROFESIONAL ? ` · ${slot.NOMBRE_PROFESIONAL}` : ""}`,
+  ));
+  if (selected?.AGENDA_SLOT_ID && !slotOptions.some((item) => item.value === selected.AGENDA_SLOT_ID)) {
+    slotOptions.unshift(option(selected.AGENDA_SLOT_ID, `${selected.FECHA_CITA || "Actual"} ${selected.HORA_INICIO || ""} · slot actual`));
+  }
+
+  const editableFields = [
+    { name: "CLIENTE", label: "Cliente", type: "select", options: clientes.map((c) => option(c.id, c.NOMBRE_CLIENTE || c.EMAIL || c.id)), disabled: !canEditField(access, "CITAS", "CLIENTE") || modalMode === "edit" },
+    { name: "SERVICIO", label: "Servicio", type: "select", options: servicios.map((s) => option(s.id, s.NOMBRE_SERVICIO || s.id)), disabled: !canEditField(access, "CITAS", "SERVICIO") || modalMode === "edit" },
+    { name: "AGENDA_SLOT", label: modalMode === "edit" ? "Nuevo slot / reprogramar" : "Slot disponible", type: "select", options: slotOptions, disabled: !canEditField(access, "CITAS", "AGENDA_SLOT") },
+    { name: "ESTADO_CITA", label: "Estado", type: "select", options: ["CONFIRMADA", "PENDIENTE_CONFIRMACION", "REPROGRAMADA"], disabled: !canEditField(access, "CITAS", "ESTADO_CITA") },
+    { name: "OBSERVACIONES_CLIENTE", label: "Observaciones cliente", type: "textarea", disabled: !canEditField(access, "CITAS", "OBSERVACIONES_CLIENTE") },
+    { name: "OBSERVACIONES_INTERNAS", label: "Observaciones internas", type: "textarea", disabled: !canEditField(access, "CITAS", "OBSERVACIONES_INTERNAS") },
+  ];
+
+  function editablePayload() {
+    const payload = editableFields
+      .filter((field) => !field.disabled)
+      .reduce((next, field) => ({ ...next, [field.name]: form[field.name] }), {});
+    if (modalMode === "edit" && payload.AGENDA_SLOT === selected?.AGENDA_SLOT_ID) {
+      delete payload.AGENDA_SLOT;
+    }
+    return payload;
+  }
+
+  async function loadAll() {
+    setLoading(true);
+    try {
+      const [citasRes, clientesRes, serviciosRes, slotsRes] = await Promise.all([
+        fetch(`${API}/api/citas`),
+        fetch(`${API}/api/clientes`),
+        fetch(`${API}/api/servicios`),
+        fetch(`${API}/api/agenda-slots?disponible=true&future_only=true`),
+      ]);
+      const [citasData, clientesData, serviciosData, slotsData] = await Promise.all([
+        citasRes.json(),
+        clientesRes.json(),
+        serviciosRes.json(),
+        slotsRes.json(),
+      ]);
+      setCitas(Array.isArray(citasData) ? citasData : citasData.citas || []);
+      setClientes(Array.isArray(clientesData) ? clientesData : clientesData.clientes || []);
+      setServicios(Array.isArray(serviciosData) ? serviciosData : serviciosData.servicios || []);
+      setSlots(Array.isArray(slotsData) ? slotsData : slotsData.agenda_slots || []);
+    } catch {
+      setError("No se pudieron cargar citas.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   useEffect(() => {
-    fetch(`${API}/api/citas`)
-      .then(r => r.json())
-      .then(d => { setCitas(Array.isArray(d) ? d : d.citas || []); setLoading(false); })
-      .catch(() => setLoading(false));
+    loadAll();
   }, []);
 
   if (loading) return <p className="opacity-50 text-center py-12">Cargando citas...</p>;
 
+  function openCreate() {
+    setSelected(null);
+    setForm(emptyForm);
+    setModalMode("create");
+    setError("");
+    setMessage("");
+  }
+
+  function openEdit() {
+    if (!selected) { setError("Seleccioná una cita de la tabla."); return; }
+    setForm({
+      CLIENTE: selected.CLIENTE_ID || "",
+      SERVICIO: selected.SERVICIO_ID || "",
+      AGENDA_SLOT: selected.AGENDA_SLOT_ID || "",
+      ESTADO_CITA: selected.ESTADO_CITA || "CONFIRMADA",
+      OBSERVACIONES_CLIENTE: selected.OBSERVACIONES_CLIENTE || "",
+      OBSERVACIONES_INTERNAS: selected.OBSERVACIONES_INTERNAS || "",
+    });
+    setModalMode("edit");
+    setError("");
+    setMessage("");
+  }
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+    setSaving(true);
+    setError("");
+    try {
+      const isEdit = modalMode === "edit";
+      const res = await fetch(`${API}/api/backoffice/citas${isEdit ? `/${selected.id}` : ""}`, {
+        method: isEdit ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(editablePayload()),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.detail?.message || data?.detail || `HTTP ${res.status}`);
+      setMessage(isEdit ? "Cita actualizada/reprogramada." : "Cita creada.");
+      setModalMode("");
+      setSelected(data);
+      await loadAll();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!selected) { setError("Seleccioná una cita de la tabla."); return; }
+    if (!window.confirm(`Cancelar la cita de ${selected.NOMBRE_CLIENTE || "este cliente"}?`)) return;
+    setSaving(true);
+    setError("");
+    try {
+      const res = await fetch(`${API}/api/backoffice/citas/${selected.id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.detail || `HTTP ${res.status}`);
+      setMessage("Cita cancelada con baja lógica.");
+      setSelected(data);
+      await loadAll();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-        <h2 className="text-2xl font-bold" style={{ fontFamily: 'var(--font-heading, Manrope)', color: 'var(--brand-text)' }}>Citas</h2>
+        <h2 className="text-2xl font-bold" style={{ fontFamily: "var(--font-heading, Manrope)", color: "var(--brand-text)" }}>Citas</h2>
         <ModuleActionBar
           moduleKey="citas"
           count={citas.length}
           rows={citas}
           columns={columns}
           filename="citas.csv"
+          onCreate={openCreate}
+          onEdit={openEdit}
+          onDelete={handleDelete}
         />
       </div>
-      <DataTable columns={columns} data={citas} />
+      {selected && (
+        <p className="mb-3 text-xs opacity-70" style={{ color: "var(--brand-text)" }}>
+          Seleccionada: {selected.NOMBRE_CLIENTE || selected.id} · {selected.FECHA_CITA || "sin fecha"} {selected.HORA_INICIO || ""}
+        </p>
+      )}
+      {message && <p className="mb-3 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{message}</p>}
+      {error && <p className="mb-3 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
+      <DataTable
+        columns={columns}
+        data={citas}
+        selectedRowId={selected?.id}
+        onRowClick={(row) => { setSelected(row); setError(""); }}
+      />
+      {modalMode && (
+        <CrudFormModal
+          title={modalMode === "edit" ? "Editar / reprogramar cita" : "Crear cita"}
+          fields={editableFields}
+          values={form}
+          saving={saving}
+          error={error}
+          onChange={(field, value) => setForm((prev) => ({ ...prev, [field]: value }))}
+          onSubmit={handleSubmit}
+          onClose={() => setModalMode("")}
+        />
+      )}
     </div>
   );
 }
