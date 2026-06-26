@@ -515,3 +515,34 @@ No se crearon `PERMISOS_CAMPO` para `SUCURSALES` porque `PERMISOS_CAMPO.TABLA` n
 - No `RESERVAS`.
 - No pagos, checkout, caja/POS, ventas/cobros ni liquidaciones.
 - No cambios auth/JWT/cookies.
+
+---
+
+# CIERRE — SURGE SINGLE COMMERCIAL DOMAIN
+
+**Fecha:** 2026-06-26
+**Estado:** CERRADO QA + DEPLOY
+
+## Decisión
+
+Por pedido explícito de Diego, se eliminaron de Surge los dominios no comerciales y queda como única web pública:
+
+- `https://bellezapro-demo.surge.sh`
+
+## Dominios eliminados de Surge
+
+- `sistema-multirrubro-demo.surge.sh`
+- `belleza-demo.surge.sh`
+
+## Cambios de código/documentación
+
+- `BrandConfigContext` conserva solo la variante comercial `bellezapro-demo.surge.sh`.
+- `PublicFooter` ya no muestra links hacia dominios técnicos/legacy eliminados.
+- `docs/WHITE_LABEL_CANONICAL_DOMAIN_UX.md` y `progress/tasks.json` actualizados con la decisión vigente.
+
+## Garantías
+
+- No se tocaron `.env`, `backend/.env`, `frontend/.env` ni `CREDENCIALES.md`.
+- No se tocaron secretos.
+- No se modificó schema Airtable.
+- No pagos, checkout, caja/POS ni `RESERVAS`.

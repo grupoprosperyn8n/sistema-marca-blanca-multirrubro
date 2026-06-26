@@ -1,6 +1,6 @@
 {
   "project": "sistema-marca-blanca-multirrubro",
-  "fase_actual": "WHITE_LABEL_CANONICAL_DOMAIN_UX — CERRADA_QA_DEPLOY",
+  "fase_actual": "SURGE_SINGLE_COMMERCIAL_DOMAIN — CERRADA_QA_DEPLOY",
   "fase_siguiente": "BACKOFFICE_OPERATIVO_P4_REPORTES_OPERATIVOS_O_CAJAS_PAGOS_DISEÑO (pendiente de aprobación; no pagos/caja todavía)",
   "tareas": {
     "FASE_3B_PORTAL_CLIENTE": {
@@ -210,8 +210,11 @@
       ],
       "domain_decision": {
         "commercial_canonical": "https://bellezapro-demo.surge.sh",
-        "technical_canonical": "https://sistema-multirrubro-demo.surge.sh",
-        "legacy_secondary": "https://belleza-demo.surge.sh"
+        "removed_from_surge": [
+          "sistema-multirrubro-demo.surge.sh",
+          "belleza-demo.surge.sh"
+        ],
+        "superseded_note": "User later requested deleting non-commercial Surge domains; only BellezaPro remains active."
       },
       "qa_results": {
         "frontend_build": "PASS",
@@ -226,9 +229,7 @@
       },
       "deploy": {
         "surge": [
-          "https://bellezapro-demo.surge.sh",
-          "https://sistema-multirrubro-demo.surge.sh",
-          "https://belleza-demo.surge.sh"
+          "https://bellezapro-demo.surge.sh"
         ],
         "railway": "AUTO_DEPLOY_SUCCESS_9ac34bc_NO_BACKEND_FILES_CHANGED"
       },
@@ -239,15 +240,33 @@
       "schema_changes": false,
       "delete_fisico": false,
       "notes": "Una lectura inicial de sistema-multirrubro root devolvió 504 transitorio post-deploy; reintento inmediato PASS 200. Railway auto-deployó el commit 9ac34bc por push a main aunque no hubo cambios backend; smoke backend posterior PASS."
+    },
+    "SURGE_SINGLE_COMMERCIAL_DOMAIN": {
+      "status": "completed",
+      "closed_at": "2026-06-26",
+      "commits": [],
+      "deliverables": [
+        "Surge teardown sistema-multirrubro-demo.surge.sh",
+        "Surge teardown belleza-demo.surge.sh",
+        "frontend/src/context/BrandConfigContext.jsx (solo variante bellezapro-demo)",
+        "frontend/src/components/PublicFooter.jsx (sin links a dominios eliminados)",
+        "docs/WHITE_LABEL_CANONICAL_DOMAIN_UX.md (decisión actualizada)"
+      ],
+      "active_domain": "https://bellezapro-demo.surge.sh",
+      "removed_surge_domains": [
+        "sistema-multirrubro-demo.surge.sh",
+        "belleza-demo.surge.sh"
+      ],
+      "secrets_free": true,
+      "env_files_touched": false,
+      "payments_checkout_pos": false,
+      "schema_changes": false,
+      "delete_fisico_business_data": false
     }
   },
   "deploys_activos": {
     "backend": "https://earnest-comfort-production-3d75.up.railway.app",
     "frontend": "https://bellezapro-demo.surge.sh",
-    "frontend_variantes": [
-      "https://sistema-multirrubro-demo.surge.sh",
-      "https://belleza-demo.surge.sh"
-    ],
-    "frontend_tecnico": "https://sistema-multirrubro-demo.surge.sh"
+    "frontend_variantes": []
   }
 }
