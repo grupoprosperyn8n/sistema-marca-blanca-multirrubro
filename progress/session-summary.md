@@ -496,6 +496,7 @@ No se crearon `PERMISOS_CAMPO` para `SUCURSALES` porque `PERMISOS_CAMPO.TABLA` n
 | Backend `/health` | ✅ 200 |
 | Backend `/api/citas` | ✅ 200 |
 | Backend `/api/agenda-slots` | ✅ 200 |
+| Railway auto-deploy commit `9ac34bc` | ✅ SUCCESS |
 
 ## Deploy
 
@@ -503,7 +504,7 @@ No se crearon `PERMISOS_CAMPO` para `SUCURSALES` porque `PERMISOS_CAMPO.TABLA` n
   - `https://bellezapro-demo.surge.sh`
   - `https://sistema-multirrubro-demo.surge.sh`
   - `https://belleza-demo.surge.sh`
-- Railway no se redeployó porque no hubo cambios backend.
+- Railway auto-deployó el commit `9ac34bc` por push a `main`; no hubo cambios backend y smoke posterior siguió OK.
 
 ## Garantías
 

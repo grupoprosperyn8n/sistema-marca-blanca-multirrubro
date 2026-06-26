@@ -221,7 +221,8 @@
         "domains_live": "PASS_BELLEZAPRO_SISTEMA_MULTIRRUBRO_BELLEZA_DEMO",
         "backend_health": "PASS_200",
         "api_citas": "PASS_200",
-        "api_agenda_slots": "PASS_200"
+        "api_agenda_slots": "PASS_200",
+        "railway_auto_deploy": "PASS_SUCCESS_9ac34bc"
       },
       "deploy": {
         "surge": [
@@ -229,7 +230,7 @@
           "https://sistema-multirrubro-demo.surge.sh",
           "https://belleza-demo.surge.sh"
         ],
-        "railway": "NO_BACKEND_CHANGES_NO_DEPLOY"
+        "railway": "AUTO_DEPLOY_SUCCESS_9ac34bc_NO_BACKEND_FILES_CHANGED"
       },
       "secrets_free": true,
       "env_files_touched": false,
@@ -237,7 +238,7 @@
       "reservas_table_used": false,
       "schema_changes": false,
       "delete_fisico": false,
-      "notes": "Una lectura inicial de sistema-multirrubro root devolvió 504 transitorio post-deploy; reintento inmediato PASS 200."
+      "notes": "Una lectura inicial de sistema-multirrubro root devolvió 504 transitorio post-deploy; reintento inmediato PASS 200. Railway auto-deployó el commit 9ac34bc por push a main aunque no hubo cambios backend; smoke backend posterior PASS."
     }
   },
   "deploys_activos": {
