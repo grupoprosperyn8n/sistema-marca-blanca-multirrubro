@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 
 const DEFAULT_BUSINESS = {
   contractVersion: "P0.1",
@@ -11,10 +12,10 @@ const DEFAULT_BUSINESS = {
   operationChannel: "MIXTO",
   showContactAddress: true,
   showMap: false,
-  usesCart: true,
+  usesCart: false,
   usesCheckout: false,
   usesOnlinePayments: false,
-  usesPhysicalPOS: true,
+  usesPhysicalPOS: false,
   paymentGatewayStatus: "PENDIENTE",
   backgroundType: "SOLIDO",
   backgroundUrl: "",
@@ -28,12 +29,12 @@ const FALLBACK = {
   brandLegalName: "BellezaPro",
   rubro: "Salón de Belleza",
   marcaId: "bellezapro-demo",
-  brandPrimary: "var(--brand-primary)",
-  brandSecondary: "var(--brand-secondary)",
-  brandAccent: "var(--brand-accent)",
-  brandText: "var(--brand-text)",
+  brandPrimary: "#7C3AED",
+  brandSecondary: "#F0ABFC",
+  brandAccent: "#EC4899",
+  brandText: "#1F1235",
   brandSurface: "#F8F9FF",
-  brandTextSecondary: "var(--brand-text-secondary)",
+  brandTextSecondary: "#6B4A7A",
   fontHeading: "Manrope",
   fontBody: "Manrope",
   glassBlur: "16px",
@@ -82,6 +83,11 @@ const FALLBACK = {
   business: DEFAULT_BUSINESS,
   seoTitle: "BellezaPro Demo",
   seoDescription: "Reservá turnos de belleza online.",
+  canonicalDomain: "https://bellezapro-demo.surge.sh",
+  technicalDomain: "https://sistema-multirrubro-demo.surge.sh",
+  commercialDomain: "https://bellezapro-demo.surge.sh",
+  domainRole: "COMERCIAL_CANONICO",
+  domainNotice: "Demo comercial principal",
   legalAviso: "Sistema de demostración. No se realizan reservas reales.",
   privacyUrl: "/privacidad",
   termsUrl: "/terminos",
@@ -113,6 +119,9 @@ const DOMAIN_VARIANTS = {
     },
     seoTitle: "Belleza Demo",
     seoDescription: "Demo piloto para gestión de salones de belleza.",
+    canonicalDomain: "https://bellezapro-demo.surge.sh",
+    domainRole: "LEGACY_SECUNDARIO",
+    domainNotice: "Demo secundaria/legacy. La variante comercial principal es BellezaPro.",
     legalAviso: "Demo operativa con datos QA. No usar para reservas reales.",
   },
   "sistema-multirrubro-demo.surge.sh": {
@@ -147,6 +156,9 @@ const DOMAIN_VARIANTS = {
     },
     seoTitle: "Sistema Multirrubro Demo",
     seoDescription: "Demo marca blanca preparada para múltiples rubros.",
+    canonicalDomain: "https://sistema-multirrubro-demo.surge.sh",
+    domainRole: "TECNICO_CANONICO",
+    domainNotice: "Dominio técnico canónico para validar arquitectura marca blanca.",
     legalAviso: "Demo marca blanca. Los datos son de prueba.",
   },
   "bellezapro-demo.surge.sh": {
@@ -176,6 +188,9 @@ const DOMAIN_VARIANTS = {
     },
     seoTitle: "BellezaPro Demo",
     seoDescription: "Variante Pro de la demo de salones de belleza.",
+    canonicalDomain: "https://bellezapro-demo.surge.sh",
+    domainRole: "COMERCIAL_CANONICO",
+    domainNotice: "Dominio comercial canónico de la demo BellezaPro.",
     legalAviso: "Demo comercial. No se procesan reservas reales.",
   },
 };
@@ -268,6 +283,34 @@ function applyCssVariables(config) {
   root.style.setProperty("--glass-surface", hexToRgba(config.brandSurface, parseFloat(config.glassOpacity) || 0.6));
   root.style.setProperty("--brand-name", `"${config.brandName}"`);
   if (config.seoTitle) document.title = config.seoTitle;
+  if (config.seoDescription) {
+    let meta = document.querySelector('meta[name="description"]');
+    if (!meta) {
+      meta = document.createElement("meta");
+      meta.setAttribute("name", "description");
+      document.head.appendChild(meta);
+    }
+    meta.setAttribute("content", config.seoDescription);
+  }
+  if (config.brandSurface) {
+    let theme = document.querySelector('meta[name="theme-color"]');
+    if (!theme) {
+      theme = document.createElement("meta");
+      theme.setAttribute("name", "theme-color");
+      document.head.appendChild(theme);
+    }
+    theme.setAttribute("content", config.brandSurface);
+  }
+  if (config.canonicalDomain) {
+    let canonical = document.querySelector('link[rel="canonical"]');
+    if (!canonical) {
+      canonical = document.createElement("link");
+      canonical.setAttribute("rel", "canonical");
+      document.head.appendChild(canonical);
+    }
+    const path = window.location.pathname === "/" ? "/" : window.location.pathname;
+    canonical.setAttribute("href", `${String(config.canonicalDomain).replace(/\/$/, "")}${path}`);
+  }
 }
 
 function deriveOfferMode(usesProducts, usesServices) {
@@ -382,6 +425,11 @@ function transformMarcaBlanca(data, base = FALLBACK) {
     business: normalizeBusiness(data.business_config || {}, base.business || DEFAULT_BUSINESS, seccionesVisibles),
     seoTitle: normalizeText(data.seo_title) || base.seoTitle,
     seoDescription: normalizeText(data.seo_description) || base.seoDescription,
+    canonicalDomain: base.canonicalDomain,
+    technicalDomain: base.technicalDomain,
+    commercialDomain: base.commercialDomain,
+    domainRole: base.domainRole,
+    domainNotice: base.domainNotice,
     legalAviso: normalizeText(data.legal_aviso) || base.legalAviso,
     privacyUrl: normalizeText(data.privacy_url) || base.privacyUrl,
     termsUrl: normalizeText(data.terms_url) || base.termsUrl,
@@ -408,6 +456,7 @@ export function BrandConfigProvider({ children }) {
   const [config, setConfig] = useState(() => applyDomainVariant(FALLBACK));
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const location = useLocation();
   const API = import.meta.env.VITE_API_BASE_URL || "";
 
   async function fetchBrandConfig() {
@@ -445,6 +494,10 @@ export function BrandConfigProvider({ children }) {
     fetchAndApply();
     return () => { cancelled = true; };
   }, []);
+
+  useEffect(() => {
+    applyCssVariables(config);
+  }, [config, location.pathname]);
 
   return React.createElement(
     BrandConfigContext.Provider,

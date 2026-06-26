@@ -11,10 +11,17 @@ export default function Home() {
   const { config } = useBrandConfig();
   const [servicios, setServicios] = useState([]);
   const [productos, setProductos] = useState([]);
+  const [serviciosLoading, setServiciosLoading] = useState(true);
+  const [productosLoading, setProductosLoading] = useState(true);
+  const [serviciosError, setServiciosError] = useState(null);
+  const [productosError, setProductosError] = useState(null);
 
   useEffect(() => {
     fetch(`${API}/api/servicios-web`)
-      .then(r => r.json())
+      .then(r => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
       .then(d => {
         const raw = Array.isArray(d) ? d : d.servicios_web || [];
         const publicos = raw.filter(s => {
@@ -23,16 +30,21 @@ export default function Home() {
         }).slice(0, 6);
         setServicios(publicos);
       })
-      .catch(() => {});
+      .catch(e => setServiciosError(e.message))
+      .finally(() => setServiciosLoading(false));
 
     fetch(`${API}/api/productos-web`)
-      .then(r => r.json())
+      .then(r => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
       .then(d => {
         const items = d.productos || [];
         const anomalos = (d.anomalias || []).map(a => a.nombre || a.id);
         setProductos(items.filter(p => !anomalos.includes(p.nombre_visible)).slice(0, 3));
       })
-      .catch(() => {});
+      .catch(e => setProductosError(e.message))
+      .finally(() => setProductosLoading(false));
   }, []);
 
   const formatearMoneda = (v) => {
@@ -88,21 +100,21 @@ export default function Home() {
             )}
             <h1 className="display-lg" style={{ color: 'var(--brand-text)', fontSize: 'clamp(1.75rem, 5vw, 3.5rem)' }}>
               {config.heroTitle || (
-                <>Belleza, bienestar y reservas simples<br />
-                <span style={{ color: 'var(--brand-primary)' }}>en un solo lugar.</span></>
+                <>{config.brandName}: catálogo, turnos y portales<br />
+                <span style={{ color: 'var(--brand-primary)' }}>adaptados a cada negocio.</span></>
               )}
             </h1>
             <p className="text-lg max-w-xl" style={{ color: 'var(--brand-text-secondary)', lineHeight: 1.7 }}>
-              {config.heroSubtitle || `${config.brandName} te conecta con servicios profesionales de salón. Reservá tu turno en segundos, sin llamadas ni mensajes.`}
+              {config.heroSubtitle || "Una plantilla marca blanca para publicar productos, servicios, sucursales y reservas según la configuración de cada tenant."}
             </p>
-            <div className="flex flex-wrap gap-4">
-              <Link to={primaryActionUrl} className="btn-primary inline-flex items-center gap-2 text-base px-8 py-4 rounded-xl">
-                <span className="material-symbols-outlined">{business.usesAppointments ? "calendar_month" : "storefront"}</span>
+            <div className="flex flex-col sm:flex-row flex-wrap gap-4">
+              <Link to={primaryActionUrl} className="btn-primary inline-flex w-full sm:w-auto items-center justify-center gap-2 text-base px-8 py-4 rounded-xl">
+                <span className="material-symbols-outlined" aria-hidden="true">{business.usesAppointments ? "calendar_month" : "storefront"}</span>
                 {primaryActionText}
               </Link>
               {showSecondaryAction && (
-                <Link to={heroSecondaryUrl} className="btn-secondary inline-flex items-center gap-2 text-base px-8 py-4 rounded-xl">
-                  <span className="material-symbols-outlined">spa</span>
+                <Link to={heroSecondaryUrl} className="btn-secondary inline-flex w-full sm:w-auto items-center justify-center gap-2 text-base px-8 py-4 rounded-xl">
+                  <span className="material-symbols-outlined" aria-hidden="true">spa</span>
                   {config.heroCtaSecondary}
                 </Link>
               )}
@@ -144,11 +156,21 @@ export default function Home() {
             </p>
           </div>
 
-          {servicios.length === 0 ? (
+          {serviciosLoading ? (
             <div className="glass-panel p-12 text-center">
               <div className="animate-spin w-8 h-8 border-4 border-t-transparent rounded-full mx-auto mb-4"
                 style={{ borderColor: 'var(--brand-secondary)', borderTopColor: 'transparent' }} />
-              <p className="opacity-50">Cargando servicios...</p>
+              <p className="opacity-50" style={{ color: 'var(--brand-text-secondary)' }}>Cargando servicios…</p>
+            </div>
+          ) : serviciosError ? (
+            <div className="glass-panel p-10 text-center">
+              <p className="text-sm text-rose-500">No pudimos cargar los servicios. Probá nuevamente en unos minutos.</p>
+            </div>
+          ) : servicios.length === 0 ? (
+            <div className="glass-panel p-10 text-center">
+              <span className="material-symbols-outlined mb-3 block text-4xl opacity-40" style={{ color: 'var(--brand-primary)' }}>category</span>
+              <h3 className="mb-2 text-lg font-semibold" style={{ color: 'var(--brand-text)' }}>Catálogo en preparación</h3>
+              <p className="text-sm" style={{ color: 'var(--brand-text-secondary)' }}>Todavía no hay servicios publicados para esta demo.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -158,11 +180,11 @@ export default function Home() {
                 const precio = s.PRECIO_WEB ?? s.PRECIO_PUBLICITADO_WEB;
                 const duracion = s.DURACION_MINUTOS_WEB ?? s.DURACION_MINUTOS;
                 return (
-                  <div key={i} className="glass-card p-6 group cursor-pointer" onClick={() => window.location.href = '/catalogo'}>
+                  <Link key={s.id || i} to="/catalogo" className="glass-card block p-6 group no-underline">
                     <div className="flex items-start gap-4">
                       <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white flex-shrink-0"
                         style={{ background: 'linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))' }}>
-                        <span className="material-symbols-outlined">{iconos[i % iconos.length]}</span>
+                        <span className="material-symbols-outlined" aria-hidden="true">{iconos[i % iconos.length]}</span>
                       </div>
                       <div className="flex-1 min-w-0">
                         <h3 className="font-semibold text-base mb-1 truncate" style={{ color: 'var(--brand-text)' }}>{nombre}</h3>
@@ -177,14 +199,14 @@ export default function Home() {
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </Link>
                 );
               })}
             </div>
           )}
 
           <div className="text-center mt-8">
-            <Link to="/catalogo" className="text-sm font-medium inline-flex items-center gap-1 hover:gap-2 transition-all" style={{ color: 'var(--brand-primary)' }}>
+            <Link to="/catalogo" className="text-sm font-medium inline-flex items-center gap-1 hover:gap-2 transition-[gap,color]" style={{ color: 'var(--brand-primary)' }}>
               Ver catálogo completo
               <span className="material-symbols-outlined text-base">arrow_forward</span>
             </Link>
@@ -193,7 +215,7 @@ export default function Home() {
       )}
 
       {/* Productos destacados */}
-      {showProducts && productos.length > 0 && (
+      {showProducts && (
         <section className="relative z-10 max-w-7xl mx-auto px-4 sm:px-8 pb-20">
           <div className="text-center mb-12">
             <h2 className="headline-lg mb-3" style={{ color: "var(--brand-text)" }}>Productos destacados</h2>
@@ -202,49 +224,67 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {productos.map((p, i) => {
-              const nombre = p.nombre_visible || "";
-              const desc = p.descripcion_visible || "";
-              const precio = p.precio_visible;
-              const categoria = formatCategoria(p.categoria_publica);
-              const img = p.imagen_principal;
-              const tieneImg = img?.url;
-              return (
-                <div key={p.slug || i} className="glass-card p-6 group cursor-pointer" onClick={() => window.location.href = "/productos"}>
-                  <div className="flex items-start gap-4">
-                    <div className="w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden"
-                      style={{ background: tieneImg ? "transparent" : "linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))" }}>
-                      {tieneImg ? (
-                        <img src={img.url} alt={p.alt_text || nombre} className="w-full h-full object-cover" />
-                      ) : (
-                        <span className="material-symbols-outlined text-white">inventory_2</span>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      {categoria && (
-                        <span className="text-xs font-medium uppercase tracking-wider mb-1 block opacity-60" style={{ color: "var(--brand-primary)" }}>
-                          {categoria}
-                        </span>
-                      )}
-                      <h3 className="font-semibold text-base mb-1 truncate" style={{ color: "var(--brand-text)" }}>{nombre}</h3>
-                      {desc && <p className="text-xs mb-2 line-clamp-2" style={{ color: "var(--brand-text-secondary)" }}>{desc}</p>}
-                      <div className="flex items-center gap-2 text-xs">
-                        {precio != null && (
-                          <span className="font-semibold" style={{ color: "var(--brand-primary)" }}>
-                            ${Number(precio).toLocaleString("es-AR", { minimumFractionDigits: 0 })}
-                          </span>
+          {productosLoading ? (
+            <div className="glass-panel p-12 text-center">
+              <div className="animate-spin w-8 h-8 border-4 border-t-transparent rounded-full mx-auto mb-4"
+                style={{ borderColor: "var(--brand-secondary)", borderTopColor: "transparent" }} />
+              <p className="opacity-50" style={{ color: "var(--brand-text-secondary)" }}>Cargando productos…</p>
+            </div>
+          ) : productosError ? (
+            <div className="glass-panel p-10 text-center">
+              <p className="text-sm text-rose-500">No pudimos cargar los productos. Probá nuevamente en unos minutos.</p>
+            </div>
+          ) : productos.length === 0 ? (
+            <div className="glass-panel p-10 text-center">
+              <span className="material-symbols-outlined mb-3 block text-4xl opacity-40" style={{ color: "var(--brand-primary)" }}>inventory_2</span>
+              <h3 className="mb-2 text-lg font-semibold" style={{ color: "var(--brand-text)" }}>Productos en preparación</h3>
+              <p className="text-sm" style={{ color: "var(--brand-text-secondary)" }}>Todavía no hay productos publicados para esta demo.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {productos.map((p, i) => {
+                const nombre = p.nombre_visible || "";
+                const desc = p.descripcion_visible || "";
+                const precio = p.precio_visible;
+                const categoria = formatCategoria(p.categoria_publica);
+                const img = p.imagen_principal;
+                const tieneImg = img?.url;
+                return (
+                  <Link key={p.slug || i} to="/productos" className="glass-card block p-6 group no-underline">
+                    <div className="flex items-start gap-4">
+                      <div className="w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden"
+                        style={{ background: tieneImg ? "transparent" : "linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))" }}>
+                        {tieneImg ? (
+                          <img src={img.url} alt={p.alt_text || nombre} width="56" height="56" loading="lazy" className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="material-symbols-outlined text-white" aria-hidden="true">inventory_2</span>
                         )}
                       </div>
+                      <div className="flex-1 min-w-0">
+                        {categoria && (
+                          <span className="text-xs font-medium uppercase tracking-wider mb-1 block opacity-60" style={{ color: "var(--brand-primary)" }}>
+                            {categoria}
+                          </span>
+                        )}
+                        <h3 className="font-semibold text-base mb-1 truncate" style={{ color: "var(--brand-text)" }}>{nombre}</h3>
+                        {desc && <p className="text-xs mb-2 line-clamp-2" style={{ color: "var(--brand-text-secondary)" }}>{desc}</p>}
+                        <div className="flex items-center gap-2 text-xs">
+                          {precio != null && (
+                            <span className="font-semibold" style={{ color: "var(--brand-primary)" }}>
+                              ${Number(precio).toLocaleString("es-AR", { minimumFractionDigits: 0 })}
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
 
           <div className="text-center mt-8">
-            <Link to="/productos" className="text-sm font-medium inline-flex items-center gap-1 hover:gap-2 transition-all" style={{ color: "var(--brand-primary)" }}>
+            <Link to="/productos" className="text-sm font-medium inline-flex items-center gap-1 hover:gap-2 transition-[gap,color]" style={{ color: "var(--brand-primary)" }}>
               Ver productos
               <span className="material-symbols-outlined text-base">arrow_forward</span>
             </Link>
@@ -259,7 +299,7 @@ export default function Home() {
             <div className="text-center mb-12">
               <h2 className="headline-lg mb-3" style={{ color: 'var(--brand-text)' }}>¿Cómo funciona?</h2>
               <p className="text-base max-w-lg mx-auto" style={{ color: 'var(--brand-text-secondary)' }}>
-                Reservar nunca fue tan simple
+                {business.usesAppointments ? "Reservas simples cuando el negocio trabaja con turnos" : "Un flujo adaptable al canal comercial de cada negocio"}
               </p>
             </div>
             <div className="grid sm:grid-cols-3 gap-8">

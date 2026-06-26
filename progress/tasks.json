@@ -1,7 +1,7 @@
 {
   "project": "sistema-marca-blanca-multirrubro",
-  "fase_actual": "BACKOFFICE_OPERATIVO_P3_PROFESIONAL_Y_COMPLETAR_CITA — CERRADA_LOCAL_QA",
-  "fase_siguiente": "BACKOFFICE_OPERATIVO_P4_REPORTES_OPERATIVOS_O_UX_PUBLICA (pendiente de definición)",
+  "fase_actual": "WHITE_LABEL_CANONICAL_DOMAIN_UX — CERRADA_QA_DEPLOY",
+  "fase_siguiente": "BACKOFFICE_OPERATIVO_P4_REPORTES_OPERATIVOS_O_CAJAS_PAGOS_DISEÑO (pendiente de aprobación; no pagos/caja todavía)",
   "tareas": {
     "FASE_3B_PORTAL_CLIENTE": {
       "status": "completed",
@@ -194,14 +194,59 @@
       "schema_changes": false,
       "payments_checkout_pos": false,
       "notes": "Completar cita actualiza solo CITAS (ESTADO_CITA=COMPLETADA, ASISTIO_CLIENTE=true, RESULTADO_CITA=SERVICIO_REALIZADO) y no toca/libera AGENDA_SLOTS. /api/citas fue optimizado con bulk resolver para evitar N+1 de Airtable."
+    },
+    "WHITE_LABEL_CANONICAL_DOMAIN_UX": {
+      "status": "completed",
+      "closed_at": "2026-06-26",
+      "commits": [],
+      "deliverables": [
+        "frontend/src/context/BrandConfigContext.jsx (roles de dominio, canonical/SEO dinámico por ruta, fallback CSS variables)",
+        "frontend/src/pages/Home.jsx (landing pública con loading/error/empty states y cards navegables)",
+        "frontend/src/pages/Catalogo.jsx (buscador y categorías dinámicas)",
+        "frontend/src/pages/Productos.jsx (buscador, categorías dinámicas y CTA no transaccional)",
+        "frontend/src/pages/Reserva.jsx (mobile/accessibility polish)",
+        "frontend/src/components/PublicNavbar.jsx, PublicFooter.jsx, AnnouncementBar.jsx (UX pública y dominio/branding)",
+        "docs/WHITE_LABEL_CANONICAL_DOMAIN_UX.md (decisión de dominios)"
+      ],
+      "domain_decision": {
+        "commercial_canonical": "https://bellezapro-demo.surge.sh",
+        "technical_canonical": "https://sistema-multirrubro-demo.surge.sh",
+        "legacy_secondary": "https://belleza-demo.surge.sh"
+      },
+      "qa_results": {
+        "frontend_build": "PASS",
+        "git_diff_check": "PASS",
+        "mobile_360_390_430_no_horizontal_overflow": "PASS_LOCAL_PLAYWRIGHT",
+        "routes_live_bellezapro": "PASS_200_HOME_CATALOGO_PRODUCTOS_RESERVA_LOGIN_LEGACY_PROTECTED_REDIRECTS",
+        "domains_live": "PASS_BELLEZAPRO_SISTEMA_MULTIRRUBRO_BELLEZA_DEMO",
+        "backend_health": "PASS_200",
+        "api_citas": "PASS_200",
+        "api_agenda_slots": "PASS_200"
+      },
+      "deploy": {
+        "surge": [
+          "https://bellezapro-demo.surge.sh",
+          "https://sistema-multirrubro-demo.surge.sh",
+          "https://belleza-demo.surge.sh"
+        ],
+        "railway": "NO_BACKEND_CHANGES_NO_DEPLOY"
+      },
+      "secrets_free": true,
+      "env_files_touched": false,
+      "payments_checkout_pos": false,
+      "reservas_table_used": false,
+      "schema_changes": false,
+      "delete_fisico": false,
+      "notes": "Una lectura inicial de sistema-multirrubro root devolvió 504 transitorio post-deploy; reintento inmediato PASS 200."
     }
   },
   "deploys_activos": {
     "backend": "https://earnest-comfort-production-3d75.up.railway.app",
-    "frontend": "https://sistema-multirrubro-demo.surge.sh",
+    "frontend": "https://bellezapro-demo.surge.sh",
     "frontend_variantes": [
-      "https://belleza-demo.surge.sh",
-      "https://bellezapro-demo.surge.sh"
-    ]
+      "https://sistema-multirrubro-demo.surge.sh",
+      "https://belleza-demo.surge.sh"
+    ],
+    "frontend_tecnico": "https://sistema-multirrubro-demo.surge.sh"
   }
 }

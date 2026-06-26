@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { isPublicBranch, formatPublicName } from "../utils/publicDataFilters";
 import { useBrandConfig } from "../context/BrandConfigContext";
 import GlassCard from "../components/ui/GlassCard";
@@ -174,11 +175,14 @@ export default function Reserva() {
     acc[key].push(horario);
     return acc;
   }, {});
+  const whatsappUrl = config.whatsapp
+    ? `https://wa.me/${String(config.whatsapp).replace(/\D/g, "")}`
+    : null;
 
   if (loading) return (
     <div className="max-w-5xl mx-auto px-4 py-20 text-center">
       <div className="animate-spin w-8 h-8 border-4 border-t-transparent rounded-full mx-auto" style={{ borderColor: 'var(--brand-secondary)', borderTopColor: 'transparent' }} />
-      <p className="mt-4" style={{ color: 'var(--brand-text)' }}>Cargando...</p>
+      <p className="mt-4" style={{ color: 'var(--brand-text)' }}>Cargando reserva…</p>
     </div>
   );
 
@@ -198,11 +202,11 @@ export default function Reserva() {
         {/* Stepper principal */}
         <div className="lg:col-span-2 space-y-6">
           {/* Steps indicator */}
-          <div className="flex items-center gap-3 mb-8">
+          <div className="flex items-center gap-2 sm:gap-3 mb-8 overflow-x-auto pb-2">
             {["Servicio", "Sucursal", "Horario", "Datos"].map((label, i) => (
-              <div key={label} className="flex items-center gap-2">
+              <div key={label} className="flex items-center gap-2 shrink-0">
                 <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all ${
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-[background-color,color,box-shadow] ${
                     step > i + 1 ? 'text-white' : step === i + 1 ? 'text-white shadow-lg' : 'text-gray-400 bg-gray-100'
                   }`}
                   style={step >= i + 1 ? { background: step === i + 1 ? 'linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))' : 'var(--brand-primary)' } : {}}
@@ -212,7 +216,7 @@ export default function Reserva() {
                 <span className={`text-sm font-medium hidden sm:inline ${step >= i + 1 ? '' : 'text-gray-400'}`} style={step >= i + 1 ? { color: 'var(--brand-text)' } : {}}>
                   {label}
                 </span>
-                {i < 3 && <div className={`w-8 h-px ${step > i + 1 ? '' : 'bg-gray-200'}`} style={step > i + 1 ? { background: 'var(--brand-secondary)' } : {}} />}
+                {i < 3 && <div className={`w-4 sm:w-8 h-px ${step > i + 1 ? '' : 'bg-gray-200'}`} style={step > i + 1 ? { background: 'var(--brand-secondary)' } : {}} />}
               </div>
             ))}
           </div>
@@ -233,6 +237,7 @@ export default function Reserva() {
                     const duracion = s.DURACION_MINUTOS_WEB ?? s.DURACION_MINUTOS;
                     return (
                       <button
+                        type="button"
                         key={i}
                         onClick={() => {
                           setServicioSel(s);
@@ -241,7 +246,7 @@ export default function Reserva() {
                           setHorarios([]);
                           setStep(2);
                         }}
-                        className={`w-full text-left p-4 rounded-xl transition-all duration-300 border ${
+                        className={`w-full text-left p-4 rounded-xl transition-[background-color,border-color,box-shadow,transform] duration-300 border ${
                           servicioSel === s ? 'border-primary shadow-md' : 'border-white/40 hover:shadow-md hover:-translate-y-0.5'
                         }`}
                         style={{
@@ -270,7 +275,7 @@ export default function Reserva() {
           {/* Step 2 — Sucursal */}
           {step === 2 && (
             <div className="space-y-4">
-              <button onClick={() => setStep(1)} className="text-sm opacity-60 hover:opacity-100 mb-2 inline-flex items-center gap-1" style={{ color: 'var(--brand-primary)' }}>
+              <button type="button" onClick={() => setStep(1)} className="text-sm opacity-60 hover:opacity-100 mb-2 inline-flex items-center gap-1" style={{ color: 'var(--brand-primary)' }}>
                 ← Volver
               </button>
               <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--brand-text)' }}>2. ¿Dónde querés el turno?</h3>
@@ -288,9 +293,10 @@ export default function Reserva() {
                     const ciudad = suc.CIUDAD_SUCURSAL || suc.LOCALIDAD || "";
                     return (
                       <button
+                        type="button"
                         key={i}
                         onClick={() => { handleSucursalSelect(suc); setStep(3); }}
-                        className={`w-full text-left p-4 rounded-xl transition-all duration-300 border ${
+                        className={`w-full text-left p-4 rounded-xl transition-[background-color,border-color,box-shadow,transform] duration-300 border ${
                           sucursalSel === suc ? 'border-primary shadow-md' : 'border-white/40 hover:shadow-md hover:-translate-y-0.5'
                         }`}
                         style={{
@@ -312,7 +318,7 @@ export default function Reserva() {
           {/* Step 3 — Horario */}
           {step === 3 && (
             <div className="space-y-4">
-              <button onClick={() => setStep(2)} className="text-sm opacity-60 hover:opacity-100 mb-2 inline-flex items-center gap-1" style={{ color: 'var(--brand-primary)' }}>
+              <button type="button" onClick={() => setStep(2)} className="text-sm opacity-60 hover:opacity-100 mb-2 inline-flex items-center gap-1" style={{ color: 'var(--brand-primary)' }}>
                 ← Volver
               </button>
               <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--brand-text)' }}>3. Elegí el horario</h3>
@@ -327,14 +333,27 @@ export default function Reserva() {
                       Próximamente publicaremos nuevos horarios. Mientras tanto, consultá disponibilidad
                       por WhatsApp o acercate a la sucursal.
                     </p>
-                    <a
-                      href="/reserva"
-                      className="inline-flex items-center gap-1 text-sm font-medium underline"
-                      style={{ color: 'var(--brand-primary)' }}
-                    >
-                      <span className="material-symbols-outlined text-sm">calendar_today</span>
-                      Consultar disponibilidad
-                    </a>
+                    {whatsappUrl ? (
+                      <a
+                        href={whatsappUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 text-sm font-medium underline"
+                        style={{ color: 'var(--brand-primary)' }}
+                      >
+                        <span className="material-symbols-outlined text-sm" aria-hidden="true">support_agent</span>
+                        Consultar disponibilidad
+                      </a>
+                    ) : (
+                      <Link
+                        to="/catalogo"
+                        className="inline-flex items-center gap-1 text-sm font-medium underline"
+                        style={{ color: 'var(--brand-primary)' }}
+                      >
+                        <span className="material-symbols-outlined text-sm" aria-hidden="true">category</span>
+                        Volver al catálogo
+                      </Link>
+                    )}
                   </div>
                 </GlassCard>
               ) : (
@@ -347,9 +366,10 @@ export default function Reserva() {
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                         {items.map((h) => (
                           <button
+                            type="button"
                             key={`${h.fecha}-${h.horaInicio}-${h.horaFin}-${h.id}`}
                             onClick={() => { setHorarioSel(h); setStep(4); }}
-                            className={`py-3 px-2 rounded-lg text-sm font-medium transition-all ${
+                            className={`py-3 px-2 rounded-lg text-sm font-medium transition-[background-color,color,box-shadow] ${
                               horarioSel?.id === h.id ? 'text-white shadow-md' : 'hover:bg-white/80 border border-gray-200'
                             }`}
                             style={horarioSel?.id === h.id ? { background: 'linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))' } : { background: 'rgba(255,255,255,0.5)' }}
@@ -369,42 +389,49 @@ export default function Reserva() {
           {/* Step 4 — Datos */}
           {step === 4 && (
             <div className="space-y-4">
-              <button onClick={() => setStep(3)} className="text-sm opacity-60 hover:opacity-100 mb-2 inline-flex items-center gap-1" style={{ color: 'var(--brand-primary)' }}>
+              <button type="button" onClick={() => setStep(3)} className="text-sm opacity-60 hover:opacity-100 mb-2 inline-flex items-center gap-1" style={{ color: 'var(--brand-primary)' }}>
                 ← Volver
               </button>
               <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--brand-text)' }}>4. Tus datos</h3>
               <GlassCard className="p-6 space-y-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1" style={{ color: 'var(--brand-text)' }}>Nombre</label>
+                  <label htmlFor="reserva-nombre" className="block text-sm font-medium mb-1" style={{ color: 'var(--brand-text)' }}>Nombre</label>
                   <input
+                    id="reserva-nombre"
+                    name="nombre"
                     type="text"
+                    autoComplete="name"
                     value={nombre}
                     onChange={e => setNombre(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-lg border border-gray-200 bg-white/70 backdrop-blur"
-                    placeholder="Tu nombre completo"
-                    style={{ outline: 'none' }}
+                    className="w-full px-4 py-2.5 rounded-lg border border-gray-200 bg-white/70 backdrop-blur focus-visible:ring-2 focus-visible:ring-sky-500"
+                    placeholder="Ej. Ana Pérez…"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1" style={{ color: 'var(--brand-text)' }}>Teléfono</label>
+                  <label htmlFor="reserva-telefono" className="block text-sm font-medium mb-1" style={{ color: 'var(--brand-text)' }}>Teléfono</label>
                   <input
+                    id="reserva-telefono"
+                    name="telefono"
                     type="tel"
+                    autoComplete="tel"
+                    inputMode="tel"
                     value={telefono}
                     onChange={e => setTelefono(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-lg border border-gray-200 bg-white/70 backdrop-blur"
-                    placeholder="+54 11 1234-5678"
-                    style={{ outline: 'none' }}
+                    className="w-full px-4 py-2.5 rounded-lg border border-gray-200 bg-white/70 backdrop-blur focus-visible:ring-2 focus-visible:ring-sky-500"
+                    placeholder="Ej. +54 11 1234-5678…"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1" style={{ color: 'var(--brand-text)' }}>Notas (opcional)</label>
+                  <label htmlFor="reserva-notas" className="block text-sm font-medium mb-1" style={{ color: 'var(--brand-text)' }}>Notas (opcional)</label>
                   <textarea
+                    id="reserva-notas"
+                    name="notas"
+                    autoComplete="off"
                     value={notas}
                     onChange={e => setNotas(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-lg border border-gray-200 bg-white/70 backdrop-blur resize-none"
-                    placeholder="¿Algo que debamos saber?"
+                    className="w-full px-4 py-2.5 rounded-lg border border-gray-200 bg-white/70 backdrop-blur resize-none focus-visible:ring-2 focus-visible:ring-sky-500"
+                    placeholder="Ej. Preferencia de horario…"
                     rows={2}
-                    style={{ outline: 'none' }}
                   />
                 </div>
               </GlassCard>
@@ -416,7 +443,7 @@ export default function Reserva() {
         <div className="space-y-4">
           <GlassCard className="p-5 sticky top-8">
             <h3 className="font-semibold text-base mb-4 flex items-center gap-2" style={{ color: 'var(--brand-text)' }}>
-              <span className="material-symbols-outlined text-lg">receipt_long</span>
+                <span className="material-symbols-outlined text-lg" aria-hidden="true">receipt_long</span>
               Resumen
             </h3>
             <div className="space-y-3 text-sm">
@@ -448,13 +475,13 @@ export default function Reserva() {
 
             {step === 4 && nombre && telefono && (
               <div className="mt-6">
-                <a
-                  href="/login"
-                  className="block w-full text-center px-6 py-3 rounded-xl font-semibold text-sm text-white transition-all hover:opacity-90"
+                <Link
+                  to="/login"
+                  className="block w-full text-center px-6 py-3 rounded-xl font-semibold text-sm text-white transition-opacity hover:opacity-90"
                   style={{ background: "linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))" }}
                 >
                   Ingresá para confirmar tu turno
-                </a>
+                </Link>
                 <p className="text-xs text-center mt-2 opacity-50" style={{ color: "var(--brand-text)" }}>
                   Necesitás crear una cuenta para confirmar la reserva
                 </p>

@@ -2,18 +2,18 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import ServiceCard from "../components/ui/ServiceCard";
 import SectionHeader from "../components/ui/SectionHeader";
-import Badge from "../components/ui/Badge";
 import { isPublicService, normalizeServiceCategory, formatPublicName } from "../utils/publicDataFilters";
+import { useBrandConfig } from "../context/BrandConfigContext";
 
 const API = import.meta.env.VITE_API_BASE_URL || "";
 
-const PUBLIC_FILTERS = ["Todos", "Cabello", "Manos y Pies", "Facial", "Maquillaje", "Spa / Bienestar"];
-
 export default function Catalogo() {
+  const { config } = useBrandConfig();
   const navigate = useNavigate();
   const [servicios, setServicios] = useState([]);
   const [categoriaActiva, setCategoriaActiva] = useState("Todos");
   const [categoriasDisponibles, setCategoriasDisponibles] = useState([]);
+  const [busqueda, setBusqueda] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -50,14 +50,20 @@ export default function Catalogo() {
     cargar();
   }, []);
 
-  const filtrados = categoriaActiva === "Todos"
-    ? servicios
-    : servicios.filter(s => s._categoria === categoriaActiva);
+  const categorias = ["Todos", ...categoriasDisponibles];
+  const search = busqueda.trim().toLowerCase();
+  const filtrados = servicios.filter(s => {
+    const matchesCategory = categoriaActiva === "Todos" || s._categoria === categoriaActiva;
+    const matchesSearch = !search ||
+      [s._nombre, s._categoria, s._descripcion].some(value => String(value || "").toLowerCase().includes(search));
+    return matchesCategory && matchesSearch;
+  });
+  const catalogLabel = config?.business?.catalogLabel || "catálogo";
 
   if (loading) return (
     <div className="max-w-7xl mx-auto px-4 py-20 text-center">
       <div className="animate-spin w-8 h-8 border-4 border-t-transparent rounded-full mx-auto" style={{ borderColor: 'var(--brand-secondary)', borderTopColor: 'transparent' }} />
-      <p className="mt-4 opacity-50" style={{ color: 'var(--brand-text)' }}>Cargando catálogo...</p>
+      <p className="mt-4 opacity-50" style={{ color: 'var(--brand-text)' }}>Cargando catálogo…</p>
     </div>
   );
 
@@ -72,17 +78,33 @@ export default function Catalogo() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-8 py-12">
       <SectionHeader
-        title="Catálogo de Servicios"
-        subtitle="Servicios profesionales de belleza y bienestar"
+        title={config.catalogTitle || `Catálogo de ${config.brandName}`}
+        subtitle={config.catalogSubtitle || `Explorá ${String(catalogLabel).toLowerCase()} publicado por el negocio.`}
       />
+
+      <div className="mx-auto mb-6 max-w-xl">
+        <label htmlFor="catalogo-busqueda" className="sr-only">Buscar en catálogo</label>
+        <input
+          id="catalogo-busqueda"
+          name="catalogo_busqueda"
+          type="search"
+          autoComplete="off"
+          value={busqueda}
+          onChange={(event) => setBusqueda(event.target.value)}
+          placeholder="Buscar por nombre o categoría…"
+          className="w-full rounded-2xl border border-white/50 bg-white/70 px-4 py-3 text-sm shadow-sm backdrop-blur focus-visible:ring-2 focus-visible:ring-sky-500"
+          style={{ color: "var(--brand-text)" }}
+        />
+      </div>
 
       {/* Filtros públicos */}
       <div className="flex flex-wrap gap-2 mb-10 justify-center">
-        {PUBLIC_FILTERS.filter(f => f === "Todos" || categoriasDisponibles.includes(f)).map((filtro) => (
+        {categorias.map((filtro) => (
           <button
+            type="button"
             key={filtro}
             onClick={() => setCategoriaActiva(filtro)}
-            className={`px-5 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
+            className={`px-5 py-2 rounded-full text-sm font-medium transition-[background-color,color,box-shadow] duration-300 ${
               categoriaActiva === filtro
                 ? 'text-white shadow-md'
                 : 'bg-white/60 text-gray-600 hover:bg-white/90 border border-gray-200'
@@ -96,9 +118,15 @@ export default function Catalogo() {
 
       {filtrados.length === 0 ? (
         <div className="glass-panel p-12 text-center rounded-2xl">
-          <span className="text-5xl mb-4 block">💇</span>
-          <h3 className="text-xl font-semibold mb-2" style={{ color: 'var(--brand-text)' }}>Catálogo en preparación</h3>
-          <p className="text-sm opacity-50">Próximamente publicaremos todos los servicios disponibles.</p>
+          <span className="material-symbols-outlined mb-4 block text-5xl opacity-30" style={{ color: 'var(--brand-primary)' }}>category</span>
+          <h3 className="text-xl font-semibold mb-2" style={{ color: 'var(--brand-text)' }}>
+            {search || categoriaActiva !== "Todos" ? "Sin resultados" : "Catálogo en preparación"}
+          </h3>
+          <p className="text-sm opacity-50" style={{ color: 'var(--brand-text-secondary)' }}>
+            {search || categoriaActiva !== "Todos"
+              ? "Probá con otro nombre o categoría."
+              : "Próximamente se publicarán las opciones disponibles."}
+          </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -113,7 +141,7 @@ export default function Catalogo() {
                 categoria: sw._categoria,
                 reservaHabilitada: sw._reserva,
               }}
-              onReservar={sw._reserva ? () => window.location.href = '/reserva' : null}
+              onReservar={sw._reserva ? () => navigate('/reserva') : null}
               onClick={() => navigate(`/servicios/${sw._slug}`)}
             />
           ))}

@@ -6,7 +6,7 @@ export default function GlassCard({ children, className = '', hover = true, padd
       className={`
         glass-card
         ${padding ? 'p-6' : ''}
-        ${hover ? 'hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300' : ''}
+        ${hover ? 'hover:shadow-lg hover:-translate-y-0.5 transition-[box-shadow,transform] duration-300' : ''}
         ${className}
       `.trim()}
       {...props}

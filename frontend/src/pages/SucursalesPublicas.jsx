@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { isPublicBranch } from "../utils/publicDataFilters";
 import { useBrandConfig } from "../context/BrandConfigContext";
 
@@ -38,7 +39,7 @@ export default function SucursalesPublicas() {
           {config.sucursalesTitle || "Nuestras Sucursales"}
         </h2>
         <p className="text-sm sm:text-base opacity-60" style={{ color: "var(--brand-text)" }}>
-          {config.sucursalesSubtitle || "Elegí la sucursal más cercana para tu próxima visita"}
+          {config.sucursalesSubtitle || "Consultá sedes, puntos de atención o unidades operativas configuradas."}
         </p>
       </div>
 
@@ -89,13 +90,13 @@ export default function SucursalesPublicas() {
               )}
               {business.usesAppointments !== false && (
                 <div className="mt-auto pt-4">
-                  <a
-                    href={b.SLUG_SUCURSAL ? `/reserva?sucursal=${b.SLUG_SUCURSAL}` : "/reserva"}
-                    className="block w-full text-center px-4 py-2.5 rounded-xl text-sm font-semibold transition-all hover:opacity-90"
+                  <Link
+                    to={b.SLUG_SUCURSAL ? `/reserva?sucursal=${b.SLUG_SUCURSAL}` : "/reserva"}
+                    className="block w-full text-center px-4 py-2.5 rounded-xl text-sm font-semibold transition-opacity hover:opacity-90"
                     style={{ background: "linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))", color: "#fff" }}
                   >
                     Reservar en esta sucursal
-                  </a>
+                  </Link>
                 </div>
               )}
             </div>

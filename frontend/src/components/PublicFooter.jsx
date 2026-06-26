@@ -12,6 +12,11 @@ export default function PublicFooter() {
     config.whatsapp ||
     (business.showContactAddress && config.address) ||
     config.googleMaps;
+  const domainRoleLabel = {
+    COMERCIAL_CANONICO: 'Demo comercial principal',
+    TECNICO_CANONICO: 'Dominio técnico canónico',
+    LEGACY_SECUNDARIO: 'Demo secundaria/legacy',
+  }[config.domainRole] || config.domainNotice;
 
   return (
     <footer className="border-t border-white/10 mt-16" style={{ background: 'var(--brand-surface, #f8f9ff)' }}>
@@ -19,7 +24,14 @@ export default function PublicFooter() {
         <div className={`grid grid-cols-1 ${hasContact ? 'md:grid-cols-4' : 'md:grid-cols-3'} gap-8`}>
           <div>
             <h3 className="font-bold text-lg mb-3" style={{ fontFamily: 'var(--font-heading, Manrope)', color: 'var(--brand-text)' }}>{config.brandName}</h3>
-            <p className="text-sm opacity-60" style={{ color: 'var(--brand-text)' }}>{config.seoDescription || "Sistema de gestión para salones de belleza y centros de estética."}</p>
+            <p className="text-sm opacity-60" style={{ color: 'var(--brand-text)' }}>
+              {config.seoDescription || "Sistema marca blanca para publicar catálogo, turnos y portales según el rubro configurado."}
+            </p>
+            {domainRoleLabel && (
+              <p className="mt-3 inline-flex rounded-full border border-white/40 bg-white/40 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--brand-primary)' }}>
+                {domainRoleLabel}
+              </p>
+            )}
           </div>
           <div>
             <h4 className="font-semibold mb-3 text-sm" style={{ fontFamily: 'var(--font-body, Manrope)', color: 'var(--brand-text)' }}>Navegación</h4>
@@ -46,6 +58,18 @@ export default function PublicFooter() {
           <div>
             <h4 className="font-semibold mb-3 text-sm" style={{ fontFamily: 'var(--font-body, Manrope)', color: 'var(--brand-text)' }}>Legal</h4>
             <p className="text-xs opacity-40" style={{ color: 'var(--brand-text)' }}>{config.legalAviso}</p>
+            <div className="mt-4 flex flex-col gap-1 text-xs">
+              {config.commercialDomain && (
+                <a href={config.commercialDomain} className="opacity-60 hover:opacity-100 transition-opacity" style={{ color: 'var(--brand-primary)' }}>
+                  Demo comercial
+                </a>
+              )}
+              {config.technicalDomain && (
+                <a href={config.technicalDomain} className="opacity-60 hover:opacity-100 transition-opacity" style={{ color: 'var(--brand-primary)' }}>
+                  Demo técnica multirrubro
+                </a>
+              )}
+            </div>
           </div>
         </div>
         <div className="mt-8 pt-6 border-t border-white/10 text-center text-xs opacity-40" style={{ color: 'var(--brand-text)' }}>

@@ -1,18 +1,41 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { Link } from "react-router-dom";
 // X icon as inline SVG to avoid extra dependency
 import { useBrandConfig } from "../context/BrandConfigContext";
 
 const API = import.meta.env.VITE_API_BASE_URL || "";
 
-const DEMO_MESSAGES = [
-  { texto: "Promo semana: 15% off en tratamientos seleccionados", cta: "Ver servicios", ctaLink: "/catalogo" },
-  { texto: "Reservá online y elegí tu sucursal", cta: "Reservar turno", ctaLink: "/reserva" },
-  { texto: "Productos profesionales disponibles en salón", cta: "Ver productos", ctaLink: "/productos" },
-];
+function buildFallbackMessages(config) {
+  const business = config.business || {};
+  const catalogLabel = String(business.catalogLabel || "catálogo").toLowerCase();
+  const messages = [
+    {
+      texto: `${config.brandName || "Demo"} publica ${catalogLabel} desde configuración marca blanca`,
+      cta: "Ver catálogo",
+      ctaLink: "/catalogo",
+    },
+  ];
+  if (business.usesAppointments) {
+    messages.push({
+      texto: "Turnos online disponibles según agenda y sucursal configurada",
+      cta: "Reservar turno",
+      ctaLink: "/reserva",
+    });
+  }
+  if (business.usesProducts) {
+    messages.push({
+      texto: "Productos publicados para consulta o venta según canal del negocio",
+      cta: "Ver productos",
+      ctaLink: "/productos",
+    });
+  }
+  return messages;
+}
 
 export default function AnnouncementBar() {
   const { config } = useBrandConfig();
-  const [messages, setMessages] = useState(DEMO_MESSAGES);
+  const fallbackMessages = useMemo(() => buildFallbackMessages(config), [config]);
+  const [messages, setMessages] = useState(fallbackMessages);
   const [current, setCurrent] = useState(0);
   const [exiting, setExiting] = useState(false);
   const [dismissed, setDismissed] = useState(() => {
@@ -31,6 +54,7 @@ export default function AnnouncementBar() {
     }
 
     // Fallback: CONFIGURACION_PUBLICA banners
+    setMessages(fallbackMessages);
     async function cargar() {
       try {
         const res = await fetch(`${API}/api/configuracion-publica`);
@@ -51,7 +75,11 @@ export default function AnnouncementBar() {
       }
     }
     cargar();
-  }, [config.bannerActive, config.bannerMessage, config.bannerTitle, config.bannerCtaText, config.bannerCtaUrl]);
+  }, [config.bannerActive, config.bannerMessage, config.bannerTitle, config.bannerCtaText, config.bannerCtaUrl, fallbackMessages]);
+
+  useEffect(() => {
+    setCurrent(0);
+  }, [messages.length]);
 
   const dismiss = useCallback(() => {
     setDismissed(true);
@@ -79,18 +107,18 @@ export default function AnnouncementBar() {
   return (
     <div className="relative overflow-hidden" style={{ position: "relative", background: "linear-gradient(135deg, var(--brand-primary) 0%, #0b4d6a 100%)" }}>
       <div className="max-w-7xl mx-auto px-4 py-2.5 flex items-center justify-center gap-3 text-center">
-        <button onClick={dismiss} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 hover:text-white transition-colors" aria-label="Cerrar banner"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
-        <div className={`transition-all duration-300 ${exiting ? "opacity-0 -translate-y-2" : "opacity-100 translate-y-0"}`}>
-          <p className="text-sm sm:text-base text-white font-medium">
+        <button type="button" onClick={dismiss} className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-white/60 hover:text-white transition-colors" aria-label="Cerrar banner"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+        <div className={`transition-[opacity,transform] duration-300 ${exiting ? "opacity-0 -translate-y-2" : "opacity-100 translate-y-0"}`}>
+          <p className="pr-8 text-sm sm:text-base text-white font-medium">
             {msg.texto}
             {msg.cta && (
-              <a
-                href={msg.ctaLink || "#"}
+              <Link
+                to={msg.ctaLink || "/catalogo"}
                 className="ml-2 inline-block px-3 py-0.5 rounded-full text-xs font-bold transition-colors"
                 style={{ background: "var(--brand-secondary)", color: "var(--brand-text)" }}
               >
                 {msg.cta} →
-              </a>
+              </Link>
             )}
           </p>
         </div>

@@ -442,3 +442,75 @@ No se crearon `PERMISOS_CAMPO` para `SUCURSALES` porque `PERMISOS_CAMPO.TABLA` n
 - No schema Airtable.
 - No cambios auth/JWT/cookies.
 - No se tocaron `.env`, `backend/.env`, `frontend/.env` ni `CREDENCIALES.md`.
+
+---
+
+# CIERRE — WHITE_LABEL_CANONICAL_DOMAIN_UX
+
+**Fecha:** 2026-06-26
+**Estado:** CERRADO QA + DEPLOY
+
+## Alcance cerrado
+
+- Dominio comercial canónico definido y aplicado: `https://bellezapro-demo.surge.sh`.
+- Dominio técnico/canónico interno documentado: `https://sistema-multirrubro-demo.surge.sh`.
+- Dominio `https://belleza-demo.surge.sh` mantenido como legacy/secundario, sin eliminarlo.
+- Branding público reforzado desde `BrandConfigContext`:
+  - role de dominio;
+  - canonical por ruta;
+  - meta description;
+  - theme color;
+  - fallback CSS variables antes de cargar `/api/marca-blanca`.
+- Landing pública mejorada sin reescritura total:
+  - loading/error/empty states;
+  - cards navegables semánticas;
+  - CTAs mobile full-width;
+  - copy menos hardcodeado a peluquería fuera del seed/demo.
+- Catálogo y productos:
+  - buscador;
+  - categorías dinámicas;
+  - CTA de productos no transaccional, sin checkout/pagos/caja.
+- Reserva pública:
+  - stepper mobile más robusto;
+  - inputs con labels, name, autocomplete/inputMode y focus visible;
+  - CTA de disponibilidad sin loop a `/reserva`.
+- Accesibilidad/UX:
+  - skip link;
+  - `prefers-reduced-motion`;
+  - `transition-all` removido del alcance tocado;
+  - botones/links semánticos en cards públicas.
+
+## QA
+
+| Prueba | Resultado |
+|--------|-----------|
+| `npm run build` | ✅ PASS |
+| `git diff --check` | ✅ PASS |
+| Mobile 360/390/430 local con Playwright | ✅ sin overflow horizontal |
+| Rutas live BellezaPro `/`, `/catalogo`, `/productos`, `/reserva`, `/login` | ✅ PASS |
+| Redirects legacy `/servicios`, `/reservar`, `/acceder`, `/admin` | ✅ PASS |
+| Rutas protegidas sin auth `/portal`, `/profesional`, `/backoffice/citas` | ✅ redirigen a `/login` |
+| `bellezapro-demo.surge.sh` | ✅ PASS |
+| `sistema-multirrubro-demo.surge.sh` | ✅ PASS tras reintento por 504 transitorio inicial |
+| `belleza-demo.surge.sh` | ✅ PASS |
+| Backend `/health` | ✅ 200 |
+| Backend `/api/citas` | ✅ 200 |
+| Backend `/api/agenda-slots` | ✅ 200 |
+
+## Deploy
+
+- Surge actualizado en:
+  - `https://bellezapro-demo.surge.sh`
+  - `https://sistema-multirrubro-demo.surge.sh`
+  - `https://belleza-demo.surge.sh`
+- Railway no se redeployó porque no hubo cambios backend.
+
+## Garantías
+
+- No se tocaron `.env`, `backend/.env`, `frontend/.env` ni `CREDENCIALES.md`.
+- No se expusieron secretos.
+- No se modificó schema Airtable.
+- No DELETE físico.
+- No `RESERVAS`.
+- No pagos, checkout, caja/POS, ventas/cobros ni liquidaciones.
+- No cambios auth/JWT/cookies.
