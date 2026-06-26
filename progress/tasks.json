@@ -1,7 +1,7 @@
 {
   "project": "sistema-marca-blanca-multirrubro",
-  "fase_actual": "SURGE_SINGLE_COMMERCIAL_DOMAIN — CERRADA_QA_DEPLOY",
-  "fase_siguiente": "BACKOFFICE_OPERATIVO_P4_REPORTES_OPERATIVOS_O_CAJAS_PAGOS_DISEÑO (pendiente de aprobación; no pagos/caja todavía)",
+  "fase_actual": "LIVE_PUBLIC_UX_COMMERCE_P0 — CERRADA_QA_DEPLOY",
+  "fase_siguiente": "WHITE_LABEL_CONFIGURADOR_LANDING_P1 o COMMERCE_MODEL_P2_DESIGN (requiere aprobación; no pagos/caja todavía)",
   "tareas": {
     "FASE_3B_PORTAL_CLIENTE": {
       "status": "completed",
@@ -262,6 +262,37 @@
       "payments_checkout_pos": false,
       "schema_changes": false,
       "delete_fisico_business_data": false
+    },
+    "LIVE_PUBLIC_UX_COMMERCE_P0": {
+      "status": "completed",
+      "closed_at": "2026-06-26",
+      "commits": [],
+      "deliverables": [
+        "frontend/src/components/AnnouncementBar.jsx (safe message guard)",
+        "frontend/src/pages/ProductoDetalle.jsx (non-transactional product CTA; no product route to reserva)",
+        "frontend/src/pages/SucursalesPublicas.jsx (empty state when no public real branches)",
+        "frontend/src/pages/Reserva.jsx (clear empty state for no public branches)",
+        "docs/WHITE_LABEL_MULTIRRUBRO_GAP_AUDIT.md (live commerce gap update)"
+      ],
+      "qa_results": {
+        "frontend_build": "PASS",
+        "git_diff_check": "PASS",
+        "surge_deploy_bellezapro": "PASS",
+        "browser_home": "PASS_CONTENT_VISIBLE_NO_PAGE_ERRORS",
+        "browser_productos": "PASS_PRODUCTS_VISIBLE",
+        "browser_producto_detalle": "PASS_PRODUCT_VISIBLE_NO_PRODUCT_CTA_TO_RESERVA",
+        "browser_sucursales": "PASS_EMPTY_STATE_NO_FAKE_BRANCHES",
+        "browser_reserva": "PASS_BRANCH_EMPTY_STATE_AFTER_SERVICE_SELECT",
+        "commercial_domain": "PASS_200",
+        "removed_surge_domains": "PASS_404"
+      },
+      "secrets_free": true,
+      "env_files_touched": false,
+      "payments_checkout_pos": false,
+      "reservas_table_used": false,
+      "schema_changes": false,
+      "delete_fisico": false,
+      "notes": "P0 did not loosen public branch filters because Airtable currently returns only fictitious/non-public/closed branches for public display. Payments, cart, upsell/cross-sell remain a separate approved commerce block."
     }
   },
   "deploys_activos": {

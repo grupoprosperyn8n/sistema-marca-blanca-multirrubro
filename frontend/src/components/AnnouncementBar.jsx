@@ -87,6 +87,7 @@ export default function AnnouncementBar() {
   }, []);
 
   const rotate = useCallback(() => {
+    if (messages.length <= 1) return;
     setExiting(true);
     setTimeout(() => {
       setCurrent((prev) => (prev + 1) % messages.length);
@@ -102,7 +103,9 @@ export default function AnnouncementBar() {
 
   if (messages.length === 0 || dismissed) return null;
 
-  const msg = messages[current];
+  const safeCurrent = Math.min(current, messages.length - 1);
+  const msg = messages[safeCurrent];
+  if (!msg?.texto) return null;
 
   return (
     <div className="relative overflow-hidden" style={{ position: "relative", background: "linear-gradient(135deg, var(--brand-primary) 0%, #0b4d6a 100%)" }}>

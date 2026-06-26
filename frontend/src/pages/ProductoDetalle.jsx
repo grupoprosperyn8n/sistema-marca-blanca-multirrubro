@@ -1,12 +1,24 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import ImageCarousel from "../components/ui/ImageCarousel";
+import { useBrandConfig } from "../context/BrandConfigContext";
 
 const API = import.meta.env.VITE_API_BASE_URL || "";
+
+function slugify(value) {
+  return String(value || "")
+    .toLowerCase()
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9-]/g, "");
+}
 
 export default function ProductoDetalle() {
   const { slug } = useParams();
   const navigate = useNavigate();
+  const { config } = useBrandConfig();
   const [producto, setProducto] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -19,9 +31,9 @@ export default function ProductoDetalle() {
         const raw = Array.isArray(data) ? data : data.productos || [];
         
         const match = raw.find(p => {
-          const nombreSlug = String(p.nombre_visible || "")
-            .toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
-          return nombreSlug === slug || p.id === slug;
+          const nombreSlug = slugify(p.nombre_visible);
+          const apiSlug = slugify(p.slug);
+          return nombreSlug === slug || apiSlug === slug || p.id === slug;
         });
 
         if (!match) {
@@ -39,6 +51,7 @@ export default function ProductoDetalle() {
           imagen: match.imagen_principal?.url || null,
           imagenes: match.imagenes_secundarias || [],
           disponibilidad: match.disponibilidad_visible || null,
+          cta: match.cta || null,
         });
       } catch (e) {
         setError(e.message);
@@ -66,10 +79,18 @@ export default function ProductoDetalle() {
 
   const p = producto;
   const todasImagenes = [p.imagen, ...(p.imagenes || [])].filter(Boolean);
+  const whatsappDigits = String(config.whatsapp || "").replace(/\D/g, "");
+  const contactMessage = `Hola, quiero consultar por el producto ${p.nombre}`;
+  const contactHref = whatsappDigits
+    ? `https://wa.me/${whatsappDigits}?text=${encodeURIComponent(contactMessage)}`
+    : config.email
+      ? `mailto:${config.email}?subject=${encodeURIComponent(`Consulta por ${p.nombre}`)}`
+      : null;
+  const contactLabel = p.cta || (contactHref ? "Consultar Producto" : "Ver Más Productos");
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-8 py-12">
-      <button onClick={() => navigate(-1)} className="mb-6 text-sm opacity-60 hover:opacity-100 flex items-center gap-1" style={{ color: "var(--brand-text)" }}>
+      <button type="button" onClick={() => navigate(-1)} className="mb-6 text-sm opacity-60 hover:opacity-100 flex items-center gap-1" style={{ color: "var(--brand-text)" }}>
         ← Volver
       </button>
 
@@ -117,14 +138,27 @@ export default function ProductoDetalle() {
           )}
 
           <div className="flex flex-col sm:flex-row gap-3">
-            <a
-              href="/reserva"
-              className="px-6 py-3 rounded-xl font-semibold text-sm text-center transition-all hover:opacity-90"
-              style={{ background: "linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))", color: "#fff" }}
-            >
-              Consultar disponibilidad
-            </a>
+            {contactHref ? (
+              <a
+                href={contactHref}
+                target={whatsappDigits ? "_blank" : undefined}
+                rel={whatsappDigits ? "noreferrer" : undefined}
+                className="px-6 py-3 rounded-xl font-semibold text-sm text-center transition-opacity hover:opacity-90"
+                style={{ background: "linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))", color: "#fff" }}
+              >
+                {contactLabel}
+              </a>
+            ) : (
+              <Link
+                to="/productos"
+                className="px-6 py-3 rounded-xl font-semibold text-sm text-center transition-opacity hover:opacity-90"
+                style={{ background: "linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))", color: "#fff" }}
+              >
+                {contactLabel}
+              </Link>
+            )}
             <button
+              type="button"
               onClick={() => navigate("/productos")}
               className="px-6 py-3 rounded-xl font-semibold text-sm border transition-all hover:bg-white/60"
               style={{ color: "var(--brand-text)", borderColor: "#d1d5db" }}
@@ -134,7 +168,7 @@ export default function ProductoDetalle() {
           </div>
 
           <p className="mt-6 text-xs opacity-40 text-center" style={{ color: "var(--brand-text)" }}>
-            Próximamente compra online · Actualmente consultá disponibilidad en sucursal
+            La venta online todavía no está activada. Este producto se consulta por el canal configurado del negocio.
           </p>
         </div>
       </div>

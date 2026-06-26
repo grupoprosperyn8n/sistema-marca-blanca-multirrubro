@@ -280,10 +280,37 @@ export default function Reserva() {
               </button>
               <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--brand-text)' }}>2. ¿Dónde querés el turno?</h3>
               {sucursales.length === 0 ? (
-                <GlassCard className="p-8 text-center">
+                <GlassCard className="p-8 text-center space-y-4">
                   <span className="text-4xl block mb-3">📍</span>
-                  <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--brand-text)' }}>Próximamente</h3>
-                  <p className="text-sm opacity-50">Publicaremos las sedes disponibles para reserva online.</p>
+                  <div>
+                    <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--brand-text)' }}>
+                      No hay sucursales publicadas para reserva online
+                    </h3>
+                    <p className="text-sm opacity-60" style={{ color: 'var(--brand-text-secondary)' }}>
+                      No mostramos sedes ficticias ni no publicadas. Configurá una sucursal real como visible
+                      para habilitar este paso.
+                    </p>
+                  </div>
+                  <div className="flex flex-col justify-center gap-3 sm:flex-row">
+                    <Link
+                      to="/catalogo"
+                      className="inline-flex items-center justify-center rounded-xl px-5 py-3 text-sm font-semibold transition-opacity hover:opacity-90"
+                      style={{ background: "linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))", color: "#fff" }}
+                    >
+                      Ver Catálogo
+                    </Link>
+                    {whatsappUrl && (
+                      <a
+                        href={whatsappUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center justify-center rounded-xl border px-5 py-3 text-sm font-semibold transition-colors hover:bg-white/70"
+                        style={{ borderColor: "rgba(0,0,0,0.12)", color: "var(--brand-text)" }}
+                      >
+                        Consultar por WhatsApp
+                      </a>
+                    )}
+                  </div>
                 </GlassCard>
               ) : (
                 <div className="grid gap-3">

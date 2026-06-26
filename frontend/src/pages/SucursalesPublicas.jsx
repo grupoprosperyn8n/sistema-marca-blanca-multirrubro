@@ -30,7 +30,6 @@ export default function SucursalesPublicas() {
 
   if (loading) return null;
   if (business.usesBranches === false && business.showContactAddress === false) return null;
-  if (branches.length === 0) return null;
 
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-8 py-16">
@@ -43,6 +42,41 @@ export default function SucursalesPublicas() {
         </p>
       </div>
 
+      {branches.length === 0 ? (
+        <div
+          className="glass-panel mx-auto max-w-2xl rounded-3xl p-8 text-center"
+          style={{ background: "rgba(255,255,255,0.78)" }}
+        >
+          <span className="material-symbols-outlined mb-3 text-5xl" aria-hidden="true" style={{ color: "var(--brand-primary)" }}>
+            location_off
+          </span>
+          <h3 className="mb-3 text-xl font-bold" style={{ color: "var(--brand-text)" }}>
+            No hay sucursales públicas configuradas
+          </h3>
+          <p className="mx-auto max-w-xl text-sm leading-relaxed opacity-65" style={{ color: "var(--brand-text)" }}>
+            El sitio no muestra direcciones ficticias ni sedes no publicadas. Configurá una sucursal real como
+            visible en el backoffice para habilitar reservas y contacto presencial.
+          </p>
+          <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
+            <Link
+              to="/catalogo"
+              className="rounded-xl px-5 py-3 text-sm font-semibold transition-opacity hover:opacity-90"
+              style={{ background: "linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))", color: "#fff" }}
+            >
+              Ver Catálogo
+            </Link>
+            {business.usesAppointments !== false && (
+              <Link
+                to="/reserva"
+                className="rounded-xl border px-5 py-3 text-sm font-semibold transition-colors hover:bg-white/70"
+                style={{ borderColor: "rgba(0,0,0,0.12)", color: "var(--brand-text)" }}
+              >
+                Revisar Reservas
+              </Link>
+            )}
+          </div>
+        </div>
+      ) : (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {branches.map((b) => {
           const address = b.DIRECCION_SUCURSAL || b["CALLE Y N°"];
@@ -103,6 +137,7 @@ export default function SucursalesPublicas() {
           );
         })}
       </div>
+      )}
     </section>
   );
 }

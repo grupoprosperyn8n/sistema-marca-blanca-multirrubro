@@ -1,8 +1,33 @@
 # White-label multirrubro — gap audit backend/frontend/backoffice
 
 Fecha: 2026-06-24  
-Demo activa auditada: `https://belleza-demo.surge.sh`  
+Demo activa auditada: `https://bellezapro-demo.surge.sh`
 Base activa: `appuns6zIUKaJG7r0`
+
+## Actualización live — 2026-06-26
+
+Se auditó en navegador la demo comercial canónica `https://bellezapro-demo.surge.sh`.
+
+### Correcciones P0 aplicadas
+
+- `AnnouncementBar` ya no rompe la página si cambia la cantidad de banners configurados.
+- Detalle de producto deja de enviar a `/reserva`; ahora usa canal de consulta configurado y explicita que la venta online todavía no está activa.
+- `/sucursales` ya no queda en blanco cuando Airtable no tiene sucursales reales publicadas: muestra empty state claro.
+- `/reserva` informa que no hay sucursales públicas para reserva online en vez de insinuar datos ficticios.
+- Se mantienen filtradas las sucursales ficticias, históricas, no activas o no publicadas.
+
+### Gaps comerciales pendientes
+
+Las tablas de venta/e-commerce existen en Airtable (`VENTAS`, `ITEMS_VENTA`, `CARRITOS`, `CARRITO_ITEMS`, `PAGOS_COBROS`, `CUENTAS_COBRO`, `PACKS`, `PROMOCIONES`, `CUPONES`), pero todavía falta un bloque aprobado para:
+
+- carrito unificado para productos, servicios y packs;
+- checkout online y pasarela de pago;
+- upsell/cross-selling desde packs, promociones y productos relacionados;
+- conversión de carrito a venta/cobro;
+- estado de stock y disponibilidad comercial;
+- integración backoffice de configuración de landing/e-commerce.
+
+No se implementó pago, checkout, caja/POS ni cambios de schema en esta corrección P0.
 
 ## Veredicto
 

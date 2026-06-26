@@ -546,3 +546,51 @@ Por pedido explícito de Diego, se eliminaron de Surge los dominios no comercial
 - No se tocaron secretos.
 - No se modificó schema Airtable.
 - No pagos, checkout, caja/POS ni `RESERVAS`.
+
+---
+
+# CIERRE — LIVE PUBLIC UX COMMERCE P0
+
+**Fecha:** 2026-06-26
+**Estado:** CERRADO QA + DEPLOY
+
+## Contexto
+
+Se auditó en navegador `https://bellezapro-demo.surge.sh` por inconsistencias del flujo público:
+
+- producto derivaba a reserva;
+- sucursales no mostraba sedes;
+- reserva no podía avanzar por falta de sucursales públicas;
+- landing debía seguir usando configuración marca blanca;
+- no debía mostrarse data ficticia como real.
+
+## Cambios aplicados
+
+- `AnnouncementBar` ahora valida índice/mensaje antes de renderizar y evita pantalla en blanco por crash.
+- Detalle de producto ya no manda a `/reserva`; usa consulta por canal configurado y aclara que la venta online no está activada.
+- `/sucursales` muestra empty state explícito si no hay sedes reales publicadas.
+- `/reserva` muestra empty state claro cuando no existen sucursales públicas para reserva online.
+- `docs/WHITE_LABEL_MULTIRRUBRO_GAP_AUDIT.md` actualizado con gaps de carrito, pago, upsell/cross-selling y configuración landing/e-commerce.
+
+## QA
+
+| Prueba | Resultado |
+|--------|-----------|
+| `npm run build` | ✅ PASS |
+| `git diff --check` | ✅ PASS |
+| Deploy Surge `bellezapro-demo.surge.sh` | ✅ PASS |
+| Browser smoke `/` | ✅ contenido visible, sin page errors |
+| Browser smoke `/productos` | ✅ productos reales visibles |
+| Browser smoke producto detalle | ✅ producto visible, sin CTA transaccional a reserva |
+| Browser smoke `/sucursales` | ✅ empty state claro |
+| Browser smoke `/reserva` + selección de servicio | ✅ empty state claro de sucursal |
+| Dominios eliminados | ✅ `sistema-multirrubro-demo` 404, `belleza-demo` 404 |
+
+## Garantías
+
+- No se tocaron `.env`, `backend/.env`, `frontend/.env` ni `CREDENCIALES.md`.
+- No se expusieron secretos.
+- No se modificó schema Airtable.
+- No DELETE físico.
+- No `RESERVAS`.
+- No pagos, checkout, caja/POS, ventas/cobros ni liquidaciones.
