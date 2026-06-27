@@ -4,10 +4,17 @@ import Badge from "../components/ui/Badge";
 import ModuleActionBar from "../components/backoffice/ModuleActionBar";
 import CrudFormModal from "../components/backoffice/CrudFormModal";
 import { canEditField, filterColumnsByAccess, useAuth } from "../context/AuthContext";
+import { getPublicServiceImage } from "../utils/publicDataFilters";
 
 const API = import.meta.env.VITE_API_BASE_URL || "";
 
 const allColumns = [
+  { header: "Foto", field: "FOTO_SERVICIO", fields: ["FOTO_SERVICIO"], render: (row) => {
+    const image = getPublicServiceImage(row);
+    return image?.url ? (
+      <img src={image.url} alt={row.NOMBRE_SERVICIO || "Servicio"} className="h-10 w-14 rounded-lg object-cover" loading="lazy" />
+    ) : "—";
+  }},
   { header: "Nombre", field: "NOMBRE_SERVICIO", fields: ["NOMBRE_SERVICIO"], render: (row) => (
     <span className="font-medium" style={{ color: 'var(--brand-text)' }}>{row.NOMBRE_SERVICIO || row.nombre || "—"}</span>
   )},

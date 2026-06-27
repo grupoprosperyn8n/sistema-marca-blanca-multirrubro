@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { formatPublicName, isPublicService, normalizeServiceCategory } from "../utils/publicDataFilters";
+import { formatPublicName, getPublicServiceImage, isPublicService, normalizeServiceCategory, toPublicSlug } from "../utils/publicDataFilters";
 
 const API = import.meta.env.VITE_API_BASE_URL || "";
 
@@ -14,14 +14,13 @@ export default function ServicioDetalle() {
   useEffect(() => {
     async function cargar() {
       try {
-        const res = await fetch(`${API}/api/servicios-web`);
+        const res = await fetch(`${API}/api/servicios-web`, { cache: "no-store" });
         const data = await res.json();
         const raw = Array.isArray(data) ? data : data.servicios_web || [];
         const publicos = raw.filter(isPublicService);
 
         const match = publicos.find(sw => {
-          const nombreSlug = String(sw.NOMBRE_PUBLICO_SERVICIO || sw.NOMBRE_SERVICIO || "")
-            .toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+          const nombreSlug = toPublicSlug(sw.NOMBRE_PUBLICO_SERVICIO || sw.NOMBRE_SERVICIO || sw.SERVICIO_NOMBRE);
           return nombreSlug === slug || sw.id === slug;
         });
 
@@ -40,6 +39,7 @@ export default function ServicioDetalle() {
           reserva: match.RESERVA_ONLINE_HABILITADA !== false,
           anticipo: match.ANTICIPO_REQUERIDO_WEB || 0,
           beneficios: match.BENEFICIOS_WEB || match.BENEFICIOS || "",
+          imagen: getPublicServiceImage(match),
         });
       } catch (e) {
         setError(e.message);
@@ -73,7 +73,19 @@ export default function ServicioDetalle() {
         ← Volver
       </button>
 
-      <div className="glass-panel p-8 rounded-3xl" style={{ background: "rgba(255,255,255,0.85)" }}>
+      <div className="glass-panel overflow-hidden rounded-3xl" style={{ background: "rgba(255,255,255,0.85)" }}>
+        {s.imagen?.url && (
+          <div className="h-64 w-full bg-slate-100 sm:h-80">
+            <img
+              src={s.imagen.url}
+              alt={s.nombre}
+              width={s.imagen.width || 960}
+              height={s.imagen.height || 540}
+              className="h-full w-full object-cover"
+            />
+          </div>
+        )}
+        <div className="p-8">
         {s.categoria && (
           <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold mb-4" style={{ background: "var(--brand-secondary)33", color: "var(--brand-primary)" }}>
             {s.categoria}
@@ -145,6 +157,7 @@ export default function ServicioDetalle() {
           >
             Ver más servicios
           </button>
+        </div>
         </div>
       </div>
     </div>

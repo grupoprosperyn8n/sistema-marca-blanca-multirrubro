@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import ServiceCard from "../components/ui/ServiceCard";
 import SectionHeader from "../components/ui/SectionHeader";
-import { isPublicService, normalizeServiceCategory, formatPublicName } from "../utils/publicDataFilters";
+import { isPublicService, normalizeServiceCategory, formatPublicName, getPublicServiceImage, toPublicSlug } from "../utils/publicDataFilters";
 import { useBrandConfig } from "../context/BrandConfigContext";
 
 const API = import.meta.env.VITE_API_BASE_URL || "";
@@ -20,7 +20,7 @@ export default function Catalogo() {
   useEffect(() => {
     async function cargar() {
       try {
-        const res = await fetch(`${API}/api/servicios-web`);
+        const res = await fetch(`${API}/api/servicios-web`, { cache: "no-store" });
         const data = await res.json();
         const raw = Array.isArray(data) ? data : data.servicios_web || [];
 
@@ -33,7 +33,8 @@ export default function Catalogo() {
           _duracion: s.DURACION_MINUTOS_WEB ?? s.DURACION_MINUTOS ?? null,
           _descripcion: s.DESCRIPCION_WEB || s.DESCRIPCION || '',
           _reserva: s.RESERVA_ONLINE_HABILITADA !== false,
-          _slug: String(s.NOMBRE_PUBLICO_SERVICIO || s.NOMBRE_SERVICIO || "").toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "") || s.id,
+          _imagen: getPublicServiceImage(s),
+          _slug: toPublicSlug(s.NOMBRE_PUBLICO_SERVICIO || s.NOMBRE_SERVICIO || s.SERVICIO_NOMBRE) || s.id,
         }));
 
         setServicios(publicos);
@@ -140,6 +141,8 @@ export default function Catalogo() {
                 duracion_minutos: sw._duracion,
                 categoria: sw._categoria,
                 reservaHabilitada: sw._reserva,
+                imagen: sw._imagen,
+                imagenAlt: sw._nombre,
               }}
               onReservar={sw._reserva ? () => navigate('/reserva') : null}
               onClick={() => navigate(`/servicios/${sw._slug}`)}

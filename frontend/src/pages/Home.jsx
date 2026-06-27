@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { formatPublicName } from "../utils/publicDataFilters";
+import { formatPublicName, getPublicServiceImage, toPublicSlug } from "../utils/publicDataFilters";
 import SucursalesPublicas from "./SucursalesPublicas";
 import { formatCategoria } from "../utils/displayFormatters";
 import { useBrandConfig } from "../context/BrandConfigContext";
@@ -17,7 +17,7 @@ export default function Home() {
   const [productosError, setProductosError] = useState(null);
 
   useEffect(() => {
-    fetch(`${API}/api/servicios-web`)
+    fetch(`${API}/api/servicios-web`, { cache: "no-store" })
       .then(r => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return r.json();
@@ -179,12 +179,25 @@ export default function Home() {
                 const desc = s.DESCRIPCION_WEB || s.DESCRIPCION || "";
                 const precio = s.PRECIO_WEB ?? s.PRECIO_PUBLICITADO_WEB;
                 const duracion = s.DURACION_MINUTOS_WEB ?? s.DURACION_MINUTOS;
+                const imagen = getPublicServiceImage(s);
+                const slug = toPublicSlug(s.NOMBRE_PUBLICO_SERVICIO || s.NOMBRE_SERVICIO || s.SERVICIO_NOMBRE) || s.id;
                 return (
-                  <Link key={s.id || i} to="/catalogo" className="glass-card block p-6 group no-underline">
+                  <Link key={s.id || i} to={`/servicios/${slug}`} className="glass-card block p-6 group no-underline">
                     <div className="flex items-start gap-4">
-                      <div className="w-12 h-12 rounded-xl flex items-center justify-center text-white flex-shrink-0"
-                        style={{ background: 'linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))' }}>
-                        <span className="material-symbols-outlined" aria-hidden="true">{iconos[i % iconos.length]}</span>
+                      <div className="w-16 h-16 rounded-xl flex items-center justify-center text-white flex-shrink-0 overflow-hidden"
+                        style={{ background: imagen?.url ? 'transparent' : 'linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))' }}>
+                        {imagen?.url ? (
+                          <img
+                            src={imagen.url}
+                            alt={nombre}
+                            width={imagen.width || 64}
+                            height={imagen.height || 64}
+                            loading="lazy"
+                            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                          />
+                        ) : (
+                          <span className="material-symbols-outlined" aria-hidden="true">{iconos[i % iconos.length]}</span>
+                        )}
                       </div>
                       <div className="flex-1 min-w-0">
                         <h3 className="font-semibold text-base mb-1 truncate" style={{ color: 'var(--brand-text)' }}>{nombre}</h3>

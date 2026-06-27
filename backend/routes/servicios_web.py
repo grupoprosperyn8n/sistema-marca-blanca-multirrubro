@@ -4,7 +4,7 @@ Fase 1B: solo lectura. Sin escrituras.
 """
 import sys
 from pathlib import Path
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Response
 
 _BACKEND = Path(__file__).resolve().parent.parent
 if str(_BACKEND) not in sys.path:
@@ -23,10 +23,29 @@ def _first_link_id(value):
     return None
 
 
+def _attachments(value):
+    if isinstance(value, list):
+        return [item for item in value if isinstance(item, dict) and item.get("url")]
+    if isinstance(value, dict) and value.get("url"):
+        return [value]
+    return []
+
+
+def _copy_if_missing(target, source, target_key, *source_keys):
+    if target.get(target_key) not in (None, "", []):
+        return
+    for key in source_keys:
+        value = source.get(key)
+        if value not in (None, "", []):
+            target[target_key] = value
+            return
+
+
 @router.get("/servicios-web")
-async def listar_servicios_web():
+async def listar_servicios_web(response: Response):
     """Lista todos los servicios web."""
     try:
+        response.headers["Cache-Control"] = "no-store, max-age=0"
         client = AirtableClient()
         records = client.list_records("SERVICIOS_WEB", by_name=True)
         items = []
@@ -43,7 +62,20 @@ async def listar_servicios_web():
                         servicio_cache[servicio_id] = {}
                 servicio_fields = servicio_cache.get(servicio_id) or {}
                 fields["SERVICIO_NOMBRE"] = servicio_fields.get("NOMBRE_SERVICIO")
-                fields["DURACION_MINUTOS"] = servicio_fields.get("DURACION_MINUTOS")
+                _copy_if_missing(fields, servicio_fields, "NOMBRE_SERVICIO", "NOMBRE_SERVICIO")
+                _copy_if_missing(fields, servicio_fields, "DESCRIPCION_WEB", "DESCRIPCION_COMERCIAL")
+                _copy_if_missing(fields, servicio_fields, "DESCRIPCION", "DESCRIPCION_COMERCIAL")
+                _copy_if_missing(fields, servicio_fields, "CATEGORIA_SERVICIO", "CATEGORIA_SERVICIO")
+                _copy_if_missing(fields, servicio_fields, "SUBCATEGORIA", "SUBCATEGORIA")
+                _copy_if_missing(fields, servicio_fields, "DURACION_MINUTOS", "DURACION_MINUTOS")
+                _copy_if_missing(fields, servicio_fields, "PRECIO_BASE", "PRECIO_BASE")
+                _copy_if_missing(fields, servicio_fields, "PRECIO_WEB", "PRECIO_BASE")
+
+                imagenes = _attachments(servicio_fields.get("FOTO_SERVICIO"))
+                if imagenes:
+                    fields["FOTO_SERVICIO"] = imagenes
+                    fields["IMAGEN_PRINCIPAL_SERVICIO"] = imagenes[0]
+                    fields["IMAGENES_SERVICIO"] = imagenes
             items.append({"id": r.get("id"), "createdTime": r.get("createdTime"), **fields})
         return {"total": len(items), "servicios_web": items}
     except ValueError as e:

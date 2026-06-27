@@ -113,7 +113,7 @@ export default function Reserva() {
     async function cargar() {
       try {
         const [srvRes, sucRes] = await Promise.all([
-          fetch(`${API}/api/servicios-web`),
+          fetch(`${API}/api/servicios-web`, { cache: "no-store" }),
           fetch(`${API}/api/sucursales`),
         ]);
         const srvData = await srvRes.json();

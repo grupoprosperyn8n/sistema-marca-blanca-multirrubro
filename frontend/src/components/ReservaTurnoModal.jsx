@@ -69,7 +69,7 @@ export default function ReservaTurnoModal({ onClose }) {
     (async () => {
       setLoadingOptions(true);
       try {
-        const data = await fetchWithCookie("/api/servicios-web");
+        const data = await fetchWithCookie("/api/servicios-web", { cache: "no-store" });
         const active = (data.servicios_web || data.servicios || []).filter(
           (s) => s.ACTIVO_EN_WEB && s.RESERVA_ONLINE_HABILITADA
         );

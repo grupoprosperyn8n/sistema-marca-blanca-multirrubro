@@ -93,6 +93,48 @@ export function formatPublicName(value) {
   return toPublicTitle(value);
 }
 
+export function toPublicSlug(value) {
+  return String(value || '')
+    .toLowerCase()
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '');
+}
+
+function normalizeAttachment(value) {
+  const attachment = Array.isArray(value) ? value[0] : value;
+  if (!attachment || typeof attachment !== 'object') return null;
+  const thumb = attachment.thumbnails?.large || attachment.thumbnails?.full || attachment.thumbnails?.small;
+  const url = thumb?.url || attachment.url;
+  if (!url) return null;
+  return {
+    url,
+    width: thumb?.width || attachment.width,
+    height: thumb?.height || attachment.height,
+    filename: attachment.filename || '',
+    type: attachment.type || '',
+  };
+}
+
+export function getPublicServiceImage(service) {
+  if (!service) return null;
+  const candidates = [
+    service.IMAGEN_PRINCIPAL_SERVICIO,
+    service.IMAGEN_PRINCIPAL,
+    service.FOTO_SERVICIO,
+    service.IMAGENES_SERVICIO,
+    service.imagen_principal,
+    service.imagen,
+  ];
+  for (const candidate of candidates) {
+    const image = normalizeAttachment(candidate);
+    if (image) return image;
+  }
+  return null;
+}
+
 export function hideTechnicalName(value) {
   return formatPublicName(value);
 }
