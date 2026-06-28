@@ -262,6 +262,15 @@ Commit: `1a0d602 fix(frontend): diferenciar branding por dominio`
 | PROFESIONAL | ✅ mutaciones 403 |
 | SOLO_LECTURA | ✅ mutaciones 403 |
 
+
+## Deploy
+
+- Commit implementación: `c6e2015 feat(backoffice): add landing configuration editor`.
+- Push `origin/main`: ✅ PASS.
+- Railway `earnest-comfort`: ✅ Online después del auto-deploy.
+- Surge producción: ✅ `https://bellezapro-demo.surge.sh`.
+- Smoke live: `/health`, `/api/landing-secciones`, `/api/configuracion-publica`, `/`, `/catalogo`, `/productos`, `/reserva`, `/login`, `/backoffice/configuracion` ✅ PASS.
+
 ## Garantías
 
 - No se modificó schema Airtable.
@@ -600,7 +609,7 @@ Se auditó en navegador `https://bellezapro-demo.surge.sh` por inconsistencias d
 # CIERRE — WHITE_LABEL_CONFIGURADOR_LANDING_P1
 
 **Fecha:** 2026-06-27
-**Estado:** CERRADO QA LOCAL — DEPLOY/PUSH PENDIENTE EN ESTE TURNO
+**Estado:** CERRADO QA + DEPLOY
 
 ## Objetivo
 

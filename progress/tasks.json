@@ -1,6 +1,6 @@
 {
   "project": "sistema-marca-blanca-multirrubro",
-  "fase_actual": "WHITE_LABEL_CONFIGURADOR_LANDING_P1 — CERRADA_QA_LOCAL",
+  "fase_actual": "WHITE_LABEL_CONFIGURADOR_LANDING_P1 — CERRADA_QA_DEPLOY",
   "fase_siguiente": "COMMERCE_MODEL_P2_DESIGN o BACKOFFICE_CONFIG_ADVANCED_P2 (requiere aprobación; sin pagos/caja reales todavía)",
   "tareas": {
     "FASE_3B_PORTAL_CLIENTE": {
@@ -295,9 +295,11 @@
       "notes": "P0 did not loosen public branch filters because Airtable currently returns only fictitious/non-public/closed branches for public display. Payments, cart, upsell/cross-sell remain a separate approved commerce block."
     },
     "WHITE_LABEL_CONFIGURADOR_LANDING_P1": {
-      "status": "completed_local_qa",
+      "status": "completed",
       "closed_at": "2026-06-27",
-      "commits": [],
+      "commits": [
+        "c6e2015"
+      ],
       "deliverables": [
         "backend/routes/landing_secciones.py (GET público + PATCH backoffice protegido)",
         "backend/routes/configuracion_publica.py (DTO público seguro + PATCH backoffice protegido)",
@@ -313,7 +315,14 @@
         "git_diff_check": "PASS",
         "local_health": "PASS_200",
         "local_landing_secciones": "PASS_200_TOTAL_15_NO_NOTAS_INTERNAS",
-        "local_configuracion_publica": "PASS_200_TOTAL_97_NO_NOTAS_INTERNAS"
+        "local_configuracion_publica": "PASS_200_TOTAL_97_NO_NOTAS_INTERNAS",
+        "push_origin_main": "PASS",
+        "railway_auto_deploy": "PASS_ONLINE",
+        "surge_deploy_bellezapro": "PASS",
+        "live_health": "PASS_200",
+        "live_landing_secciones": "PASS_200_TOTAL_15_NO_NOTAS_INTERNAS",
+        "live_configuracion_publica": "PASS_200_TOTAL_97_NO_NOTAS_INTERNAS",
+        "live_routes": "PASS_200_HOME_CATALOGO_PRODUCTOS_RESERVA_LOGIN_BACKOFFICE_CONFIGURACION"
       },
       "secrets_free": true,
       "env_files_touched": false,
@@ -321,7 +330,13 @@
       "reservas_table_used": false,
       "schema_changes": false,
       "delete_fisico": false,
-      "notes": "Backoffice editor writes only safe allowlisted fields and enforces PERMISOS_CAMPO when present. Public landing reads existing LANDING_SECCIONES and CONFIGURACION_PUBLICA with no-store cache policy."
+      "notes": "Backoffice editor writes only safe allowlisted fields and enforces PERMISOS_CAMPO when present. Public landing reads existing LANDING_SECCIONES and CONFIGURACION_PUBLICA with no-store cache policy.",
+      "deploy": {
+        "frontend": "https://bellezapro-demo.surge.sh",
+        "backend": "https://earnest-comfort-production-3d75.up.railway.app",
+        "railway_status": "ONLINE",
+        "surge_production": "PASS"
+      }
     }
   },
   "deploys_activos": {
