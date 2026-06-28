@@ -1,13 +1,45 @@
 import { useEffect, useState } from "react";
-import { canAccess, useAuth } from "../context/AuthContext";
+import { canAccess, canEditField, useAuth } from "../context/AuthContext";
 import { useBrandConfig } from "../context/BrandConfigContext";
 
 const API = import.meta.env.VITE_API_BASE_URL || "";
 
 async function fetchJson(path) {
-  const res = await fetch(`${API}${path}`);
+  const res = await fetch(`${API}${path}`, { cache: "no-store" });
   if (!res.ok) throw new Error(`${path}: HTTP ${res.status}`);
   return res.json();
+}
+
+function buildConfigDraft(row = {}) {
+  return {
+    NOMBRE_CONFIGURACION: row.NOMBRE_CONFIGURACION || "",
+    TEXTO_CONFIGURACION: row.TEXTO_CONFIGURACION || "",
+    SI_NO_CONFIGURACION: !!row.SI_NO_CONFIGURACION,
+    COLOR_HEX_CONFIGURACION: row.COLOR_HEX_CONFIGURACION || "",
+    URL_CONFIGURACION: row.URL_CONFIGURACION || "",
+    VISIBLE_EN_FRONTEND_PUBLICO: row.VISIBLE_EN_FRONTEND_PUBLICO !== false,
+    REGISTRO_ACTIVO: row.REGISTRO_ACTIVO !== false,
+    ORDEN_VISUAL: row.ORDEN_VISUAL ?? "",
+  };
+}
+
+function buildLandingDraft(row = {}) {
+  return {
+    NOMBRE_SECCION: row.NOMBRE_SECCION || "",
+    TITULO_PUBLICO: row.TITULO_PUBLICO || "",
+    SUBTITULO_PUBLICO: row.SUBTITULO_PUBLICO || "",
+    CONTENIDO_PUBLICO: row.CONTENIDO_PUBLICO || "",
+    TEXTO_BOTON_CTA: row.TEXTO_BOTON_CTA || "",
+    URL_BOTON_CTA: row.URL_BOTON_CTA || "",
+    COLOR_FONDO_HEX: row.COLOR_FONDO_HEX || "",
+    COLOR_TEXTO_HEX: row.COLOR_TEXTO_HEX || "",
+    VISIBLE_MOBILE: row.VISIBLE_MOBILE !== false,
+    VISIBLE_TABLET: row.VISIBLE_TABLET !== false,
+    VISIBLE_DESKTOP: row.VISIBLE_DESKTOP !== false,
+    VISIBLE_EN_FRONTEND_PUBLICO: row.VISIBLE_EN_FRONTEND_PUBLICO !== false,
+    REGISTRO_ACTIVO: row.REGISTRO_ACTIVO !== false,
+    ORDEN_VISUAL: row.ORDEN_VISUAL ?? "",
+  };
 }
 
 function buildForm(marca = {}) {
@@ -61,6 +93,22 @@ function buildForm(marca = {}) {
 }
 
 const inputClass = "mt-1 w-full rounded-xl border border-slate-200 bg-white/80 px-3 py-2 text-sm outline-none focus:border-sky-400";
+const landingKeys = [
+  "HOME_HERO_PRINCIPAL",
+  "HOME_SERVICIOS_DESTACADOS",
+  "HOME_PRODUCTOS_DESTACADOS",
+  "HOME_BLOQUE_RESERVAS",
+  "HOME_SUCURSALES_CONTACTO",
+  "HOME_CONTACTO_RAPIDO",
+  "HOME_PORTAL_CLIENTES",
+  "HOME_FOOTER",
+];
+const configCategories = new Set(["BRANDING", "CTA", "CONTACTO", "SEO", "COLORES", "MODULO_VISIBLE", "LANDING", "GENERAL"]);
+const configScopes = new Set(["LANDING_PUBLICA", "GLOBAL", "CONTACTO", "SEO", "PUBLICO", "PUBLICA"]);
+
+function sortByOrder(a, b) {
+  return (a.ORDEN_VISUAL ?? 999) - (b.ORDEN_VISUAL ?? 999) || String(a.CLAVE_SECCION || a.CLAVE_CONFIGURACION || "").localeCompare(String(b.CLAVE_SECCION || b.CLAVE_CONFIGURACION || ""));
+}
 
 function Field({ label, value, onChange, disabled, type = "text", placeholder = "" }) {
   return (
@@ -73,6 +121,22 @@ function Field({ label, value, onChange, disabled, type = "text", placeholder = 
         disabled={disabled}
         onChange={(event) => onChange(event.target.value)}
         className={`${inputClass} ${disabled ? "opacity-60" : ""}`}
+      />
+    </label>
+  );
+}
+
+function TextAreaField({ label, value, onChange, disabled, placeholder = "", rows = 3 }) {
+  return (
+    <label className="text-sm font-medium" style={{ color: "var(--brand-text)" }}>
+      {label}
+      <textarea
+        value={value || ""}
+        placeholder={placeholder}
+        disabled={disabled}
+        rows={rows}
+        onChange={(event) => onChange(event.target.value)}
+        className={`${inputClass} min-h-20 ${disabled ? "opacity-60" : ""}`}
       />
     </label>
   );
@@ -131,32 +195,43 @@ export default function Configuracion() {
     error: null,
     marca: null,
     configuracion: [],
+    landing: [],
     modulos: [],
   });
   const [form, setForm] = useState(null);
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
+  const [configDrafts, setConfigDrafts] = useState({});
+  const [landingDrafts, setLandingDrafts] = useState({});
+  const [rowSaving, setRowSaving] = useState({});
+  const [rowMessages, setRowMessages] = useState({});
 
   useEffect(() => {
     let cancelled = false;
 
     async function cargar() {
       try {
-        const [marca, conf, modulos] = await Promise.all([
+        const [marca, conf, modulos, landing] = await Promise.all([
           fetchJson("/api/marca-blanca"),
           fetchJson("/api/configuracion-publica"),
           fetchJson("/api/modulos"),
+          fetchJson("/api/landing-secciones"),
         ]);
 
         if (cancelled) return;
+        const configRows = conf.configuracion || [];
+        const landingRows = landing.landing_secciones || [];
         setState({
           loading: false,
           error: null,
           marca,
-          configuracion: conf.configuracion || [],
+          configuracion: configRows,
+          landing: landingRows,
           modulos: modulos.modulos || [],
         });
         setForm(buildForm(marca));
+        setConfigDrafts(Object.fromEntries(configRows.map((row) => [row.id, buildConfigDraft(row)])));
+        setLandingDrafts(Object.fromEntries(landingRows.map((row) => [row.id, buildLandingDraft(row)])));
       } catch (error) {
         if (cancelled) return;
         setState((prev) => ({ ...prev, loading: false, error: error.message }));
@@ -184,7 +259,6 @@ export default function Configuracion() {
   const marca = state.marca || {};
   const business = liveConfig.business || {};
   const rawBusiness = marca.business_config || {};
-  const activeModules = state.modulos.filter((m) => m.ACTIVO === true || m.activo === true);
   const faltantes = marca.faltantes || [];
   const canEdit = canAccess(role, "configuracion", access, "edit");
 
@@ -229,6 +303,102 @@ export default function Configuracion() {
       setSaving(false);
     }
   }
+
+  function updateConfigDraft(id, field, value) {
+    setConfigDrafts((prev) => ({
+      ...prev,
+      [id]: {
+        ...(prev[id] || {}),
+        [field]: value,
+      },
+    }));
+  }
+
+  function updateLandingDraft(id, field, value) {
+    setLandingDrafts((prev) => ({
+      ...prev,
+      [id]: {
+        ...(prev[id] || {}),
+        [field]: value,
+      },
+    }));
+  }
+
+  function fieldEditable(table, field) {
+    return canEdit && canEditField(access, table, field);
+  }
+
+  async function patchConfigRow(row) {
+    if (!canEdit || !row?.id) return;
+    const key = `config:${row.id}`;
+    setRowSaving((prev) => ({ ...prev, [key]: true }));
+    setRowMessages((prev) => ({ ...prev, [key]: "" }));
+    try {
+      const res = await fetch(`${API}/api/backoffice/configuracion-publica/${row.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(configDrafts[row.id] || buildConfigDraft(row)),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const detail = data?.detail?.message || data?.detail || `HTTP ${res.status}`;
+        throw new Error(typeof detail === "string" ? detail : "No se pudo guardar la configuración.");
+      }
+      setState((prev) => ({
+        ...prev,
+        configuracion: prev.configuracion.map((item) => (item.id === row.id ? { ...item, ...data } : item)),
+      }));
+      setConfigDrafts((prev) => ({ ...prev, [row.id]: buildConfigDraft(data) }));
+      await refresh?.();
+      setRowMessages((prev) => ({ ...prev, [key]: "Guardado" }));
+    } catch (error) {
+      setRowMessages((prev) => ({ ...prev, [key]: `Error: ${error.message}` }));
+    } finally {
+      setRowSaving((prev) => ({ ...prev, [key]: false }));
+    }
+  }
+
+  async function patchLandingRow(row) {
+    if (!canEdit || !row?.id) return;
+    const key = `landing:${row.id}`;
+    setRowSaving((prev) => ({ ...prev, [key]: true }));
+    setRowMessages((prev) => ({ ...prev, [key]: "" }));
+    try {
+      const res = await fetch(`${API}/api/backoffice/landing-secciones/${row.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(landingDrafts[row.id] || buildLandingDraft(row)),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const detail = data?.detail?.message || data?.detail || `HTTP ${res.status}`;
+        throw new Error(typeof detail === "string" ? detail : "No se pudo guardar la sección.");
+      }
+      setState((prev) => ({
+        ...prev,
+        landing: prev.landing.map((item) => (item.id === row.id ? { ...item, ...data } : item)),
+      }));
+      setLandingDrafts((prev) => ({ ...prev, [row.id]: buildLandingDraft(data) }));
+      setRowMessages((prev) => ({ ...prev, [key]: "Guardado" }));
+    } catch (error) {
+      setRowMessages((prev) => ({ ...prev, [key]: `Error: ${error.message}` }));
+    } finally {
+      setRowSaving((prev) => ({ ...prev, [key]: false }));
+    }
+  }
+
+  const landingRows = [...state.landing]
+    .filter((row) => landingKeys.includes(row.CLAVE_SECCION))
+    .sort(sortByOrder);
+  const configRows = [...state.configuracion]
+    .filter((row) => {
+      const category = String(row.CATEGORIA_CONFIGURACION || "").trim().toUpperCase();
+      const scope = String(row.AMBITO_APLICACION || "").trim().toUpperCase();
+      return configCategories.has(category) || configScopes.has(scope);
+    })
+    .sort(sortByOrder);
 
   return (
     <div className="space-y-6">
@@ -347,11 +517,283 @@ export default function Configuracion() {
         </form>
       )}
 
+      <div className="rounded-3xl border border-white/40 bg-white/75 p-5 shadow-sm">
+        <div className="mb-5 flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+          <div>
+            <h3 className="text-lg font-bold" style={{ color: "var(--brand-text)" }}>
+              Constructor de landing
+            </h3>
+            <p className="text-sm opacity-60" style={{ color: "var(--brand-text)" }}>
+              Edita LANDING_SECCIONES sin tocar código. El frontend público lee estas secciones con cache deshabilitado.
+            </p>
+          </div>
+          <Badge active={landingRows.length > 0}>{landingRows.length} secciones mapeadas</Badge>
+        </div>
+
+        {landingRows.length === 0 ? (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+            No hay secciones LANDING_SECCIONES compatibles para editar.
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {landingRows.map((row) => {
+              const draft = landingDrafts[row.id] || buildLandingDraft(row);
+              const key = `landing:${row.id}`;
+              const disabled = !canEdit || !!rowSaving[key];
+              return (
+                <section key={row.id} className="rounded-2xl border border-slate-200 bg-white/70 p-4">
+                  <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide opacity-50" style={{ color: "var(--brand-text)" }}>
+                        {row.CLAVE_SECCION}
+                      </p>
+                      <h4 className="font-bold" style={{ color: "var(--brand-text)" }}>
+                        {draft.NOMBRE_SECCION || row.NOMBRE_SECCION || "Sección"}
+                      </h4>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge active={draft.VISIBLE_EN_FRONTEND_PUBLICO}>Pública</Badge>
+                      <button
+                        type="button"
+                        disabled={disabled}
+                        onClick={() => patchLandingRow(row)}
+                        className="rounded-xl px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                        style={{ background: "linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))" }}
+                      >
+                        {rowSaving[key] ? "Guardando..." : canEdit ? "Guardar sección" : "Solo lectura"}
+                      </button>
+                    </div>
+                  </div>
+
+                  {rowMessages[key] && (
+                    <div className={`mb-4 rounded-xl border p-3 text-sm ${rowMessages[key].startsWith("Error") ? "border-red-200 bg-red-50 text-red-700" : "border-green-200 bg-green-50 text-green-700"}`}>
+                      {rowMessages[key]}
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+                    <Field
+                      label="Nombre interno visible"
+                      value={draft.NOMBRE_SECCION}
+                      disabled={disabled || !fieldEditable("LANDING_SECCIONES", "NOMBRE_SECCION")}
+                      onChange={(value) => updateLandingDraft(row.id, "NOMBRE_SECCION", value)}
+                    />
+                    <Field
+                      label="Orden"
+                      type="number"
+                      value={draft.ORDEN_VISUAL}
+                      disabled={disabled || !fieldEditable("LANDING_SECCIONES", "ORDEN_VISUAL")}
+                      onChange={(value) => updateLandingDraft(row.id, "ORDEN_VISUAL", value)}
+                    />
+                    <Field
+                      label="Título público"
+                      value={draft.TITULO_PUBLICO}
+                      disabled={disabled || !fieldEditable("LANDING_SECCIONES", "TITULO_PUBLICO")}
+                      onChange={(value) => updateLandingDraft(row.id, "TITULO_PUBLICO", value)}
+                    />
+                    <Field
+                      label="Subtítulo público"
+                      value={draft.SUBTITULO_PUBLICO}
+                      disabled={disabled || !fieldEditable("LANDING_SECCIONES", "SUBTITULO_PUBLICO")}
+                      onChange={(value) => updateLandingDraft(row.id, "SUBTITULO_PUBLICO", value)}
+                    />
+                    <TextAreaField
+                      label="Contenido público"
+                      value={draft.CONTENIDO_PUBLICO}
+                      disabled={disabled || !fieldEditable("LANDING_SECCIONES", "CONTENIDO_PUBLICO")}
+                      onChange={(value) => updateLandingDraft(row.id, "CONTENIDO_PUBLICO", value)}
+                    />
+                    <div className="grid grid-cols-1 gap-3">
+                      <Field
+                        label="Texto CTA"
+                        value={draft.TEXTO_BOTON_CTA}
+                        disabled={disabled || !fieldEditable("LANDING_SECCIONES", "TEXTO_BOTON_CTA")}
+                        onChange={(value) => updateLandingDraft(row.id, "TEXTO_BOTON_CTA", value)}
+                      />
+                      <Field
+                        label="URL CTA"
+                        value={draft.URL_BOTON_CTA}
+                        disabled={disabled || !fieldEditable("LANDING_SECCIONES", "URL_BOTON_CTA")}
+                        onChange={(value) => updateLandingDraft(row.id, "URL_BOTON_CTA", value)}
+                      />
+                    </div>
+                    <Field
+                      label="Color fondo"
+                      value={draft.COLOR_FONDO_HEX}
+                      placeholder="#FDF4FF"
+                      disabled={disabled || !fieldEditable("LANDING_SECCIONES", "COLOR_FONDO_HEX")}
+                      onChange={(value) => updateLandingDraft(row.id, "COLOR_FONDO_HEX", value)}
+                    />
+                    <Field
+                      label="Color texto"
+                      value={draft.COLOR_TEXTO_HEX}
+                      placeholder="#1F1235"
+                      disabled={disabled || !fieldEditable("LANDING_SECCIONES", "COLOR_TEXTO_HEX")}
+                      onChange={(value) => updateLandingDraft(row.id, "COLOR_TEXTO_HEX", value)}
+                    />
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-1 gap-2 md:grid-cols-5">
+                    <Toggle
+                      label="Pública"
+                      checked={draft.VISIBLE_EN_FRONTEND_PUBLICO}
+                      disabled={disabled || !fieldEditable("LANDING_SECCIONES", "VISIBLE_EN_FRONTEND_PUBLICO")}
+                      onChange={(value) => updateLandingDraft(row.id, "VISIBLE_EN_FRONTEND_PUBLICO", value)}
+                    />
+                    <Toggle
+                      label="Activa"
+                      checked={draft.REGISTRO_ACTIVO}
+                      disabled={disabled || !fieldEditable("LANDING_SECCIONES", "REGISTRO_ACTIVO")}
+                      onChange={(value) => updateLandingDraft(row.id, "REGISTRO_ACTIVO", value)}
+                    />
+                    <Toggle
+                      label="Mobile"
+                      checked={draft.VISIBLE_MOBILE}
+                      disabled={disabled || !fieldEditable("LANDING_SECCIONES", "VISIBLE_MOBILE")}
+                      onChange={(value) => updateLandingDraft(row.id, "VISIBLE_MOBILE", value)}
+                    />
+                    <Toggle
+                      label="Tablet"
+                      checked={draft.VISIBLE_TABLET}
+                      disabled={disabled || !fieldEditable("LANDING_SECCIONES", "VISIBLE_TABLET")}
+                      onChange={(value) => updateLandingDraft(row.id, "VISIBLE_TABLET", value)}
+                    />
+                    <Toggle
+                      label="Desktop"
+                      checked={draft.VISIBLE_DESKTOP}
+                      disabled={disabled || !fieldEditable("LANDING_SECCIONES", "VISIBLE_DESKTOP")}
+                      onChange={(value) => updateLandingDraft(row.id, "VISIBLE_DESKTOP", value)}
+                    />
+                  </div>
+                </section>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <div className="rounded-3xl border border-white/40 bg-white/75 p-5 shadow-sm">
+        <div className="mb-5 flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+          <div>
+            <h3 className="text-lg font-bold" style={{ color: "var(--brand-text)" }}>
+              Configuración pública rápida
+            </h3>
+            <p className="text-sm opacity-60" style={{ color: "var(--brand-text)" }}>
+              Edita claves seguras de CONFIGURACION_PUBLICA. No se exponen notas internas ni campos sensibles.
+            </p>
+          </div>
+          <Badge active={configRows.length > 0}>{configRows.length} flags editables</Badge>
+        </div>
+
+        {configRows.length === 0 ? (
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+            No hay registros de CONFIGURACION_PUBLICA filtrados para esta landing.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+            {configRows.map((row) => {
+              const draft = configDrafts[row.id] || buildConfigDraft(row);
+              const key = `config:${row.id}`;
+              const disabled = !canEdit || !!rowSaving[key];
+              return (
+                <section key={row.id} className="rounded-2xl border border-slate-200 bg-white/70 p-4">
+                  <div className="mb-4 flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide opacity-50" style={{ color: "var(--brand-text)" }}>
+                        {row.CLAVE_CONFIGURACION || row.CATEGORIA_CONFIGURACION || "CONFIG"}
+                      </p>
+                      <h4 className="font-bold" style={{ color: "var(--brand-text)" }}>
+                        {draft.NOMBRE_CONFIGURACION || row.NOMBRE_CONFIGURACION || "Configuración"}
+                      </h4>
+                    </div>
+                    <Badge active={draft.VISIBLE_EN_FRONTEND_PUBLICO}>Visible</Badge>
+                  </div>
+
+                  {rowMessages[key] && (
+                    <div className={`mb-4 rounded-xl border p-3 text-sm ${rowMessages[key].startsWith("Error") ? "border-red-200 bg-red-50 text-red-700" : "border-green-200 bg-green-50 text-green-700"}`}>
+                      {rowMessages[key]}
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                    <Field
+                      label="Nombre"
+                      value={draft.NOMBRE_CONFIGURACION}
+                      disabled={disabled || !fieldEditable("CONFIGURACION_PUBLICA", "NOMBRE_CONFIGURACION")}
+                      onChange={(value) => updateConfigDraft(row.id, "NOMBRE_CONFIGURACION", value)}
+                    />
+                    <Field
+                      label="Orden"
+                      type="number"
+                      value={draft.ORDEN_VISUAL}
+                      disabled={disabled || !fieldEditable("CONFIGURACION_PUBLICA", "ORDEN_VISUAL")}
+                      onChange={(value) => updateConfigDraft(row.id, "ORDEN_VISUAL", value)}
+                    />
+                    <TextAreaField
+                      label="Texto"
+                      value={draft.TEXTO_CONFIGURACION}
+                      disabled={disabled || !fieldEditable("CONFIGURACION_PUBLICA", "TEXTO_CONFIGURACION")}
+                      onChange={(value) => updateConfigDraft(row.id, "TEXTO_CONFIGURACION", value)}
+                    />
+                    <div className="grid grid-cols-1 gap-3">
+                      <Field
+                        label="URL"
+                        value={draft.URL_CONFIGURACION}
+                        disabled={disabled || !fieldEditable("CONFIGURACION_PUBLICA", "URL_CONFIGURACION")}
+                        onChange={(value) => updateConfigDraft(row.id, "URL_CONFIGURACION", value)}
+                      />
+                      <Field
+                        label="Color"
+                        value={draft.COLOR_HEX_CONFIGURACION}
+                        placeholder="#7C3AED"
+                        disabled={disabled || !fieldEditable("CONFIGURACION_PUBLICA", "COLOR_HEX_CONFIGURACION")}
+                        onChange={(value) => updateConfigDraft(row.id, "COLOR_HEX_CONFIGURACION", value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-1 gap-2 md:grid-cols-3">
+                    <Toggle
+                      label="Sí/No"
+                      checked={draft.SI_NO_CONFIGURACION}
+                      disabled={disabled || !fieldEditable("CONFIGURACION_PUBLICA", "SI_NO_CONFIGURACION")}
+                      onChange={(value) => updateConfigDraft(row.id, "SI_NO_CONFIGURACION", value)}
+                    />
+                    <Toggle
+                      label="Visible frontend"
+                      checked={draft.VISIBLE_EN_FRONTEND_PUBLICO}
+                      disabled={disabled || !fieldEditable("CONFIGURACION_PUBLICA", "VISIBLE_EN_FRONTEND_PUBLICO")}
+                      onChange={(value) => updateConfigDraft(row.id, "VISIBLE_EN_FRONTEND_PUBLICO", value)}
+                    />
+                    <Toggle
+                      label="Activa"
+                      checked={draft.REGISTRO_ACTIVO}
+                      disabled={disabled || !fieldEditable("CONFIGURACION_PUBLICA", "REGISTRO_ACTIVO")}
+                      onChange={(value) => updateConfigDraft(row.id, "REGISTRO_ACTIVO", value)}
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={disabled}
+                    onClick={() => patchConfigRow(row)}
+                    className="mt-4 w-full rounded-xl px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                    style={{ background: "linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))" }}
+                  >
+                    {rowSaving[key] ? "Guardando..." : canEdit ? "Guardar flag" : "Solo lectura"}
+                  </button>
+                </section>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         <InfoCard label="Marca" value={marca.nombre_sistema || liveConfig.brandName} hint={marca.rubro || liveConfig.rubro} />
         <InfoCard label="Modo de oferta" value={rawBusiness.modo_oferta || business.offerMode} hint={business.catalogLabel} />
         <InfoCard label="Canal" value={rawBusiness.canal_operacion || business.operationChannel} hint="Online, físico o mixto" />
-        <InfoCard label="Módulos activos" value={activeModules.length} hint={`${state.modulos.length} módulos totales`} />
+        <InfoCard label="Landing config" value={state.landing.length} hint={`${state.configuracion.length} flags públicos`} />
       </div>
 
       <div className="rounded-3xl border border-white/40 bg-white/70 p-5 shadow-sm">

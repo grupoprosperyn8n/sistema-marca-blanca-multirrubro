@@ -32,6 +32,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routes.productos_web import router as productos_web_router
 from routes.configuracion_publica import router as configuracion_publica_router
+from routes.landing_secciones import router as landing_secciones_router
 from routes.modulos import router as modulos_router
 from routes.categorias_menu import router as categorias_menu_router
 from routes.sucursales import router as sucursales_router
@@ -51,7 +52,7 @@ app = FastAPI(
 # CORS para desarrollo local
 # CORS: frontend Surge + desarrollo local
 # Configurar via CORS_ORIGINS (coma-separado) o usa defaults
-_cors_origins = os.getenv("CORS_ORIGINS", "https://belleza-demo.surge.sh,https://bellezapro-demo.surge.sh,https://sistema-multirrubro-demo.surge.sh,http://localhost:5173").split(",")
+_cors_origins = os.getenv("CORS_ORIGINS", "https://bellezapro-demo.surge.sh,http://localhost:5173").split(",")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[o.strip() for o in _cors_origins],
@@ -67,6 +68,7 @@ async def root():
 
 # P0 core
 app.include_router(configuracion_publica_router)
+app.include_router(landing_secciones_router)
 app.include_router(modulos_router)
 app.include_router(categorias_menu_router)
 app.include_router(sucursales_router)
@@ -108,6 +110,7 @@ async def health():
         "tablas_info": "usa /api/tablas para ver lista completa",
         "endpoints_p0": [
             "/api/configuracion-publica",
+            "/api/landing-secciones",
             "/api/modulos",
             "/api/marca-blanca",
             "/api/categorias-menu",

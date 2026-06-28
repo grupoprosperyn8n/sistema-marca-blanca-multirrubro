@@ -11,6 +11,7 @@ export default function Home() {
   const { config } = useBrandConfig();
   const [servicios, setServicios] = useState([]);
   const [productos, setProductos] = useState([]);
+  const [landingSections, setLandingSections] = useState([]);
   const [serviciosLoading, setServiciosLoading] = useState(true);
   const [productosLoading, setProductosLoading] = useState(true);
   const [serviciosError, setServiciosError] = useState(null);
@@ -33,7 +34,7 @@ export default function Home() {
       .catch(e => setServiciosError(e.message))
       .finally(() => setServiciosLoading(false));
 
-    fetch(`${API}/api/productos-web`)
+    fetch(`${API}/api/productos-web`, { cache: "no-store" })
       .then(r => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return r.json();
@@ -45,6 +46,14 @@ export default function Home() {
       })
       .catch(e => setProductosError(e.message))
       .finally(() => setProductosLoading(false));
+
+    fetch(`${API}/api/landing-secciones`, { cache: "no-store" })
+      .then(r => (r.ok ? r.json() : { landing_secciones: [] }))
+      .then(d => {
+        const raw = Array.isArray(d) ? d : d.landing_secciones || [];
+        setLandingSections(raw.filter((section) => section.REGISTRO_ACTIVO !== false));
+      })
+      .catch(() => setLandingSections([]));
   }, []);
 
   const formatearMoneda = (v) => {
@@ -58,15 +67,31 @@ export default function Home() {
 
   const sec = config.seccionesVisibles || {};
   const business = config.business || {};
-  const showServices = business.usesServices !== false && sec.mostrar_servicios !== false;
-  const showProducts = business.usesProducts !== false && sec.mostrar_productos !== false;
-  const showBranches = business.usesBranches !== false && sec.mostrar_sucursales !== false;
+  const landingByKey = landingSections.reduce((acc, section) => {
+    if (section.CLAVE_SECCION) acc[section.CLAVE_SECCION] = section;
+    return acc;
+  }, {});
+  const getSection = (key) => landingByKey[key] || null;
+  const sectionVisible = (key, fallback = true) => {
+    const section = getSection(key);
+    if (!section) return fallback;
+    return section.VISIBLE_EN_FRONTEND_PUBLICO !== false;
+  };
+  const heroSection = getSection("HOME_HERO_PRINCIPAL");
+  const servicesSection = getSection("HOME_SERVICIOS_DESTACADOS");
+  const productsSection = getSection("HOME_PRODUCTOS_DESTACADOS");
+  const howSection = getSection("HOME_BLOQUE_RESERVAS") || getSection("HOME_AGENDA_PUBLICA");
+  const contactSection = getSection("HOME_SUCURSALES_CONTACTO") || getSection("HOME_CONTACTO_RAPIDO");
+  const finalSection = getSection("HOME_FOOTER") || getSection("HOME_PORTAL_CLIENTES");
+  const showServices = business.usesServices !== false && sec.mostrar_servicios !== false && sectionVisible("HOME_SERVICIOS_DESTACADOS");
+  const showProducts = business.usesProducts !== false && sec.mostrar_productos !== false && sectionVisible("HOME_PRODUCTOS_DESTACADOS");
+  const showBranches = business.usesBranches !== false && sec.mostrar_sucursales !== false && sectionVisible("HOME_SUCURSALES_CONTACTO");
   const showVisitCard = business.showContactAddress && (config.address || config.phone || config.email);
   const primaryActionUrl = business.primaryFlow === "RESERVA" && business.usesAppointments
-    ? (config.heroCtaPrimaryUrl || "/reserva")
+    ? (heroSection?.URL_BOTON_CTA || config.heroCtaPrimaryUrl || "/reserva")
     : (business.usesProducts && !business.usesServices ? "/productos" : "/catalogo");
   const primaryActionText = business.primaryFlow === "RESERVA" && business.usesAppointments
-    ? (config.heroCtaPrimary || "Reservar")
+    ? (heroSection?.TEXTO_BOTON_CTA || config.heroCtaPrimary || "Reservar")
     : `Ver ${String(business.catalogLabel || "catálogo").toLowerCase()}`;
   const finalCtaUrl = business.usesAppointments ? "/reserva" : primaryActionUrl;
   const finalCtaText = business.usesAppointments ? "Reservar turno" : primaryActionText;
@@ -82,9 +107,6 @@ export default function Home() {
     { num: "2", icon: "shopping_bag", title: "Elegí", desc: "Compará productos, servicios o packs disponibles." },
     { num: "3", icon: "support_agent", title: "Coordiná", desc: "Contactá o comprá según el canal configurado." },
   ];
-  const ordenSecciones = (sec.orden_secciones || "hero,servicios,como_funciona,productos,visitanos,cta_final")
-    .split(",").map(s => s.trim());
-
   return (
     <div className="page-bg">
       {/* Hero Section */}
@@ -99,13 +121,13 @@ export default function Home() {
               </div>
             )}
             <h1 className="display-lg" style={{ color: 'var(--brand-text)', fontSize: 'clamp(1.75rem, 5vw, 3.5rem)' }}>
-              {config.heroTitle || (
+              {heroSection?.TITULO_PUBLICO || config.heroTitle || (
                 <>{config.brandName}: catálogo, turnos y portales<br />
                 <span style={{ color: 'var(--brand-primary)' }}>adaptados a cada negocio.</span></>
               )}
             </h1>
             <p className="text-lg max-w-xl" style={{ color: 'var(--brand-text-secondary)', lineHeight: 1.7 }}>
-              {config.heroSubtitle || "Una plantilla marca blanca para publicar productos, servicios, sucursales y reservas según la configuración de cada tenant."}
+              {heroSection?.SUBTITULO_PUBLICO || config.heroSubtitle || "Una plantilla marca blanca para publicar productos, servicios, sucursales y reservas según la configuración de cada tenant."}
             </p>
             <div className="flex flex-col sm:flex-row flex-wrap gap-4">
               <Link to={primaryActionUrl} className="btn-primary inline-flex w-full sm:w-auto items-center justify-center gap-2 text-base px-8 py-4 rounded-xl">
@@ -150,9 +172,9 @@ export default function Home() {
       {showServices && (
         <section className="relative z-10 max-w-7xl mx-auto px-4 sm:px-8 pb-20">
           <div className="text-center mb-12">
-            <h2 className="headline-lg mb-3" style={{ color: 'var(--brand-text)' }}>Servicios destacados</h2>
+            <h2 className="headline-lg mb-3" style={{ color: 'var(--brand-text)' }}>{servicesSection?.TITULO_PUBLICO || "Servicios destacados"}</h2>
             <p className="text-base max-w-lg mx-auto" style={{ color: 'var(--brand-text-secondary)' }}>
-              Opciones destacadas publicadas por el negocio
+              {servicesSection?.SUBTITULO_PUBLICO || "Opciones destacadas publicadas por el negocio"}
             </p>
           </div>
 
@@ -231,9 +253,9 @@ export default function Home() {
       {showProducts && (
         <section className="relative z-10 max-w-7xl mx-auto px-4 sm:px-8 pb-20">
           <div className="text-center mb-12">
-            <h2 className="headline-lg mb-3" style={{ color: "var(--brand-text)" }}>Productos destacados</h2>
+            <h2 className="headline-lg mb-3" style={{ color: "var(--brand-text)" }}>{productsSection?.TITULO_PUBLICO || "Productos destacados"}</h2>
             <p className="text-base max-w-lg mx-auto" style={{ color: "var(--brand-text-secondary)" }}>
-              Ítems publicados para venta, consulta o promoción
+              {productsSection?.SUBTITULO_PUBLICO || "Ítems publicados para venta, consulta o promoción"}
             </p>
           </div>
 
@@ -306,13 +328,13 @@ export default function Home() {
       )}
 
       {/* ¿Cómo funciona? */}
-      {sec.mostrar_como_funciona !== false && (
+      {sec.mostrar_como_funciona !== false && sectionVisible("HOME_BLOQUE_RESERVAS") && (
         <section className="relative z-10 max-w-7xl mx-auto px-4 sm:px-8 pb-20">
           <div className="glass-panel p-10 sm:p-16 rounded-3xl">
             <div className="text-center mb-12">
-              <h2 className="headline-lg mb-3" style={{ color: 'var(--brand-text)' }}>¿Cómo funciona?</h2>
+              <h2 className="headline-lg mb-3" style={{ color: 'var(--brand-text)' }}>{howSection?.TITULO_PUBLICO || "¿Cómo funciona?"}</h2>
               <p className="text-base max-w-lg mx-auto" style={{ color: 'var(--brand-text-secondary)' }}>
-                {business.usesAppointments ? "Reservas simples cuando el negocio trabaja con turnos" : "Un flujo adaptable al canal comercial de cada negocio"}
+                {howSection?.SUBTITULO_PUBLICO || (business.usesAppointments ? "Reservas simples cuando el negocio trabaja con turnos" : "Un flujo adaptable al canal comercial de cada negocio")}
               </p>
             </div>
             <div className="grid sm:grid-cols-3 gap-8">
@@ -338,7 +360,10 @@ export default function Home() {
             {showVisitCard && (
               <div className="glass-panel p-8 sm:p-12 rounded-3xl">
                 <span className="material-symbols-outlined text-3xl mb-4 block" style={{ color: 'var(--brand-primary)' }}>location_on</span>
-                <h3 className="text-xl font-semibold mb-3" style={{ color: 'var(--brand-text)' }}>Ubicación y contacto</h3>
+                <h3 className="text-xl font-semibold mb-3" style={{ color: 'var(--brand-text)' }}>{contactSection?.TITULO_PUBLICO || "Ubicación y contacto"}</h3>
+                {contactSection?.SUBTITULO_PUBLICO && (
+                  <p className="text-sm mb-4" style={{ color: 'var(--brand-text-secondary)' }}>{contactSection.SUBTITULO_PUBLICO}</p>
+                )}
                 {config.address && (
                   <p className="text-sm mb-2" style={{ color: 'var(--brand-text-secondary)' }}>📍 {config.address}</p>
                 )}
@@ -359,14 +384,14 @@ export default function Home() {
             <div className="glass-panel p-8 sm:p-12 rounded-3xl flex flex-col justify-center text-center"
               style={{ background: 'linear-gradient(135deg, rgba(125,211,252,0.2), rgba(220,233,255,0.2))' }}>
               <h3 className="text-2xl font-bold mb-2" style={{ color: 'var(--brand-text)' }}>
-                {business.usesAppointments ? "¿Listo para coordinar tu turno?" : `Explorá ${String(business.catalogLabel || "el catálogo").toLowerCase()}`}
+                {finalSection?.TITULO_PUBLICO || (business.usesAppointments ? "¿Listo para coordinar tu turno?" : `Explorá ${String(business.catalogLabel || "el catálogo").toLowerCase()}`)}
               </h3>
               <p className="text-sm mb-6 max-w-xs mx-auto" style={{ color: 'var(--brand-text-secondary)' }}>
-                {business.usesAppointments ? "Reservá ahora y seguí el estado desde tu portal." : "La experiencia se adapta al canal configurado por cada negocio."}
+                {finalSection?.SUBTITULO_PUBLICO || (business.usesAppointments ? "Reservá ahora y seguí el estado desde tu portal." : "La experiencia se adapta al canal configurado por cada negocio.")}
               </p>
-              <Link to={finalCtaUrl} className="btn-primary inline-flex items-center gap-2 text-base px-10 py-4 rounded-xl mx-auto">
+              <Link to={finalSection?.URL_BOTON_CTA || finalCtaUrl} className="btn-primary inline-flex items-center gap-2 text-base px-10 py-4 rounded-xl mx-auto">
                 <span className="material-symbols-outlined">{business.usesAppointments ? "calendar_month" : "storefront"}</span>
-                {finalCtaText}
+                {finalSection?.TEXTO_BOTON_CTA || finalCtaText}
               </Link>
             </div>
           </div>

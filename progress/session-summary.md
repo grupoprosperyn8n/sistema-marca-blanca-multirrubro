@@ -594,3 +594,46 @@ Se auditó en navegador `https://bellezapro-demo.surge.sh` por inconsistencias d
 - No DELETE físico.
 - No `RESERVAS`.
 - No pagos, checkout, caja/POS, ventas/cobros ni liquidaciones.
+
+---
+
+# CIERRE — WHITE_LABEL_CONFIGURADOR_LANDING_P1
+
+**Fecha:** 2026-06-27
+**Estado:** CERRADO QA LOCAL — DEPLOY/PUSH PENDIENTE EN ESTE TURNO
+
+## Objetivo
+
+Conectar la landing pública y el backoffice de configuración con las tablas existentes `MARCAS`, `CONFIGURACION_PUBLICA` y `LANDING_SECCIONES`, sin crear schema nuevo ni hardcodear peluquería como arquitectura.
+
+## Cambios aplicados
+
+- Nuevo endpoint público `GET /api/landing-secciones` con DTO seguro y `Cache-Control: no-store`.
+- Nuevos endpoints protegidos de edición:
+  - `PATCH /api/backoffice/configuracion-publica/{record_id}`
+  - `PATCH /api/backoffice/landing-secciones/{record_id}`
+- `CONFIGURACION_PUBLICA` pública deja de exponer campos no necesarios como notas internas.
+- `Home.jsx` consume `LANDING_SECCIONES` para textos/visibilidad/CTAs de hero, servicios, productos, cómo funciona, contacto y CTA final.
+- `/backoffice/configuracion` suma constructor de landing y editor rápido de configuración pública.
+- `AnnouncementBar`, `BrandConfigContext`, `resolveBrandConfig` y Home usan fetch `no-store` para reflejar cambios de Airtable/backend sin cache visible.
+- CORS default del backend queda alineado al único dominio comercial activo: `https://bellezapro-demo.surge.sh` + localhost.
+
+## QA local
+
+| Prueba | Resultado |
+|--------|-----------|
+| `python3 -m py_compile backend/routes/configuracion_publica.py backend/routes/landing_secciones.py backend/main.py` | ✅ PASS |
+| `npm run build` | ✅ PASS |
+| `git diff --check` | ✅ PASS |
+| Backend local `/health` | ✅ PASS 200 |
+| Backend local `/api/landing-secciones` | ✅ PASS 15 registros, sin `NOTAS_INTERNAS` |
+| Backend local `/api/configuracion-publica` | ✅ PASS 97 registros, sin `NOTAS_INTERNAS` |
+
+## Garantías
+
+- No se tocaron `.env`, `backend/.env`, `frontend/.env` ni `CREDENCIALES.md`.
+- No se expusieron secretos.
+- No se modificó schema Airtable.
+- No DELETE físico.
+- No `RESERVAS`.
+- No pagos, checkout, carrito real, caja/POS, ventas/cobros ni liquidaciones.

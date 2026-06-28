@@ -123,6 +123,7 @@ function findFieldValue(records, keys) {
           return (
             fields.TEXTO_CONFIGURACION ??
             fields.COLOR_HEX_CONFIGURACION ??
+            fields.URL_CONFIGURACION ??
             fields.VALOR_CONFIGURACION ??
             fields.VALUE ??
             fields.IMAGEN_CONFIGURACION ??
@@ -188,8 +189,8 @@ async function resolveBrandConfig() {
 
   const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
   const [configRes, marcaRes] = await Promise.allSettled([
-    fetch(`${API_BASE}/api/configuracion-publica`),
-    fetch(`${API_BASE}/api/marca-blanca`),
+    fetch(`${API_BASE}/api/configuracion-publica`, { cache: "no-store" }),
+    fetch(`${API_BASE}/api/marca-blanca`, { cache: "no-store" }),
   ]);
 
   if (configRes.status === "fulfilled" && configRes.value.ok) {

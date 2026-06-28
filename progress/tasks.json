@@ -1,7 +1,7 @@
 {
   "project": "sistema-marca-blanca-multirrubro",
-  "fase_actual": "LIVE_PUBLIC_UX_COMMERCE_P0 — CERRADA_QA_DEPLOY",
-  "fase_siguiente": "WHITE_LABEL_CONFIGURADOR_LANDING_P1 o COMMERCE_MODEL_P2_DESIGN (requiere aprobación; no pagos/caja todavía)",
+  "fase_actual": "WHITE_LABEL_CONFIGURADOR_LANDING_P1 — CERRADA_QA_LOCAL",
+  "fase_siguiente": "COMMERCE_MODEL_P2_DESIGN o BACKOFFICE_CONFIG_ADVANCED_P2 (requiere aprobación; sin pagos/caja reales todavía)",
   "tareas": {
     "FASE_3B_PORTAL_CLIENTE": {
       "status": "completed",
@@ -293,6 +293,35 @@
       "schema_changes": false,
       "delete_fisico": false,
       "notes": "P0 did not loosen public branch filters because Airtable currently returns only fictitious/non-public/closed branches for public display. Payments, cart, upsell/cross-sell remain a separate approved commerce block."
+    },
+    "WHITE_LABEL_CONFIGURADOR_LANDING_P1": {
+      "status": "completed_local_qa",
+      "closed_at": "2026-06-27",
+      "commits": [],
+      "deliverables": [
+        "backend/routes/landing_secciones.py (GET público + PATCH backoffice protegido)",
+        "backend/routes/configuracion_publica.py (DTO público seguro + PATCH backoffice protegido)",
+        "backend/main.py (router landing + CORS dominio comercial único)",
+        "frontend/src/pages/Home.jsx (landing consume LANDING_SECCIONES)",
+        "frontend/src/pages/Configuracion.jsx (constructor landing + editor CONFIGURACION_PUBLICA)",
+        "frontend/src/components/AnnouncementBar.jsx (no-store + URL_CONFIGURACION)",
+        "frontend/src/context/BrandConfigContext.jsx, frontend/src/theme/resolveBrandConfig.js (no-store)"
+      ],
+      "qa_results": {
+        "backend_py_compile": "PASS",
+        "frontend_build": "PASS",
+        "git_diff_check": "PASS",
+        "local_health": "PASS_200",
+        "local_landing_secciones": "PASS_200_TOTAL_15_NO_NOTAS_INTERNAS",
+        "local_configuracion_publica": "PASS_200_TOTAL_97_NO_NOTAS_INTERNAS"
+      },
+      "secrets_free": true,
+      "env_files_touched": false,
+      "payments_checkout_pos": false,
+      "reservas_table_used": false,
+      "schema_changes": false,
+      "delete_fisico": false,
+      "notes": "Backoffice editor writes only safe allowlisted fields and enforces PERMISOS_CAMPO when present. Public landing reads existing LANDING_SECCIONES and CONFIGURACION_PUBLICA with no-store cache policy."
     }
   },
   "deploys_activos": {

@@ -1,9 +1,12 @@
 """
-Rutas FastAPI para CONFIGURACION_PUBLICA — /api/configuracion-publica
-Lectura pública y edición controlada para backoffice de marca blanca.
+Rutas FastAPI para LANDING_SECCIONES.
+
+La tabla controla contenido/orden/visibilidad de la landing pública sin crear
+schema nuevo. Lectura pública; edición protegida para backoffice.
 """
 import sys
 from pathlib import Path
+
 from fastapi import APIRouter, Depends, HTTPException, Response
 
 _BACKEND = Path(__file__).resolve().parent.parent
@@ -15,36 +18,56 @@ from auth.access_contract import can_edit_field
 from auth.dependencies import get_current_user
 from routes.modulos import _require_config_editor
 
-router = APIRouter(prefix="/api", tags=["configuracion-publica"])
+router = APIRouter(prefix="/api", tags=["landing-secciones"])
 
 PUBLIC_FIELDS = {
-    "NOMBRE_CONFIGURACION",
-    "CLAVE_CONFIGURACION",
-    "CATEGORIA_CONFIGURACION",
-    "AMBITO_APLICACION",
-    "TEXTO_CONFIGURACION",
-    "SI_NO_CONFIGURACION",
-    "COLOR_HEX_CONFIGURACION",
-    "URL_CONFIGURACION",
-    "IMAGEN_CONFIGURACION",
+    "NOMBRE_SECCION",
+    "CLAVE_SECCION",
+    "TIPO_SECCION",
+    "COMPONENTE_VISUAL",
+    "FUENTE_CONTENIDO",
+    "AMBITO_SECCION",
+    "TITULO_PUBLICO",
+    "SUBTITULO_PUBLICO",
+    "CONTENIDO_PUBLICO",
+    "TEXTO_BOTON_CTA",
+    "URL_BOTON_CTA",
+    "IMAGEN_PRINCIPAL",
+    "IMAGENES_CARRUSEL",
+    "COLOR_FONDO_HEX",
+    "COLOR_TEXTO_HEX",
+    "VISIBLE_MOBILE",
+    "VISIBLE_TABLET",
+    "VISIBLE_DESKTOP",
     "VISIBLE_EN_FRONTEND_PUBLICO",
     "REGISTRO_ACTIVO",
     "ORDEN_VISUAL",
-    "LANDING_SECCIONES",
 }
 
 EDITABLE_FIELDS = {
-    "NOMBRE_CONFIGURACION",
-    "TEXTO_CONFIGURACION",
-    "SI_NO_CONFIGURACION",
-    "COLOR_HEX_CONFIGURACION",
-    "URL_CONFIGURACION",
+    "NOMBRE_SECCION",
+    "TITULO_PUBLICO",
+    "SUBTITULO_PUBLICO",
+    "CONTENIDO_PUBLICO",
+    "TEXTO_BOTON_CTA",
+    "URL_BOTON_CTA",
+    "COLOR_FONDO_HEX",
+    "COLOR_TEXTO_HEX",
+    "VISIBLE_MOBILE",
+    "VISIBLE_TABLET",
+    "VISIBLE_DESKTOP",
     "VISIBLE_EN_FRONTEND_PUBLICO",
     "REGISTRO_ACTIVO",
     "ORDEN_VISUAL",
 }
 
-BOOLEAN_FIELDS = {"SI_NO_CONFIGURACION", "VISIBLE_EN_FRONTEND_PUBLICO", "REGISTRO_ACTIVO"}
+BOOLEAN_FIELDS = {
+    "VISIBLE_MOBILE",
+    "VISIBLE_TABLET",
+    "VISIBLE_DESKTOP",
+    "VISIBLE_EN_FRONTEND_PUBLICO",
+    "REGISTRO_ACTIVO",
+}
 NUMBER_FIELDS = {"ORDEN_VISUAL"}
 
 
@@ -81,33 +104,34 @@ def _public_record(record):
     }
 
 
-@router.get("/configuracion-publica")
-async def listar_configuracion(response: Response):
-    """Lista toda la configuracion publica del sistema."""
+@router.get("/landing-secciones")
+async def listar_landing_secciones(response: Response):
+    """Lista secciones configurables de la landing."""
     try:
         response.headers["Cache-Control"] = "no-store, max-age=0"
         client = AirtableClient()
-        records = client.list_records("CONFIGURACION_PUBLICA", by_name=True)
-        items = [_public_record(r) for r in records]
-        return {"total": len(items), "configuracion": items}
+        records = client.list_records("LANDING_SECCIONES", by_name=True)
+        items = [_public_record(record) for record in records]
+        items.sort(key=lambda item: (item.get("ORDEN_VISUAL") is None, item.get("ORDEN_VISUAL") or 999, item.get("CLAVE_SECCION") or ""))
+        return {"total": len(items), "landing_secciones": items}
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 
 
-@router.patch("/backoffice/configuracion-publica/{record_id}")
-async def actualizar_configuracion_publica(record_id: str, payload: dict, user: dict = Depends(get_current_user)):
-    """Actualiza campos seguros de CONFIGURACION_PUBLICA desde backoffice."""
+@router.patch("/backoffice/landing-secciones/{record_id}")
+async def actualizar_landing_seccion(record_id: str, payload: dict, user: dict = Depends(get_current_user)):
+    """Actualiza campos seguros de LANDING_SECCIONES."""
     _require_config_editor(user)
     if not isinstance(payload, dict):
         raise HTTPException(status_code=400, detail="Payload inválido.")
 
     try:
         client = AirtableClient()
-        table = client.get_table("CONFIGURACION_PUBLICA")
+        table = client.get_table("LANDING_SECCIONES")
         if not table:
-            raise HTTPException(status_code=404, detail="Tabla CONFIGURACION_PUBLICA no encontrada.")
+            raise HTTPException(status_code=404, detail="Tabla LANDING_SECCIONES no encontrada.")
 
         available_fields = set(table.field_names)
         role_name = user.get("rol") or ""
@@ -118,7 +142,7 @@ async def actualizar_configuracion_publica(record_id: str, payload: dict, user: 
             if field not in EDITABLE_FIELDS or field not in available_fields:
                 ignored_fields.append(field)
                 continue
-            if not can_edit_field(role_name, "CONFIGURACION_PUBLICA", field):
+            if not can_edit_field(role_name, "LANDING_SECCIONES", field):
                 forbidden_fields.append(field)
                 continue
             safe_patch[field] = _normalize_value(field, value)
@@ -134,7 +158,7 @@ async def actualizar_configuracion_publica(record_id: str, payload: dict, user: 
                 detail={"message": "No hay campos editables compatibles.", "ignored_fields": sorted(ignored_fields)},
             )
 
-        updated = client.patch_record("CONFIGURACION_PUBLICA", record_id, safe_patch)
+        updated = client.patch_record("LANDING_SECCIONES", record_id, safe_patch)
         return {
             **_public_record(updated),
             "updated_fields": sorted(safe_patch.keys()),

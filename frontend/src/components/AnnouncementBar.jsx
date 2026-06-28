@@ -57,7 +57,7 @@ export default function AnnouncementBar() {
     setMessages(fallbackMessages);
     async function cargar() {
       try {
-        const res = await fetch(`${API}/api/configuracion-publica`);
+        const res = await fetch(`${API}/api/configuracion-publica`, { cache: "no-store" });
         const data = await res.json();
         const configs = Array.isArray(data) ? data : data.configuracion || [];
         const banners = configs
@@ -67,7 +67,7 @@ export default function AnnouncementBar() {
           setMessages(banners.map(b => ({
             texto: b.TEXTO_CONFIGURACION || b.NOMBRE_CONFIGURACION || "",
             cta: b.SI_NO_CONFIGURACION ? "Ver más" : null,
-            ctaLink: b.CLAVE_CONFIGURACION?.startsWith("LINK_") ? (b.VALOR_CONFIGURACION || "/catalogo") : null,
+            ctaLink: b.URL_CONFIGURACION || null,
           })));
         }
       } catch {

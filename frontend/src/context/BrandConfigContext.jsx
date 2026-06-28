@@ -393,7 +393,7 @@ export function BrandConfigProvider({ children }) {
   const API = import.meta.env.VITE_API_BASE_URL || "";
 
   async function fetchBrandConfig() {
-    const res = await fetch(`${API}/api/marca-blanca`);
+    const res = await fetch(`${API}/api/marca-blanca`, { cache: "no-store" });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     return applyDomainVariant(transformMarcaBlanca(data));
