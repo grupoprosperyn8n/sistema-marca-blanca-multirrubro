@@ -1,7 +1,7 @@
 # COMMERCE_MUTATION_P3_CART_CHECKOUT_SANDBOX
 
 **Fecha:** 2026-06-29
-**Estado:** implementado local + pendiente de deploy al cerrar bloque
+**Estado:** cerrado con QA + deploy
 **Dominio comercial:** `https://bellezapro-demo.surge.sh`
 
 ## Objetivo
@@ -106,10 +106,10 @@ Archivos principales:
 - No cambios de schema Airtable.
 - No secretos al frontend.
 
-## QA local ejecutada
+## QA ejecutada
 
-- `GET /api/carrito` sin auth → `401`.
-- Login cliente QA → `200`.
+- Local y live: `GET /api/carrito` sin auth → `401`.
+- Local y live: login cliente QA → `200`.
 - `POST /api/carrito/items` → `201`.
 - `PATCH /api/carrito/items/{id}` cantidad 2 → `200`.
 - `DELETE /api/carrito/items/{id}` → `200`, baja lógica.
@@ -119,3 +119,8 @@ Registros QA creados:
 
 - `CARRITOS`: un carrito sandbox QA, `ESTADO_CARRITO=EN_CURSO`, `CANTIDAD_ITEMS_ESTIMADA=0`, `SUBTOTAL_CARRITO=0`, `MONTO_PAGADO=0`.
 - `CARRITO_ITEMS`: un item sandbox QA, luego marcado `CANCELADO` por baja lógica.
+
+## Deploy
+
+- Backend Railway `earnest-comfort`: deploy `d4541ad` exitoso y corriendo.
+- Frontend Surge: `https://bellezapro-demo.surge.sh` publicado.

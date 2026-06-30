@@ -1,7 +1,7 @@
 {
   "project": "sistema-marca-blanca-multirrubro",
-  "fase_actual": "COMMERCE_MODEL_P2_DESIGN_ONLY — CERRADA_QA_DEPLOY",
-  "fase_siguiente": "COMMERCE_MUTATION_P3_CART_CHECKOUT_SANDBOX (requiere aprobación explícita; sin pagos reales)",
+  "fase_actual": "COMMERCE_MUTATION_P3_CART_CHECKOUT_SANDBOX — CERRADA_QA_DEPLOY",
+  "fase_siguiente": "COMMERCE_MUTATION_P4_CHECKOUT_SANDBOX_OR_POS_DESIGN (requiere aprobación explícita; sin pagos reales hasta contrato)",
   "tareas": {
     "FASE_3B_PORTAL_CLIENTE": {
       "status": "completed",
@@ -381,6 +381,53 @@
         "railway_status": "ONLINE",
         "surge_production": "PASS"
       }
+    },
+    "COMMERCE_MUTATION_P3_CART_CHECKOUT_SANDBOX": {
+      "status": "completed",
+      "closed_at": "2026-06-29",
+      "commits": [
+        "d4541ad"
+      ],
+      "deliverables": [
+        "backend/routes/carrito.py (GET /api/carrito, POST/PATCH/DELETE lógico /api/carrito/items)",
+        "backend/routes/commerce_public.py (cart_enabled sandbox, checkout/payment/POS disabled)",
+        "backend/services/productos_web_service.py (cart_enabled/purchase_enabled public flags)",
+        "frontend/src/pages/ProductoDetalle.jsx (Agregar al carrito sandbox)",
+        "frontend/src/pages/Carrito.jsx (carrito cliente, cantidades, baja lógica, checkout disabled)",
+        "frontend/src/components/PublicNavbar.jsx and frontend/src/layouts/PortalLayout.jsx (nav Carrito)",
+        "docs/commerce/COMMERCE_MUTATION_P3_CART_CHECKOUT_SANDBOX.md"
+      ],
+      "qa_results": {
+        "backend_py_compile": "PASS",
+        "frontend_build": "PASS",
+        "git_diff_check": "PASS",
+        "strict_secret_scan": "PASS",
+        "local_get_carrito_sin_auth": "401_PASS",
+        "local_login_cliente_qa": "200_PASS",
+        "local_add_item": "201_PASS_CARRITOS_CARRITO_ITEMS",
+        "local_patch_quantity": "200_PASS",
+        "local_delete_logical_item": "200_PASS_CANCELADO_NO_DELETE",
+        "live_health": "200_PASS_CARRITO_ENDPOINT",
+        "live_commerce_public": "200_PASS_CART_SANDBOX_CHECKOUT_FALSE_PAYMENTS_FALSE",
+        "live_productos_web": "200_PASS_CART_FLAGS",
+        "live_get_carrito_sin_auth": "401_PASS",
+        "live_login_cliente_qa": "200_PASS",
+        "live_add_item": "201_PASS",
+        "live_delete_logical_item": "200_PASS"
+      },
+      "deploy": {
+        "backend_railway": "PASS_SUCCESS_d4541ad_earnest_comfort",
+        "frontend_surge": "PASS_https://bellezapro-demo.surge.sh"
+      },
+      "secrets_free": true,
+      "env_files_touched": false,
+      "payments_checkout_pos": false,
+      "ventas_items_venta_pagos_cobros": false,
+      "reservas_table_used": false,
+      "schema_changes": false,
+      "delete_fisico": false,
+      "commerce_writes": "ONLY_CARRITOS_AND_CARRITO_ITEMS_QA_SANDBOX",
+      "notes": "Checkout, pagos y caja/POS permanecen desactivados. Se crearon escrituras QA mínimas autorizadas en CARRITOS/CARRITO_ITEMS; los items QA se bajaron lógicamente con ESTADO_ITEM_CARRITO=CANCELADO."
     }
   },
   "deploys_activos": {
