@@ -1,7 +1,7 @@
 {
   "project": "sistema-marca-blanca-multirrubro",
-  "fase_actual": "WHITE_LABEL_CONFIGURADOR_LANDING_P1 — CERRADA_QA_DEPLOY",
-  "fase_siguiente": "COMMERCE_MODEL_P2_DESIGN o BACKOFFICE_CONFIG_ADVANCED_P2 (requiere aprobación; sin pagos/caja reales todavía)",
+  "fase_actual": "COMMERCE_MODEL_P2_DESIGN_ONLY — CERRADA_QA_LOCAL",
+  "fase_siguiente": "COMMERCE_MUTATION_P3_CART_CHECKOUT_SANDBOX (requiere aprobación explícita; sin pagos reales)",
   "tareas": {
     "FASE_3B_PORTAL_CLIENTE": {
       "status": "completed",
@@ -337,6 +337,35 @@
         "railway_status": "ONLINE",
         "surge_production": "PASS"
       }
+    },
+    "COMMERCE_MODEL_P2_DESIGN_ONLY": {
+      "status": "completed_local_qa",
+      "closed_at": "2026-06-29",
+      "commits": [],
+      "deliverables": [
+        "backend/routes/commerce_public.py (GET /api/commerce/public read-only)",
+        "backend/main.py (router commerce public + health)",
+        "frontend/src/pages/ProductoDetalle.jsx (upsell/cross-sell read-only)",
+        "frontend/src/pages/Productos.jsx (no-store product fetch)",
+        "docs/commerce/COMMERCE_MODEL_P2_DESIGN.md",
+        "docs/WHITE_LABEL_MULTIRRUBRO_GAP_AUDIT.md (actualización comercio read-only)"
+      ],
+      "qa_results": {
+        "backend_py_compile": "PASS",
+        "frontend_build": "PASS",
+        "git_diff_check": "PASS",
+        "local_commerce_public": "PASS_200",
+        "commerce_flags_disabled": "PASS_CART_CHECKOUT_PAYMENTS_POS_FALSE",
+        "blocked_operations_declared": "PASS_PAYMENT_CREATE_VENTA"
+      },
+      "secrets_free": true,
+      "env_files_touched": false,
+      "payments_checkout_pos": false,
+      "reservas_table_used": false,
+      "schema_changes": false,
+      "delete_fisico": false,
+      "commerce_writes": false,
+      "notes": "Fase read-only: muestra packs/promociones/cupones como recomendaciones comerciales, pero no crea carrito, venta ni pago."
     }
   },
   "deploys_activos": {

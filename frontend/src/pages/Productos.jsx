@@ -17,7 +17,7 @@ export default function Productos() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetch(`${API}/api/productos-web`)
+    fetch(`${API}/api/productos-web`, { cache: "no-store" })
       .then(r => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return r.json();

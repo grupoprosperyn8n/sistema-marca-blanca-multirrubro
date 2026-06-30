@@ -646,3 +646,42 @@ Conectar la landing pública y el backoffice de configuración con las tablas ex
 - No DELETE físico.
 - No `RESERVAS`.
 - No pagos, checkout, carrito real, caja/POS, ventas/cobros ni liquidaciones.
+
+---
+
+# CIERRE — COMMERCE_MODEL_P2_DESIGN_ONLY
+
+**Fecha:** 2026-06-29
+**Estado:** CERRADO QA LOCAL — DEPLOY/PUSH PENDIENTE EN ESTE TURNO
+
+## Objetivo
+
+Preparar el modelo de venta online marca blanca sin activar carrito real, checkout, pagos, caja/POS ni escrituras comerciales.
+
+## Cambios aplicados
+
+- Nuevo endpoint read-only `GET /api/commerce/public`.
+- El endpoint lee de forma segura `PACKS`, `PROMOCIONES` y `CUPONES`.
+- Devuelve flags explícitos en falso para carrito, checkout, pagos online y POS físico.
+- `ProductoDetalle.jsx` muestra packs/promos/cupones como upsell/cross-selling read-only.
+- `Productos.jsx` y `ProductoDetalle.jsx` usan fetch `no-store` para reflejar cambios backend/Airtable.
+- Documentado contrato en `docs/commerce/COMMERCE_MODEL_P2_DESIGN.md`.
+
+## QA local
+
+| Prueba | Resultado |
+|--------|-----------|
+| `python3 -m py_compile backend/routes/commerce_public.py backend/main.py` | ✅ PASS |
+| `git diff --check` | ✅ PASS |
+| `npm run build` | ✅ PASS |
+| Backend local `/api/commerce/public` | ✅ PASS |
+| Flags mutantes desactivados | ✅ `cart/checkout/payments/pos=false` |
+| Operaciones bloqueadas declaradas | ✅ `PAYMENT`, `CREATE_VENTA` |
+
+## Garantías
+
+- No se tocaron `.env`, `backend/.env`, `frontend/.env` ni `CREDENCIALES.md`.
+- No se expusieron secretos.
+- No se modificó schema Airtable.
+- No se escribieron `CARRITOS`, `CARRITO_ITEMS`, `VENTAS`, `ITEMS_VENTA` ni `PAGOS_COBROS`.
+- No pagos reales, checkout, caja/POS ni pasarela.

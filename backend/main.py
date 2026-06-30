@@ -30,6 +30,7 @@ for _ENV_PATH in [_BACKEND.parent / ".env", _BACKEND / ".env"]:
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from routes.commerce_public import router as commerce_public_router
 from routes.productos_web import router as productos_web_router
 from routes.configuracion_publica import router as configuracion_publica_router
 from routes.landing_secciones import router as landing_secciones_router
@@ -79,6 +80,7 @@ app.include_router(agenda_slots_router)
 app.include_router(citas_router)
 # Técnico (no P0)
 app.include_router(productos_web_router)
+app.include_router(commerce_public_router)
 # Auth (FASE_2A_C)
 app.include_router(auth_router)
 
@@ -117,6 +119,7 @@ async def health():
             "/api/sucursales",
             "/api/servicios",
             "/api/servicios-web",
+            "/api/commerce/public",
             "/api/clientes",
             "/api/agenda-slots",
             "/api/citas",

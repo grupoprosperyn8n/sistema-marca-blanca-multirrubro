@@ -20,14 +20,20 @@ export default function ProductoDetalle() {
   const navigate = useNavigate();
   const { config } = useBrandConfig();
   const [producto, setProducto] = useState(null);
+  const [commerce, setCommerce] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     async function cargar() {
       try {
-        const res = await fetch(`${API}/api/productos-web`);
-        const data = await res.json();
+        const [productosRes, commerceRes] = await Promise.all([
+          fetch(`${API}/api/productos-web`, { cache: "no-store" }),
+          fetch(`${API}/api/commerce/public`, { cache: "no-store" }).catch(() => null),
+        ]);
+        if (!productosRes.ok) throw new Error(`HTTP ${productosRes.status}`);
+        const data = await productosRes.json();
+        const commerceData = commerceRes?.ok ? await commerceRes.json() : null;
         const raw = Array.isArray(data) ? data : data.productos || [];
         
         const match = raw.find(p => {
@@ -53,6 +59,7 @@ export default function ProductoDetalle() {
           disponibilidad: match.disponibilidad_visible || null,
           cta: match.cta || null,
         });
+        setCommerce(commerceData);
       } catch (e) {
         setError(e.message);
       } finally {
@@ -87,6 +94,11 @@ export default function ProductoDetalle() {
       ? `mailto:${config.email}?subject=${encodeURIComponent(`Consulta por ${p.nombre}`)}`
       : null;
   const contactLabel = p.cta || (contactHref ? "Consultar Producto" : "Ver Más Productos");
+  const suggestions = [
+    ...(commerce?.packs || []),
+    ...(commerce?.promotions || []),
+    ...(commerce?.coupons || []),
+  ].slice(0, 4);
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-8 py-12">
@@ -172,6 +184,63 @@ export default function ProductoDetalle() {
           </p>
         </div>
       </div>
+
+      {suggestions.length > 0 && (
+        <section className="mt-8 glass-panel rounded-3xl p-6 sm:p-8">
+          <div className="mb-5 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--brand-primary)" }}>
+                Venta inteligente
+              </p>
+              <h2 className="text-xl font-bold" style={{ color: "var(--brand-text)" }}>
+                Packs, promos y beneficios relacionados
+              </h2>
+              <p className="mt-1 text-sm" style={{ color: "var(--brand-text-secondary)" }}>
+                Lectura comercial desde Airtable. Sin carrito, checkout ni pago activo en esta fase.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            {suggestions.map((item) => {
+              const discount = item.discount_percent
+                ? `${item.discount_percent}% OFF`
+                : item.discount_amount
+                  ? `$${Number(item.discount_amount).toLocaleString("es-AR")} OFF`
+                  : item.price_promo
+                    ? `$${Number(item.price_promo).toLocaleString("es-AR")}`
+                    : "";
+              return (
+                <article key={`${item.type}-${item.id}`} className="rounded-2xl border border-white/50 bg-white/70 p-4">
+                  <div className="mb-2 flex items-center justify-between gap-3">
+                    <span className="rounded-full bg-white px-3 py-1 text-[11px] font-bold uppercase tracking-wide" style={{ color: "var(--brand-primary)" }}>
+                      {item.type}
+                    </span>
+                    {discount && (
+                      <span className="text-sm font-bold" style={{ color: "var(--brand-primary)" }}>
+                        {discount}
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="font-semibold leading-snug" style={{ color: "var(--brand-text)" }}>
+                    {item.title}
+                  </h3>
+                  {item.description && (
+                    <p className="mt-2 line-clamp-2 text-sm" style={{ color: "var(--brand-text-secondary)" }}>
+                      {item.description}
+                    </p>
+                  )}
+                  {item.code && (
+                    <p className="mt-3 inline-flex rounded-lg bg-slate-100 px-3 py-1 font-mono text-xs" style={{ color: "var(--brand-text)" }}>
+                      Cupón: {item.code}
+                    </p>
+                  )}
+                </article>
+              );
+            })}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

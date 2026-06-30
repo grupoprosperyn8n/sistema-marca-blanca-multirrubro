@@ -290,3 +290,30 @@ El contrato P0 expone:
 - `primary_flow`
 
 Pendiente inmediato: ampliar RBAC dinámico con `PERMISOS_MODULO`/`PERMISOS_CAMPO`, y crear campos Airtable explícitos para las opciones avanzadas del modelo de negocio (`USA_PAGO_ONLINE`, `CANAL_OPERACION`, `FONDO_TIPO`, etc.).
+
+---
+
+## Actualización comercio read-only — 2026-06-29
+
+Se agregó el bloque `COMMERCE_MODEL_P2_DESIGN_ONLY` para empezar a mostrar venta inteligente sin activar operaciones reales.
+
+### Aplicado
+
+- Nuevo endpoint `GET /api/commerce/public`.
+- Lee de forma segura `PACKS`, `PROMOCIONES` y `CUPONES`.
+- Expone recomendaciones read-only para upsell/cross-selling.
+- `ProductoDetalle.jsx` muestra packs/promos/beneficios relacionados.
+- El frontend aclara que carrito, checkout y pagos no están activos.
+
+### Sigue pendiente para fase mutante
+
+- Crear carrito real.
+- Crear/editar `CARRITOS` y `CARRITO_ITEMS`.
+- Convertir carrito en `VENTAS` e `ITEMS_VENTA`.
+- Registrar `PAGOS_COBROS`.
+- Integrar pasarela de pago sandbox/real.
+- Integrar stock/reserva real.
+
+### Guardrails
+
+No se activó checkout, no se tocó pasarela, no se registraron ventas ni pagos y no se modificó schema Airtable.
