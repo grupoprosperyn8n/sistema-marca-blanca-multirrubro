@@ -179,12 +179,13 @@ async def commerce_public_bootstrap(response: Response):
         promotions, promos_total = _safe_list(client, "PROMOCIONES", _promotion_is_public, _public_promotion, 6)
         coupons, coupons_total = _safe_list(client, "CUPONES", _coupon_is_public, _public_coupon, 6)
         return {
-            "status": "READ_ONLY_COMMERCE_BOOTSTRAP",
-            "cart_enabled": False,
+            "status": "SANDBOX_COMMERCE_BOOTSTRAP",
+            "cart_enabled": True,
+            "cart_mode": "SANDBOX",
             "checkout_enabled": False,
             "online_payments_enabled": False,
             "physical_pos_enabled": False,
-            "message": "Carrito, checkout, pagos y caja/POS no están activos en esta fase.",
+            "message": "Carrito sandbox activo. Checkout, pagos y caja/POS no están activos en esta fase.",
             "packs": packs,
             "promotions": promotions,
             "coupons": coupons,
@@ -197,12 +198,13 @@ async def commerce_public_bootstrap(response: Response):
                 "coupons_total": coupons_total,
             },
             "blocked_operations": [
-                "CREATE_CART",
                 "CHECKOUT",
                 "PAYMENT",
                 "POS_SALE",
                 "CREATE_VENTA",
+                "CREATE_ITEM_VENTA",
                 "CREATE_PAGO_COBRO",
+                "CREATE_RESERVAS",
             ],
         }
     except Exception as e:

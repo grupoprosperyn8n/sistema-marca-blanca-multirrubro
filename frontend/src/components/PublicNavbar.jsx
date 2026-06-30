@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { ROLES, useAuth } from '../context/AuthContext';
 import { getPublicNavigation, useBrandConfig } from '../context/BrandConfigContext';
 
 export default function PublicNavbar() {
   const [menuOpen, setMenuOpen] = useState(false);
-  const { usuario } = useAuth();
+  const { role, usuario } = useAuth();
   const { config } = useBrandConfig();
   const publicLinks = getPublicNavigation(config);
   const showDomainPill = config.domainRole && config.domainRole !== 'COMERCIAL_CANONICO';
@@ -34,9 +34,16 @@ export default function PublicNavbar() {
             </NavLink>
           ))}
           {usuario ? (
-            <Link to="/portal" className="ml-3 btn-primary text-sm px-4 py-2">
-              Mi Portal
-            </Link>
+            <div className="ml-3 flex items-center gap-2">
+              {role === ROLES.CLIENTE && (
+                <Link to="/carrito" className="rounded-lg bg-white/50 px-4 py-2 text-sm font-semibold" style={{ color: 'var(--brand-text)' }}>
+                  Carrito
+                </Link>
+              )}
+              <Link to="/portal" className="btn-primary text-sm px-4 py-2">
+                Mi Portal
+              </Link>
+            </div>
           ) : (
             <Link to="/login" className="ml-3 btn-primary text-sm px-4 py-2">
               Acceder
@@ -69,10 +76,19 @@ export default function PublicNavbar() {
               </NavLink>
             ))}
             {usuario ? (
-              <Link to="/portal" onClick={() => setMenuOpen(false)}
-                className="btn-primary text-sm text-center py-3 mt-2">
-                Mi Portal
-              </Link>
+              <>
+                {role === ROLES.CLIENTE && (
+                  <Link to="/carrito" onClick={() => setMenuOpen(false)}
+                    className="px-4 py-3 rounded-lg text-sm font-medium hover:bg-white/30"
+                    style={{ color: 'var(--brand-text)' }}>
+                    Carrito
+                  </Link>
+                )}
+                <Link to="/portal" onClick={() => setMenuOpen(false)}
+                  className="btn-primary text-sm text-center py-3 mt-2">
+                  Mi Portal
+                </Link>
+              </>
             ) : (
               <Link to="/login" onClick={() => setMenuOpen(false)}
                 className="btn-primary text-sm text-center py-3 mt-2">

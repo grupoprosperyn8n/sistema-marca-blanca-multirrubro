@@ -47,6 +47,13 @@ export default function PortalLayout() {
                 Mi Portal
               </Link>
               <Link
+                to="/carrito"
+                className="px-3 py-2 rounded-lg text-sm font-medium hover:bg-white/30 transition-colors"
+                style={{ color: 'var(--brand-text)' }}
+              >
+                Carrito
+              </Link>
+              <Link
                 to="/catalogo"
                 className="px-3 py-2 rounded-lg text-sm font-medium hover:bg-white/30 transition-colors"
                 style={{ color: 'var(--brand-text)' }}

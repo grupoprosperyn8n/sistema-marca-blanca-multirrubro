@@ -353,6 +353,9 @@ def _build_producto_web_publico(
         "destacado": destacado,
         "cta": cta,
         "slug": slug,
+        "cart_enabled": bool(fields.get("CARRITO_HABILITADO")),
+        "purchase_enabled": bool(fields.get("VENTA_HABILITADA_WEB")),
+        "availability_state": _parse_select(fields.get("ESTADO_DISPONIBILIDAD_WEB")),
     }
 
 

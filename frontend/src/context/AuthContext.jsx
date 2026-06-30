@@ -113,6 +113,7 @@ export function getNavLinks(role, access = null) {
   if (role === ROLES.CLIENTE) {
     return [
       { to: "/portal", label: "Mi Portal" },
+      { to: "/carrito", label: "Carrito" },
       { to: "/catalogo", label: "Catalogo" },
       { to: "/reserva", label: "Reserva" },
     ];

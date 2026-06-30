@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import ImageCarousel from "../components/ui/ImageCarousel";
 import { useBrandConfig } from "../context/BrandConfigContext";
+import { ROLES, useAuth } from "../context/AuthContext";
 
 const API = import.meta.env.VITE_API_BASE_URL || "";
 
@@ -19,10 +20,13 @@ export default function ProductoDetalle() {
   const { slug } = useParams();
   const navigate = useNavigate();
   const { config } = useBrandConfig();
+  const { role, usuario } = useAuth();
   const [producto, setProducto] = useState(null);
   const [commerce, setCommerce] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [cartLoading, setCartLoading] = useState(false);
+  const [cartMessage, setCartMessage] = useState(null);
 
   useEffect(() => {
     async function cargar() {
@@ -58,6 +62,7 @@ export default function ProductoDetalle() {
           imagenes: match.imagenes_secundarias || [],
           disponibilidad: match.disponibilidad_visible || null,
           cta: match.cta || null,
+          cartEnabled: Boolean(match.cart_enabled || match.purchase_enabled),
         });
         setCommerce(commerceData);
       } catch (e) {
@@ -94,6 +99,8 @@ export default function ProductoDetalle() {
       ? `mailto:${config.email}?subject=${encodeURIComponent(`Consulta por ${p.nombre}`)}`
       : null;
   const contactLabel = p.cta || (contactHref ? "Consultar Producto" : "Ver Más Productos");
+  const canUseSandboxCart = usuario && role === ROLES.CLIENTE;
+  const sandboxCartEnabled = commerce?.cart_enabled && p.cartEnabled;
   const suggestions = [
     ...(commerce?.packs || []),
     ...(commerce?.promotions || []),
@@ -150,6 +157,45 @@ export default function ProductoDetalle() {
           )}
 
           <div className="flex flex-col sm:flex-row gap-3">
+            {sandboxCartEnabled && (
+              canUseSandboxCart ? (
+                <button
+                  type="button"
+                  disabled={cartLoading}
+                  onClick={async () => {
+                    setCartLoading(true);
+                    setCartMessage(null);
+                    try {
+                      const res = await fetch(`${API}/api/carrito/items`, {
+                        method: "POST",
+                        credentials: "include",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ product_id: p.id, quantity: 1 }),
+                      });
+                      const body = await res.json().catch(() => ({}));
+                      if (!res.ok) throw new Error(body.detail || `Error ${res.status}`);
+                      setCartMessage({ type: "success", text: "Producto agregado al carrito sandbox." });
+                    } catch (e) {
+                      setCartMessage({ type: "error", text: e.message || "No se pudo agregar al carrito." });
+                    } finally {
+                      setCartLoading(false);
+                    }
+                  }}
+                  className="px-6 py-3 rounded-xl font-semibold text-sm text-center transition-opacity hover:opacity-90 disabled:opacity-60"
+                  style={{ background: "linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))", color: "#fff" }}
+                >
+                  {cartLoading ? "Agregando…" : "Agregar al carrito"}
+                </button>
+              ) : (
+                <Link
+                  to="/login"
+                  className="px-6 py-3 rounded-xl font-semibold text-sm text-center transition-opacity hover:opacity-90"
+                  style={{ background: "linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))", color: "#fff" }}
+                >
+                  Ingresar para comprar
+                </Link>
+              )
+            )}
             {contactHref ? (
               <a
                 href={contactHref}
@@ -179,8 +225,25 @@ export default function ProductoDetalle() {
             </button>
           </div>
 
-          <p className="mt-6 text-xs opacity-40 text-center" style={{ color: "var(--brand-text)" }}>
-            La venta online todavía no está activada. Este producto se consulta por el canal configurado del negocio.
+          {cartMessage && (
+            <div
+              className="mt-4 rounded-xl px-4 py-3 text-sm font-semibold"
+              style={{
+                background: cartMessage.type === "error" ? "#fff1f2" : "#ecfdf5",
+                color: cartMessage.type === "error" ? "#be123c" : "#047857",
+              }}
+            >
+              {cartMessage.text}
+              {cartMessage.type === "success" && (
+                <Link to="/carrito" className="ml-2 underline">Ver carrito</Link>
+              )}
+            </div>
+          )}
+
+          <p className="mt-6 text-xs opacity-50 text-center" style={{ color: "var(--brand-text)" }}>
+            {p.cartEnabled
+              ? "Carrito sandbox activo. Checkout, pagos y caja/POS todavía no están habilitados."
+              : "Este producto se consulta por el canal configurado del negocio."}
           </p>
         </div>
       </div>

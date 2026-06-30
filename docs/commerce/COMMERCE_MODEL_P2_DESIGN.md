@@ -1,7 +1,7 @@
 # COMMERCE_MODEL_P2_DESIGN_ONLY
 
-**Fecha:** 2026-06-29  
-**Estado:** P2 diseño + bootstrap read-only implementado  
+**Fecha:** 2026-06-29
+**Estado:** P2 diseño + bootstrap read-only implementado; supersedido parcialmente por P3 carrito sandbox
 **Dominio demo:** `https://bellezapro-demo.surge.sh`
 
 ## Objetivo
@@ -106,7 +106,13 @@ Activar carrito real implica:
 
 Hacerlo sin ese contrato completo rompe datos comerciales. Por eso este bloque deja lista la capa de lectura y recomienda el siguiente bloque mutante por separado.
 
-## Siguiente bloque recomendado
+## Evolución posterior
+
+El bloque `COMMERCE_MUTATION_P3_CART_CHECKOUT_SANDBOX` activa carrito sandbox con escrituras mínimas en `CARRITOS` y `CARRITO_ITEMS`.
+
+Siguen bloqueados pagos, checkout real, caja/POS, `VENTAS`, `ITEMS_VENTA`, `PAGOS_COBROS` y `RESERVAS`.
+
+## Siguiente bloque recomendado histórico
 
 `COMMERCE_MUTATION_P3_CART_CHECKOUT_SANDBOX`
 

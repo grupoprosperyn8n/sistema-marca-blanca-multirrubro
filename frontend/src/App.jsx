@@ -15,6 +15,7 @@ import Reserva from "./pages/Reserva";
 import SucursalesPublicas from "./pages/SucursalesPublicas";
 import ServicioDetalle from "./pages/ServicioDetalle";
 import ProductoDetalle from "./pages/ProductoDetalle";
+import Carrito from "./pages/Carrito";
 
 // Auth
 import Login from "./pages/Login";
@@ -118,6 +119,7 @@ export default function App() {
 
       <Route element={<ProtectedRoute roles={[ROLES.CLIENTE, ROLES.ADMINISTRADOR]}><PortalLayout /></ProtectedRoute>}>
         <Route path="/portal" element={<PortalCliente />} />
+        <Route path="/carrito" element={<Carrito />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
