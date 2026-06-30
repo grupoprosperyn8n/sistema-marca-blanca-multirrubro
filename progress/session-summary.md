@@ -652,7 +652,7 @@ Conectar la landing pública y el backoffice de configuración con las tablas ex
 # CIERRE — COMMERCE_MODEL_P2_DESIGN_ONLY
 
 **Fecha:** 2026-06-29
-**Estado:** CERRADO QA LOCAL — DEPLOY/PUSH PENDIENTE EN ESTE TURNO
+**Estado:** CERRADO QA + DEPLOY
 
 ## Objetivo
 
@@ -677,6 +677,16 @@ Preparar el modelo de venta online marca blanca sin activar carrito real, checko
 | Backend local `/api/commerce/public` | ✅ PASS |
 | Flags mutantes desactivados | ✅ `cart/checkout/payments/pos=false` |
 | Operaciones bloqueadas declaradas | ✅ `PAYMENT`, `CREATE_VENTA` |
+
+
+## Deploy
+
+- Commit implementación: `06d8ade feat(commerce): add read-only public bootstrap`.
+- Push `origin/main`: ✅ PASS.
+- Railway `earnest-comfort`: ✅ Online.
+- Surge producción: ✅ `https://bellezapro-demo.surge.sh`.
+- Smoke live: `/health`, `/api/commerce/public`, `/api/productos-web`, `/`, `/productos`, producto detalle y `/login` ✅ PASS.
+- Nota: un fetch de `/` devolvió 504 transitorio de Surge justo post-deploy; reintento inmediato PASS 200.
 
 ## Garantías
 

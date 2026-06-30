@@ -1,6 +1,6 @@
 {
   "project": "sistema-marca-blanca-multirrubro",
-  "fase_actual": "COMMERCE_MODEL_P2_DESIGN_ONLY — CERRADA_QA_LOCAL",
+  "fase_actual": "COMMERCE_MODEL_P2_DESIGN_ONLY — CERRADA_QA_DEPLOY",
   "fase_siguiente": "COMMERCE_MUTATION_P3_CART_CHECKOUT_SANDBOX (requiere aprobación explícita; sin pagos reales)",
   "tareas": {
     "FASE_3B_PORTAL_CLIENTE": {
@@ -339,9 +339,11 @@
       }
     },
     "COMMERCE_MODEL_P2_DESIGN_ONLY": {
-      "status": "completed_local_qa",
+      "status": "completed",
       "closed_at": "2026-06-29",
-      "commits": [],
+      "commits": [
+        "06d8ade"
+      ],
       "deliverables": [
         "backend/routes/commerce_public.py (GET /api/commerce/public read-only)",
         "backend/main.py (router commerce public + health)",
@@ -356,7 +358,14 @@
         "git_diff_check": "PASS",
         "local_commerce_public": "PASS_200",
         "commerce_flags_disabled": "PASS_CART_CHECKOUT_PAYMENTS_POS_FALSE",
-        "blocked_operations_declared": "PASS_PAYMENT_CREATE_VENTA"
+        "blocked_operations_declared": "PASS_PAYMENT_CREATE_VENTA",
+        "push_origin_main": "PASS",
+        "railway_auto_deploy": "PASS_ONLINE",
+        "surge_deploy_bellezapro": "PASS",
+        "live_health": "PASS_200",
+        "live_commerce_public": "PASS_200_READ_ONLY_COUNTS_2_2_3",
+        "live_productos_web": "PASS_200_TOTAL_4_TOTAL_LEIDOS_8",
+        "live_routes": "PASS_200_HOME_PRODUCTOS_PRODUCT_DETAIL_LOGIN"
       },
       "secrets_free": true,
       "env_files_touched": false,
@@ -365,7 +374,13 @@
       "schema_changes": false,
       "delete_fisico": false,
       "commerce_writes": false,
-      "notes": "Fase read-only: muestra packs/promociones/cupones como recomendaciones comerciales, pero no crea carrito, venta ni pago."
+      "notes": "Fase read-only: muestra packs/promociones/cupones como recomendaciones comerciales, pero no crea carrito, venta ni pago.",
+      "deploy": {
+        "frontend": "https://bellezapro-demo.surge.sh",
+        "backend": "https://earnest-comfort-production-3d75.up.railway.app",
+        "railway_status": "ONLINE",
+        "surge_production": "PASS"
+      }
     }
   },
   "deploys_activos": {
