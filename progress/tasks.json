@@ -1,6 +1,6 @@
 {
   "project": "sistema-marca-blanca-multirrubro",
-  "fase_actual": "WHITE_LABEL_MEDIA_PERSONAL_MULTI_SERVICE_P6 — COMPLETADA_LOCAL",
+  "fase_actual": "WHITE_LABEL_MEDIA_PERSONAL_MULTI_SERVICE_P6 — CERRADA_QA_DEPLOY",
   "fase_siguiente": "RESERVA_MULTI_SERVICIO_UI_P7 o CHECKOUT_PAYMENTS_POS_CONTRACT_P5 (requiere aprobación para pagos reales)",
   "tareas": {
     "FASE_3B_PORTAL_CLIENTE": {
@@ -482,9 +482,11 @@
       }
     },
     "WHITE_LABEL_MEDIA_PERSONAL_MULTI_SERVICE_P6": {
-      "status": "completed_local",
+      "status": "completed_deployed",
       "closed_at": "2026-07-01",
-      "commits": [],
+      "commits": [
+        "be63d0f"
+      ],
       "deliverables": [
         "Airtable CITA_ITEMS (junction table para varios servicios por turno)",
         "Airtable MEDIA_PUBLICA (medios imagen/video/embed/url para carruseles públicos)",
@@ -507,7 +509,12 @@
         "local_servicios_web_media_key": "PASS_9_TOTAL_MEDIA_KEY_PRESENT",
         "local_productos_web_media_key": "PASS_4_TOTAL_MEDIA_KEY_PRESENT",
         "dry_run_multiple_sin_auth": "401_PASS",
-        "railway_link": "PASS_EARNEST_COMFORT"
+        "railway_link": "PASS_EARNEST_COMFORT",
+        "live_health": "PASS_200",
+        "live_media_publica": "PASS_200_TOTAL_0_SAFE_EMPTY",
+        "live_personal_web": "PASS_200_TOTAL_7_NO_FICTICIAS",
+        "live_dry_run_multiple_sin_auth": "401_PASS",
+        "surge_personal_route": "PASS_200"
       },
       "secrets_free": true,
       "env_files_touched": false,
@@ -515,7 +522,11 @@
       "reservas_table_used": false,
       "schema_changes": true,
       "delete_fisico": false,
-      "notes": "CITA_ITEMS permite turno compuesto con servicio/profesional/slot por ítem. MEDIA_PUBLICA permite carruseles genéricos por producto, servicio, empleado, promo, pack y cupón. La UI pública ya muestra Equipo y carruseles/fallbacks; la reserva actual separa horarios por profesional. La UI completa para armar un turno compuesto multi-servicio queda como siguiente bloque."
+      "notes": "CITA_ITEMS permite turno compuesto con servicio/profesional/slot por ítem. MEDIA_PUBLICA permite carruseles genéricos por producto, servicio, empleado, promo, pack y cupón. La UI pública ya muestra Equipo y carruseles/fallbacks; la reserva actual separa horarios por profesional. La UI completa para armar un turno compuesto multi-servicio queda como siguiente bloque.",
+      "deploy": {
+        "backend_railway": "PASS_SUCCESS_be63d0f_earnest_comfort",
+        "frontend_surge": "PASS_https://bellezapro-demo.surge.sh"
+      }
     }
   },
   "deploys_activos": {

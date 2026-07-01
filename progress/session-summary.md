@@ -7,7 +7,7 @@ Backend: Railway `earnest-comfort`
 ## Estado
 
 - Fase: WHITE_LABEL_MEDIA_PERSONAL_MULTI_SERVICE_P6
-- Estado: completado localmente; pendiente commit/push/deploy final si se aprueba/ejecuta.
+- Estado: completado, commiteado, pusheado y desplegado.
 
 ## Implementado
 
@@ -35,6 +35,19 @@ Backend: Railway `earnest-comfort`
 - `/api/servicios-web`: 9 servicios, `MEDIA_PUBLICA` presente.
 - `/api/productos-web`: 4 productos, `media` presente.
 - `/api/clientes/citas/dry-run-multiple` sin auth: 401.
+
+## Deploy final
+
+- Commit: `be63d0f`
+- Push origin/main: PASS.
+- Railway `earnest-comfort`: SUCCESS/RUNNING para `be63d0f`.
+- Surge: PASS `https://bellezapro-demo.surge.sh`.
+- Smoke live:
+  - `/health`: 200.
+  - `/api/media-publica`: 200, empty safe.
+  - `/api/personal-web`: 200, 7 perfiles, sin sucursales ficticias.
+  - `/api/clientes/citas/dry-run-multiple` sin auth: 401.
+  - `/personal` en Surge: 200.
 
 ## Límites respetados
 
