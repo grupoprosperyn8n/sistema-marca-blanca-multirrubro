@@ -1,7 +1,7 @@
 {
   "project": "sistema-marca-blanca-multirrubro",
-  "fase_actual": "PORTAL_CLIENTE_UX_COMMERCE_P4 — CERRADA_QA_DEPLOY",
-  "fase_siguiente": "COMMERCE_CHECKOUT_PAYMENTS_POS_CONTRACT_P5 (solo diseño/contrato; requiere aprobación explícita antes de pagos reales)",
+  "fase_actual": "WHITE_LABEL_MEDIA_PERSONAL_MULTI_SERVICE_P6 — COMPLETADA_LOCAL",
+  "fase_siguiente": "RESERVA_MULTI_SERVICIO_UI_P7 o CHECKOUT_PAYMENTS_POS_CONTRACT_P5 (requiere aprobación para pagos reales)",
   "tareas": {
     "FASE_3B_PORTAL_CLIENTE": {
       "status": "completed",
@@ -480,6 +480,42 @@
         "backend_railway": "PASS_ONLINE_DEPLOYMENT_5546bd59",
         "frontend_surge": "PASS_https://bellezapro-demo.surge.sh"
       }
+    },
+    "WHITE_LABEL_MEDIA_PERSONAL_MULTI_SERVICE_P6": {
+      "status": "completed_local",
+      "closed_at": "2026-07-01",
+      "commits": [],
+      "deliverables": [
+        "Airtable CITA_ITEMS (junction table para varios servicios por turno)",
+        "Airtable MEDIA_PUBLICA (medios imagen/video/embed/url para carruseles públicos)",
+        "backend/services/public_media_service.py (normalización e índice de medios)",
+        "backend/routes/media_publica.py (GET /api/media-publica)",
+        "backend/routes/personal_web.py (GET /api/personal-web seguro desde EMPLEADOS)",
+        "backend/routes/clientes.py (/api/clientes/citas/dry-run-multiple y /confirmar-multiple)",
+        "backend/routes/servicios_web.py y backend/services/productos_web_service.py (media pública asociada)",
+        "frontend/src/components/ui/MediaCarousel.jsx (carrusel imagen/video/embed responsive)",
+        "frontend/src/pages/Personal.jsx (página pública Equipo)",
+        "frontend/src/pages/Reserva.jsx y ReservaTurnoModal.jsx (slots separados por profesional y nombre visible)",
+        "frontend/src/components/ui/ProductCard.jsx, ServiceCard.jsx, ProductoDetalle.jsx, ServicioDetalle.jsx (media/fallback carrusel)"
+      ],
+      "qa_results": {
+        "backend_py_compile": "PASS",
+        "frontend_build": "PASS",
+        "git_diff_check": "PASS",
+        "local_media_publica": "PASS_200_TOTAL_0_SAFE_EMPTY",
+        "local_personal_web": "PASS_200_TOTAL_7_NO_FICTICIAS",
+        "local_servicios_web_media_key": "PASS_9_TOTAL_MEDIA_KEY_PRESENT",
+        "local_productos_web_media_key": "PASS_4_TOTAL_MEDIA_KEY_PRESENT",
+        "dry_run_multiple_sin_auth": "401_PASS",
+        "railway_link": "PASS_EARNEST_COMFORT"
+      },
+      "secrets_free": true,
+      "env_files_touched": false,
+      "payments_checkout_pos": false,
+      "reservas_table_used": false,
+      "schema_changes": true,
+      "delete_fisico": false,
+      "notes": "CITA_ITEMS permite turno compuesto con servicio/profesional/slot por ítem. MEDIA_PUBLICA permite carruseles genéricos por producto, servicio, empleado, promo, pack y cupón. La UI pública ya muestra Equipo y carruseles/fallbacks; la reserva actual separa horarios por profesional. La UI completa para armar un turno compuesto multi-servicio queda como siguiente bloque."
     }
   },
   "deploys_activos": {

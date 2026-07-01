@@ -788,6 +788,292 @@ async def confirmar_reserva(payload: dict, user: dict = Depends(get_current_user
         },
     }
 
+
+def _normalize_multi_items(payload: dict) -> list[dict]:
+    raw_items = payload.get("items")
+    if not isinstance(raw_items, list) or not raw_items:
+        raise HTTPException(status_code=400, detail="items debe ser una lista con al menos un servicio.")
+    if len(raw_items) > 6:
+        raise HTTPException(status_code=400, detail="Máximo 6 servicios por turno compuesto.")
+
+    items = []
+    seen_slots = set()
+    for index, raw in enumerate(raw_items, start=1):
+        if not isinstance(raw, dict):
+            raise HTTPException(status_code=400, detail=f"Item {index} inválido.")
+        slot_id = _text(raw.get("slot_id"))
+        servicio_web_id = _text(raw.get("servicio_web_id"))
+        profesional_id = _text(raw.get("profesional_id"))
+        if not slot_id or not servicio_web_id:
+            raise HTTPException(status_code=400, detail=f"Item {index}: slot_id y servicio_web_id son requeridos.")
+        if slot_id in seen_slots:
+            raise HTTPException(status_code=409, detail=f"El slot {slot_id} está repetido en el turno.")
+        seen_slots.add(slot_id)
+        items.append({
+            "slot_id": slot_id,
+            "servicio_web_id": servicio_web_id,
+            "profesional_id": profesional_id,
+            "orden": int(raw.get("orden") or index),
+            "observaciones": _text(raw.get("observaciones")),
+        })
+    return items
+
+
+def _validate_multi_booking(at: AirtableClient, payload: dict, cliente_id: str) -> dict:
+    sucursal_id = _text(payload.get("sucursal_id"))
+    if not sucursal_id:
+        raise HTTPException(status_code=400, detail="sucursal_id es requerido.")
+
+    try:
+        suc_record = at.get_record("SUCURSALES", sucursal_id)
+        suc_fields = suc_record.get("fields", {})
+    except Exception:
+        raise HTTPException(status_code=404, detail=f"Sucursal {sucursal_id} no encontrada.")
+
+    errores = []
+    if not suc_fields.get("ACTIVO", False):
+        errores.append("La sucursal no esta activa.")
+
+    validated_items = []
+    fecha_turno = ""
+    for item in _normalize_multi_items(payload):
+        slot_id = item["slot_id"]
+        servicio_web_id = item["servicio_web_id"]
+        item_errors = []
+
+        try:
+            slot = at.get_record("AGENDA_SLOTS", slot_id)
+            sfields = slot.get("fields", {})
+        except Exception:
+            raise HTTPException(status_code=404, detail=f"Slot {slot_id} no encontrado.")
+
+        estado_slot = (sfields.get("ESTADO_SLOT") or "").upper()
+        disponible_auto = (sfields.get("DISPONIBLE_AUTO") or "").upper()
+        permite_web = sfields.get("PERMITE_RESERVA_WEB", False)
+        activo = sfields.get("ACTIVO", False)
+        capacidad = sfields.get("CAPACIDAD_DISPONIBLE", 0)
+        slot_sucursal_ids = _as_id_list(sfields.get("SUCURSAL"))
+        slot_profesional_ids = _as_id_list(sfields.get("PROFESIONAL"))
+        requested_profesional = item.get("profesional_id")
+
+        if estado_slot != "DISPONIBLE":
+            item_errors.append(f"Slot no disponible (estado: {estado_slot}).")
+        if disponible_auto != "SI":
+            item_errors.append("Slot marcado como no disponible automaticamente.")
+        if not permite_web:
+            item_errors.append("Slot no permite reserva web.")
+        if not activo:
+            item_errors.append("Slot inactivo.")
+        if capacidad is not None and capacidad <= 0:
+            item_errors.append("Slot sin capacidad disponible.")
+        if sucursal_id not in slot_sucursal_ids:
+            item_errors.append("El slot no pertenece a la sucursal elegida.")
+        if requested_profesional and requested_profesional not in slot_profesional_ids:
+            item_errors.append("El profesional elegido no coincide con el profesional del slot.")
+        if _has_active_cita_for_slot(at, slot_id):
+            item_errors.append("El slot ya tiene una cita activa.")
+
+        try:
+            sw_record = at.get_record("SERVICIOS_WEB", servicio_web_id)
+            sw_fields = sw_record.get("fields", {})
+        except Exception:
+            raise HTTPException(status_code=404, detail=f"Servicio web {servicio_web_id} no encontrado.")
+
+        if not sw_fields.get("RESERVA_ONLINE_HABILITADA", False):
+            item_errors.append("El servicio no esta habilitado para reserva online.")
+        if not sw_fields.get("ACTIVO_EN_WEB", False):
+            item_errors.append("El servicio no esta activo en web.")
+
+        svc_linked = sw_fields.get("SERVICIO")
+        svc_canonico_id = svc_linked[0] if isinstance(svc_linked, list) and svc_linked else str(svc_linked) if svc_linked else ""
+        fecha_slot = sfields.get("FECHA_SLOT", "")
+        if not fecha_turno:
+            fecha_turno = fecha_slot
+        elif fecha_slot != fecha_turno:
+            item_errors.append("Todos los servicios del turno compuesto deben estar en la misma fecha.")
+
+        if item_errors:
+            errores.append({"slot_id": slot_id, "servicio_web_id": servicio_web_id, "errores": item_errors})
+
+        validated_items.append({
+            **item,
+            "slot_fields": sfields,
+            "service_web_fields": sw_fields,
+            "servicio_canonico_id": svc_canonico_id,
+            "profesional_ids": slot_profesional_ids,
+        })
+
+    return {
+        "cliente_id": cliente_id,
+        "sucursal_id": sucursal_id,
+        "sucursal_nombre": suc_fields.get("NOMBRE_SUCURSAL", "Sin nombre"),
+        "items": validated_items,
+        "errores": errores,
+        "disponible": not errores,
+    }
+
+
+@router.post("/clientes/citas/dry-run-multiple")
+async def dry_run_reserva_multiple(payload: dict, user: dict = Depends(get_current_user)):
+    """Valida un turno compuesto con varios servicios/profesionales sin escribir."""
+    rol = (user.get("rol") or "").upper()
+    if rol != "CLIENTE":
+        raise HTTPException(status_code=403, detail="Solo clientes pueden reservar turnos.")
+    cliente_id = (user.get("cliente") or "").strip()
+    if not cliente_id:
+        raise HTTPException(status_code=404, detail="No tenes un perfil de cliente vinculado.")
+
+    at = AirtableClient()
+    result = _validate_multi_booking(at, payload, cliente_id)
+    return {
+        "dry_run": True,
+        "multi_servicio": True,
+        "disponible": result["disponible"],
+        "errores": result["errores"] or None,
+        "items": [
+            {
+                "orden": item["orden"],
+                "slot_id": item["slot_id"],
+                "servicio_web_id": item["servicio_web_id"],
+                "nombre_servicio": item["service_web_fields"].get("NOMBRE_PUBLICO_SERVICIO") or item["service_web_fields"].get("NOMBRE_SERVICIO"),
+                "profesional_id": (item["profesional_ids"] or [None])[0],
+                "fecha": item["slot_fields"].get("FECHA_SLOT"),
+                "hora_inicio": item["slot_fields"].get("HORA_INICIO"),
+                "hora_fin": item["slot_fields"].get("HORA_FIN"),
+            }
+            for item in result["items"]
+        ],
+        "mensaje": "Turno compuesto disponible." if result["disponible"] else "No se puede reservar el turno compuesto.",
+        "nota": "Ningun registro fue creado ni modificado. Esto es un dry-run.",
+    }
+
+
+@router.post("/clientes/citas/confirmar-multiple")
+async def confirmar_reserva_multiple(payload: dict, user: dict = Depends(get_current_user)):
+    """Confirma un turno con varios servicios. No usa RESERVAS ni borra datos."""
+    rol = (user.get("rol") or "").upper()
+    if rol != "CLIENTE":
+        raise HTTPException(status_code=403, detail="Solo clientes pueden confirmar turnos.")
+    cliente_id = (user.get("cliente") or "").strip()
+    if not cliente_id:
+        raise HTTPException(status_code=404, detail="No tenes un perfil de cliente vinculado.")
+
+    at = AirtableClient()
+    result = _validate_multi_booking(at, payload, cliente_id)
+    if not result["disponible"]:
+        return {
+            "confirmado": False,
+            "multi_servicio": True,
+            "errores": result["errores"],
+            "mensaje": "No se puede confirmar el turno compuesto.",
+        }
+
+    items = sorted(result["items"], key=lambda item: item["orden"])
+    first = items[0]
+    hoy = date.today().isoformat()
+    fecha_cita = first["slot_fields"].get("FECHA_SLOT", "")
+    hora_inicio = min(_text(item["slot_fields"].get("HORA_INICIO")) for item in items)
+    hora_fin = max(_text(item["slot_fields"].get("HORA_FIN")) for item in items)
+    duracion_total = sum(_number(item["slot_fields"].get("DURACION_MINUTOS"), 0) for item in items)
+    slot_ids = [item["slot_id"] for item in items]
+    servicio_ids = [item["servicio_canonico_id"] for item in items if item["servicio_canonico_id"]]
+    profesional_ids = []
+    for item in items:
+        for profesional_id in item["profesional_ids"]:
+            if profesional_id and profesional_id not in profesional_ids:
+                profesional_ids.append(profesional_id)
+
+    try:
+        cli_record = at.get_record("CLIENTES", cliente_id)
+        nombre_cliente = cli_record.get("fields", {}).get("NOMBRE_CLIENTE", "CLIENTE")
+    except Exception:
+        nombre_cliente = "CLIENTE"
+
+    nombre_cita = f"CITA_MULTI_{nombre_cliente[:18].upper().replace(' ','_')}_{fecha_cita}_{hora_inicio.replace(':','')}"
+    cita_fields = {
+        "NOMBRE_CITA": nombre_cita,
+        "CLIENTE": [cliente_id],
+        "SERVICIO": servicio_ids[:1],
+        "AGENDA_SLOT": slot_ids,
+        "PROFESIONAL": profesional_ids,
+        "FECHA_CITA": fecha_cita,
+        "HORA_INICIO": hora_inicio,
+        "HORA_FIN": hora_fin,
+        "DURACION_MINUTOS": duracion_total,
+        "CANAL_ORIGEN": "WEB",
+        "ESTADO_CITA": "CONFIRMADA",
+        "CONFIRMADA_CLIENTE": True,
+        "FECHA_CONFIRMACION": hoy,
+        "SUCURSAL_ATENCION": [result["sucursal_id"]],
+        "ACTIVO": True,
+    }
+
+    try:
+        cita_creada = at.create_record("CITAS", cita_fields)
+        cita_id = cita_creada["id"]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al crear CITA compuesta: {str(e)}")
+
+    created_items = []
+    reserved_slots = []
+    try:
+        for item in items:
+            service_name = item["service_web_fields"].get("NOMBRE_PUBLICO_SERVICIO") or item["service_web_fields"].get("NOMBRE_SERVICIO") or "Servicio"
+            item_fields = {
+                "NOMBRE_ITEM_CITA": f"{nombre_cita}_{item['orden']}_{service_name[:24]}",
+                "CITA": [cita_id],
+                "SERVICIO": [item["servicio_canonico_id"]] if item["servicio_canonico_id"] else [],
+                "SERVICIO_WEB": [item["servicio_web_id"]],
+                "PROFESIONAL": item["profesional_ids"][:1],
+                "AGENDA_SLOT": [item["slot_id"]],
+                "ORDEN_ITEM": item["orden"],
+                "DURACION_MINUTOS": _number(item["slot_fields"].get("DURACION_MINUTOS"), 0),
+                "PRECIO_REFERENCIA": _number(item["service_web_fields"].get("PRECIO_WEB"), 0),
+                "ESTADO_ITEM_CITA": "CONFIRMADO",
+                "OBSERVACIONES_ITEM": item.get("observaciones") or None,
+                "ACTIVO": True,
+            }
+            created = at.create_record("CITA_ITEMS", item_fields)
+            created_items.append(created.get("id"))
+
+            sfields = item["slot_fields"]
+            at.patch_record("AGENDA_SLOTS", item["slot_id"], {
+                "ESTADO_SLOT": "RESERVADO",
+                "TIPO_SLOT": "RESERVA_WEB_PENDIENTE",
+                "CAPACIDAD_OCUPADA": (sfields.get("CAPACIDAD_OCUPADA", 0) or 0) + 1,
+                "CITAS": [cita_id],
+            })
+            reserved_slots.append(item["slot_id"])
+    except Exception as e:
+        try:
+            at.patch_record("CITAS", cita_id, {
+                "ESTADO_CITA": "CANCELADA",
+                "ACTIVO": False,
+                "MOTIVO_CANCELACION": "Rollback por error al confirmar turno compuesto.",
+                "FECHA_CANCELACION": hoy,
+            })
+        except Exception:
+            pass
+        raise HTTPException(status_code=500, detail=f"Error al confirmar items/slots del turno compuesto: {str(e)}")
+
+    return {
+        "confirmado": True,
+        "multi_servicio": True,
+        "mensaje": "Turno compuesto confirmado exitosamente.",
+        "cita": {
+            "id": cita_id,
+            "nombre_cita": nombre_cita,
+            "fecha_cita": fecha_cita,
+            "hora_inicio": hora_inicio,
+            "hora_fin": hora_fin,
+            "estado_cita": "CONFIRMADA",
+            "cantidad_servicios": len(items),
+        },
+        "items": created_items,
+        "slots": reserved_slots,
+        "sucursal": {"id": result["sucursal_id"], "nombre": result["sucursal_nombre"]},
+    }
+
 # ---- FASE_3C3: CANCELAR Y REPROGRAMAR ----
 
 @router.post("/clientes/citas/{cita_id}/cancelar")

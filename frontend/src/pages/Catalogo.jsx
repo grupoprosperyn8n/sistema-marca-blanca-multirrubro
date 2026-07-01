@@ -185,6 +185,7 @@ export default function Catalogo() {
                 compraHabilitada: sw._compra,
                 imagen: sw._imagen,
                 imagenAlt: sw._nombre,
+                media: sw.MEDIA_PUBLICA || sw.media || [],
                 id: sw.id,
               }}
               buying={savingService === sw.id}

@@ -2,10 +2,13 @@ import React from 'react';
 import GlassCard from './GlassCard';
 import PrimaryButton from './PrimaryButton';
 import Badge from './Badge';
+import MediaCarousel from './MediaCarousel';
+import { mediaSlidesFrom } from '../../utils/media';
 
 export default function ServiceCard({ service, onReservar, onComprar, onClick, buying = false }) {
-  const { nombre, descripcion, precio, duracion_minutos, categoria, imagen, imagenAlt } = service || {};
+  const { nombre, descripcion, precio, duracion_minutos, categoria, imagen, imagenAlt, media } = service || {};
   const ContentWrapper = onClick ? 'button' : 'div';
+  const slides = mediaSlidesFrom({ media, images: [imagen], fallbackAlt: imagenAlt || nombre || 'Servicio' });
 
   return (
     <GlassCard className="flex flex-col h-full" hover>
@@ -14,18 +17,15 @@ export default function ServiceCard({ service, onReservar, onComprar, onClick, b
         onClick={onClick}
         className={onClick ? 'mb-4 flex-1 text-left focus-visible:ring-2 focus-visible:ring-sky-500 rounded-lg' : 'mb-4 flex-1'}
       >
-        {imagen?.url && (
-          <div className="mb-4 h-44 overflow-hidden rounded-2xl bg-slate-100">
-            <img
-              src={imagen.url}
-              alt={imagenAlt || nombre || 'Servicio'}
-              width={imagen.width || 640}
-              height={imagen.height || 360}
-              loading="lazy"
-              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-            />
-          </div>
-        )}
+        <MediaCarousel
+          items={slides}
+          alt={imagenAlt || nombre || 'Servicio'}
+          mediaClassName="h-36 sm:h-40"
+          imageClassName="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+          showControls={false}
+          fallbackIcon="spa"
+          className="mb-4"
+        />
         {categoria && (
           <Badge variant="primary" className="mb-3 self-start">{categoria}</Badge>
         )}

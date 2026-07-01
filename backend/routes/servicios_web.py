@@ -11,6 +11,7 @@ if str(_BACKEND) not in sys.path:
     sys.path.insert(0, str(_BACKEND))
 
 from airtable_adapter import AirtableClient
+from services.public_media_service import build_media_index
 
 router = APIRouter(prefix="/api", tags=["servicios-web"])
 
@@ -48,10 +49,12 @@ async def listar_servicios_web(response: Response):
         response.headers["Cache-Control"] = "no-store, max-age=0"
         client = AirtableClient()
         records = client.list_records("SERVICIOS_WEB", by_name=True)
+        media_by_service = build_media_index(client).get("service_web", {})
         items = []
         servicio_cache = {}
         for r in records:
             fields = r.get("fields", {})
+            fields["MEDIA_PUBLICA"] = media_by_service.get(r.get("id"), [])
             servicio_id = _first_link_id(fields.get("SERVICIO"))
             if servicio_id:
                 fields["SERVICIO_ID"] = servicio_id

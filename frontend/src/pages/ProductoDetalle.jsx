@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
-import ImageCarousel from "../components/ui/ImageCarousel";
+import MediaCarousel from "../components/ui/MediaCarousel";
 import { useBrandConfig } from "../context/BrandConfigContext";
 import { ROLES, useAuth } from "../context/AuthContext";
 import { notifyCartUpdated } from "../hooks/useCartSummary";
 import { formatPublicName } from "../utils/publicDataFilters";
+import { mediaSlidesFrom } from "../utils/media";
 
 const API = import.meta.env.VITE_API_BASE_URL || "";
 
@@ -107,6 +108,7 @@ export default function ProductoDetalle() {
           categoria: cleanLabel(match.categoria_publica || ""),
           imagen: productImages[0] || null,
           imagenes: productImages.slice(1),
+          media: match.media || [],
           disponibilidad: match.disponibilidad_visible || null,
           cta: match.cta || null,
           cartEnabled: Boolean(match.cart_enabled || match.purchase_enabled),
@@ -138,7 +140,7 @@ export default function ProductoDetalle() {
   );
 
   const p = producto;
-  const todasImagenes = [p.imagen, ...(p.imagenes || [])].filter(Boolean);
+  const mediaSlides = mediaSlidesFrom({ media: p.media, images: [p.imagen, ...(p.imagenes || [])], fallbackAlt: p.nombre });
   const whatsappDigits = String(config.whatsapp || "").replace(/\D/g, "");
   const whatsappHref = whatsappDigits
     ? `https://wa.me/${whatsappDigits}?text=${encodeURIComponent(`Hola, quiero consultar por el producto ${p.nombre}`)}`
@@ -166,12 +168,13 @@ export default function ProductoDetalle() {
       <section className="glass-panel overflow-hidden rounded-[2rem] bg-white/85 shadow-sm">
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,0.95fr)_minmax(320px,1.05fr)]">
           <div className="bg-gradient-to-br from-sky-50 via-white to-cyan-50">
-            {todasImagenes.length > 0 ? (
-              <ImageCarousel
-                images={todasImagenes}
+            {mediaSlides.length > 0 ? (
+              <MediaCarousel
+                items={mediaSlides}
                 alt={p.nombre}
                 mediaClassName="h-72 sm:h-80 lg:h-[460px]"
                 imageClassName="h-full w-full object-contain p-4 sm:p-6 lg:p-8"
+                fallbackIcon="inventory_2"
               />
             ) : (
               <div className="flex h-72 items-center justify-center sm:h-80 lg:h-[460px]">
@@ -334,18 +337,20 @@ function BenefitsSection({ items }) {
 
       <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {items.map(item => {
-          const img = imageUrl(item.image);
+          const slides = mediaSlidesFrom({ media: item.media, images: [item.image], fallbackAlt: cleanLabel(item.title || item.name || "Beneficio disponible") });
           const label = cleanLabel(item.type || "Beneficio");
           const title = cleanLabel(item.title || item.name || "Beneficio disponible");
           return (
             <article key={`${item.type}-${item.id}`} className="flex h-full min-w-0 flex-col rounded-3xl border border-white/60 bg-white/75 p-3">
-              <div className="mb-3 h-24 overflow-hidden rounded-2xl bg-gradient-to-br from-sky-50 to-cyan-100 sm:h-28">
-                {img ? (
-                  <img src={img} alt={title} width="320" height="180" loading="lazy" className="h-full w-full object-cover" />
-                ) : (
-                  <span className="flex h-full items-center justify-center text-4xl" aria-hidden="true">{benefitIcon(item.type)}</span>
-                )}
-              </div>
+              <MediaCarousel
+                items={slides}
+                alt={title}
+                mediaClassName="h-24 sm:h-28"
+                imageClassName="h-full w-full object-cover"
+                showControls={false}
+                fallbackIcon={benefitIcon(item.type) === "🏷️" ? "local_offer" : "redeem"}
+                className="mb-3"
+              />
               <div className="mb-2 flex items-center justify-between gap-2">
                 <span className="max-w-[65%] truncate rounded-full bg-white px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--brand-primary)" }}>{label}</span>
                 <strong className="shrink-0 text-xs tabular-nums" style={{ color: "var(--brand-primary)" }}>{benefitValue(item)}</strong>

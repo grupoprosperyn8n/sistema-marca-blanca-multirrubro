@@ -14,6 +14,7 @@ if str(_BACKEND) not in sys.path:
     sys.path.insert(0, str(_BACKEND))
 
 from airtable_adapter import AirtableClient
+from services.public_media_service import build_media_index
 from contract_productos_web import (
     PUBLICACION_GATE, PUBLIC_FIELDS, BLOCKED_FIELDS_FOR_TIENDA, IA_SAFE_FIELDS,
     VISIBILIDAD_POR_ROL,
@@ -374,6 +375,7 @@ def listar_productos_web_publico() -> dict:
     client = _get_client()
     pw_records = client.list_records(TABLE_NAME)
     total_leidos = len(pw_records)
+    media_by_product_web = build_media_index(client).get("product_web", {})
 
     # Carga lote de PRODUCTOS vinculados
     productos_map = _resolver_productos_bulk(client, pw_records)
@@ -428,6 +430,7 @@ def listar_productos_web_publico() -> dict:
 
         try:
             item = _build_producto_web_publico(r, prod_fields)
+            item["media"] = media_by_product_web.get(rid, [])
             productos.append(item)
         except Exception as e:
             excluidos.append({

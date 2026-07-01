@@ -14,6 +14,7 @@ if str(_BACKEND) not in sys.path:
     sys.path.insert(0, str(_BACKEND))
 
 from airtable_adapter import AirtableClient
+from services.public_media_service import build_media_index
 
 router = APIRouter(prefix="/api", tags=["commerce-public"])
 
@@ -175,9 +176,16 @@ async def commerce_public_bootstrap(response: Response):
     try:
         response.headers["Cache-Control"] = "no-store, max-age=0"
         client = AirtableClient()
+        media_index = build_media_index(client)
         packs, packs_total = _safe_list(client, "PACKS", _pack_is_public, _public_pack, 6)
         promotions, promos_total = _safe_list(client, "PROMOCIONES", _promotion_is_public, _public_promotion, 6)
         coupons, coupons_total = _safe_list(client, "CUPONES", _coupon_is_public, _public_coupon, 6)
+        for item in packs:
+            item["media"] = media_index.get("pack", {}).get(item.get("id"), [])
+        for item in promotions:
+            item["media"] = media_index.get("promotion", {}).get(item.get("id"), [])
+        for item in coupons:
+            item["media"] = media_index.get("coupon", {}).get(item.get("id"), [])
         return {
             "status": "SANDBOX_COMMERCE_BOOTSTRAP",
             "cart_enabled": True,

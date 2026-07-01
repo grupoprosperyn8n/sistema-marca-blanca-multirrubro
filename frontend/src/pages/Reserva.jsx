@@ -68,7 +68,8 @@ function normalizeAvailableSlots(slotsRaw, sucursal, servicio) {
       const fecha = String(slot.FECHA_SLOT || "");
       const horaInicio = normalizeTime(slot.HORA_INICIO);
       const horaFin = normalizeTime(slot.HORA_FIN);
-      const key = `${fecha}|${horaInicio}|${horaFin}|${selectedSucursalId || getLinkedIds(slot.SUCURSAL).join(",")}`;
+      const profesionalId = slot.PROFESIONAL_ID || getLinkedIds(slot.PROFESIONAL).join(",");
+      const key = `${fecha}|${horaInicio}|${horaFin}|${selectedSucursalId || getLinkedIds(slot.SUCURSAL).join(",")}|${profesionalId}`;
       const capacidad = Number(slot.CAPACIDAD_DISPONIBLE || 0);
       const existing = byVisibleSlot.get(key);
       if (existing) {
@@ -86,6 +87,8 @@ function normalizeAvailableSlots(slotsRaw, sucursal, servicio) {
         horaFin,
         capacidad,
         duracion: slot.DURACION_MINUTOS,
+        profesionalId,
+        profesionalNombre: slot.NOMBRE_PROFESIONAL || "",
         label: `${horaInicio} — ${horaFin}`,
       });
     });
@@ -402,6 +405,7 @@ export default function Reserva() {
                             style={horarioSel?.id === h.id ? { background: 'linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))' } : { background: 'rgba(255,255,255,0.5)' }}
                           >
                             <span className="block">{h.label}</span>
+                            {h.profesionalNombre && <span className="block truncate text-[11px] opacity-80">{h.profesionalNombre}</span>}
                             <span className="block text-[11px] opacity-70">{h.capacidad} cupo{h.capacidad === 1 ? "" : "s"}</span>
                           </button>
                         ))}
@@ -491,6 +495,11 @@ export default function Reserva() {
                 <p className="font-medium" style={{ color: 'var(--brand-text)' }}>
                   {horarioSel ? `${horarioSel.fechaCorta || ""} · ${horarioSel.label || horarioSel.horaInicio}` : '—'}
                 </p>
+                {horarioSel?.profesionalNombre && (
+                  <p className="mt-1 text-xs font-semibold" style={{ color: 'var(--brand-primary)' }}>
+                    Profesional: {horarioSel.profesionalNombre}
+                  </p>
+                )}
               </div>
               <div className="border-t border-gray-200 pt-3 mt-3">
                 <span className="opacity-50 text-xs" style={{ color: 'var(--brand-text-secondary)' }}>Total estimado</span>

@@ -460,6 +460,10 @@ export function getPublicNavigation(config = FALLBACK) {
     links.push({ to: '/productos', label: business.catalogLabel || 'Productos' });
   }
 
+  if (business.usesServices) {
+    links.push({ to: '/personal', label: 'Equipo' });
+  }
+
   if (business.usesBranches || business.showContactAddress) {
     links.push({ to: '/sucursales', label: business.usesMultiBranch ? 'Sucursales' : 'Ubicación' });
   }

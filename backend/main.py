@@ -32,6 +32,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routes.commerce_public import router as commerce_public_router
 from routes.carrito import router as carrito_router
+from routes.media_publica import router as media_publica_router
+from routes.personal_web import router as personal_web_router
 from routes.productos_web import router as productos_web_router
 from routes.configuracion_publica import router as configuracion_publica_router
 from routes.landing_secciones import router as landing_secciones_router
@@ -83,6 +85,8 @@ app.include_router(citas_router)
 app.include_router(productos_web_router)
 app.include_router(commerce_public_router)
 app.include_router(carrito_router)
+app.include_router(media_publica_router)
+app.include_router(personal_web_router)
 # Auth (FASE_2A_C)
 app.include_router(auth_router)
 
@@ -121,9 +125,13 @@ async def health():
             "/api/sucursales",
             "/api/servicios",
             "/api/servicios-web",
+            "/api/media-publica",
+            "/api/personal-web",
             "/api/commerce/public",
             "/api/carrito",
             "/api/clientes",
+            "/api/clientes/citas/dry-run-multiple",
+            "/api/clientes/citas/confirmar-multiple",
             "/api/agenda-slots",
             "/api/citas",
             "/api/profesional/me",

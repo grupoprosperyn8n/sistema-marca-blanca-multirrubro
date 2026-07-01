@@ -20,7 +20,8 @@ function getServiceDuration(servicio) {
 function dedupeSlots(slots) {
   const map = new Map();
   slots.forEach((slot) => {
-    const key = `${slot.FECHA_SLOT || ""}|${slot.HORA_INICIO || ""}|${slot.HORA_FIN || ""}|${(slot.SUCURSAL || []).join(",")}`;
+    const profesionalKey = slot.PROFESIONAL_ID || (slot.PROFESIONAL || []).join(",");
+    const key = `${slot.FECHA_SLOT || ""}|${slot.HORA_INICIO || ""}|${slot.HORA_FIN || ""}|${(slot.SUCURSAL || []).join(",")}|${profesionalKey}`;
     const existing = map.get(key);
     if (existing) {
       existing.CAPACIDAD_DISPONIBLE = Number(existing.CAPACIDAD_DISPONIBLE || 0) + Number(slot.CAPACIDAD_DISPONIBLE || 0);
@@ -357,6 +358,7 @@ export default function ReservaTurnoModal({ onClose }) {
                       </div>
                       <div style={{ fontSize: ".8rem", color: "#6b7280", marginTop: ".2rem" }}>
                         {slot.DURACION_MINUTOS && `${slot.DURACION_MINUTOS} min`}
+                        {slot.NOMBRE_PROFESIONAL && ` · Profesional: ${slot.NOMBRE_PROFESIONAL}`}
                         {slot.CAPACIDAD_DISPONIBLE > 0 &&
                           ` · ${slot.CAPACIDAD_DISPONIBLE} turno(s) disponible(s)`}
                       </div>
@@ -395,6 +397,12 @@ export default function ReservaTurnoModal({ onClose }) {
                     {selectedSlot?.DURACION_MINUTOS && ` (${selectedSlot.DURACION_MINUTOS} min)`}
                   </strong>
                 </div>
+                {selectedSlot?.NOMBRE_PROFESIONAL && (
+                  <div style={summaryRow}>
+                    <span style={{ color: "#6b7280" }}>Profesional</span>
+                    <strong>{selectedSlot.NOMBRE_PROFESIONAL}</strong>
+                  </div>
+                )}
                 {selectedServicio?.PRECIO_WEB && (
                   <div style={summaryRow}>
                     <span style={{ color: "#6b7280" }}>Precio</span>

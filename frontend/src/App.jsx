@@ -13,6 +13,7 @@ import Catalogo from "./pages/Catalogo";
 import Productos from "./pages/Productos";
 import Reserva from "./pages/Reserva";
 import SucursalesPublicas from "./pages/SucursalesPublicas";
+import Personal from "./pages/Personal";
 import ServicioDetalle from "./pages/ServicioDetalle";
 import ProductoDetalle from "./pages/ProductoDetalle";
 import Carrito from "./pages/Carrito";
@@ -72,6 +73,7 @@ export default function App() {
         <Route path="/productos" element={<Productos />} />
         <Route path="/reserva" element={<Reserva />} />
         <Route path="/sucursales" element={<SucursalesPublicas />} />
+        <Route path="/personal" element={<Personal />} />
         <Route path="/servicios/:slug" element={<ServicioDetalle />} />
         <Route path="/productos/:slug" element={<ProductoDetalle />} />
 

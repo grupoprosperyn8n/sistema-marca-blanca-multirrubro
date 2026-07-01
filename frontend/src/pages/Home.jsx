@@ -241,10 +241,15 @@ export default function Home() {
           )}
 
           <div className="text-center mt-8">
-            <Link to="/catalogo" className="text-sm font-medium inline-flex items-center gap-1 hover:gap-2 transition-[gap,color]" style={{ color: 'var(--brand-primary)' }}>
-              Ver catálogo completo
-              <span className="material-symbols-outlined text-base">arrow_forward</span>
-            </Link>
+            <div className="inline-flex flex-col items-center justify-center gap-3 sm:flex-row">
+              <Link to="/catalogo" className="text-sm font-medium inline-flex items-center gap-1 hover:gap-2 transition-[gap,color]" style={{ color: 'var(--brand-primary)' }}>
+                Ver catálogo completo
+                <span className="material-symbols-outlined text-base">arrow_forward</span>
+              </Link>
+              <Link to="/personal" className="rounded-full bg-white/70 px-4 py-2 text-sm font-semibold" style={{ color: 'var(--brand-text)' }}>
+                Conocé al equipo
+              </Link>
+            </div>
           </div>
         </section>
       )}

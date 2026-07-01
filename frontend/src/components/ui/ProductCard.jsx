@@ -1,6 +1,8 @@
 import GlassCard from './GlassCard';
 import Badge from './Badge';
 import { formatCategoria, toPublicTitle } from '../../utils/displayFormatters';
+import MediaCarousel from './MediaCarousel';
+import { mediaSlidesFrom } from '../../utils/media';
 
 /**
  * ProductCard — compact mobile-first card for the public product catalog.
@@ -17,7 +19,11 @@ export default function ProductCard({ producto, onClick }) {
 
   const categoriaHumana = formatCategoria(categoria_publica);
   const nombre = toPublicTitle(nombre_visible) || "Producto";
-  const tieneImagen = imagen_principal?.url;
+  const slides = mediaSlidesFrom({
+    media: producto?.media,
+    images: [imagen_principal],
+    fallbackAlt: alt_text || nombre,
+  });
 
   const formatearPrecio = (v) => {
     if (v == null) return "";
@@ -37,23 +43,16 @@ export default function ProductCard({ producto, onClick }) {
         onClick={onClick}
         className="flex h-full w-full touch-manipulation flex-col text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
       >
-        <div className="relative aspect-[4/3] w-full overflow-hidden bg-white/80">
-          {tieneImagen ? (
-            <img
-              src={imagen_principal.url}
-              alt={alt_text || nombre}
-              width="420"
-              height="315"
-              className="h-full w-full object-contain p-2 transition-transform duration-500 group-hover:scale-105"
-              loading="lazy"
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center">
-              <span className="material-symbols-outlined text-4xl opacity-30" style={{ color: 'var(--brand-primary)' }} aria-hidden="true">
-                inventory_2
-              </span>
-            </div>
-          )}
+        <div className="relative w-full overflow-hidden bg-white/80">
+          <MediaCarousel
+            items={slides}
+            alt={alt_text || nombre}
+            mediaClassName="aspect-[4/3]"
+            imageClassName="h-full w-full object-contain p-2 transition-transform duration-500 group-hover:scale-105"
+            showControls={false}
+            fallbackIcon="inventory_2"
+            className="rounded-none bg-white/80"
+          />
 
           {destacado && (
             <div className="absolute left-2 top-2 scale-90 origin-top-left">

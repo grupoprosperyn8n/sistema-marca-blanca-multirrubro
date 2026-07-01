@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
+import MediaCarousel from "../components/ui/MediaCarousel";
 import { formatPublicName, getPublicServiceImage, isPublicService, normalizeServiceCategory, toPublicSlug } from "../utils/publicDataFilters";
 import { ROLES, useAuth } from "../context/AuthContext";
 import { notifyCartUpdated } from "../hooks/useCartSummary";
+import { mediaSlidesFrom } from "../utils/media";
 
 const API = import.meta.env.VITE_API_BASE_URL || "";
 
@@ -46,6 +48,7 @@ export default function ServicioDetalle() {
           anticipo: match.ANTICIPO_REQUERIDO_WEB || 0,
           beneficios: match.BENEFICIOS_WEB || match.BENEFICIOS || "",
           imagen: getPublicServiceImage(match),
+          media: match.MEDIA_PUBLICA || match.media || [],
         });
       } catch (e) {
         setError(e.message);
@@ -72,6 +75,7 @@ export default function ServicioDetalle() {
   );
 
   const s = servicio;
+  const mediaSlides = mediaSlidesFrom({ media: s.media, images: [s.imagen], fallbackAlt: s.nombre });
   const canUseSandboxCart = usuario && role === ROLES.CLIENTE;
   const sandboxCartEnabled = s.cartEnabled && s.precio != null;
 
@@ -103,17 +107,14 @@ export default function ServicioDetalle() {
       </button>
 
       <div className="glass-panel overflow-hidden rounded-3xl" style={{ background: "rgba(255,255,255,0.85)" }}>
-        {s.imagen?.url && (
-          <div className="h-64 w-full bg-slate-100 sm:h-80">
-            <img
-              src={s.imagen.url}
-              alt={s.nombre}
-              width={s.imagen.width || 960}
-              height={s.imagen.height || 540}
-              className="h-full w-full object-cover"
-            />
-          </div>
-        )}
+        <MediaCarousel
+          items={mediaSlides}
+          alt={s.nombre}
+          mediaClassName="h-64 sm:h-80"
+          imageClassName="h-full w-full object-cover"
+          fallbackIcon="spa"
+          className="rounded-none"
+        />
         <div className="p-8">
         {s.categoria && (
           <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold mb-4" style={{ background: "var(--brand-secondary)33", color: "var(--brand-primary)" }}>
