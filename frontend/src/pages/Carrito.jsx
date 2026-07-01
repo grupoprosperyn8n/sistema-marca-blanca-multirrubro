@@ -31,6 +31,12 @@ function recommendationPayload(item) {
   return { item_type: "PRODUCTO_WEB", product_id: item.item_id, quantity: 1 };
 }
 
+function imageUrl(image) {
+  if (!image) return "";
+  if (typeof image === "string") return image;
+  return image.url || "";
+}
+
 export default function Carrito() {
   const navigate = useNavigate();
   const { role, logout } = useAuth();
@@ -170,26 +176,26 @@ export default function Carrito() {
   const coupons = marketing.coupons || [];
 
   return (
-    <section className="mx-auto max-w-6xl px-4 py-8 sm:py-12">
+    <section className="mx-auto max-w-6xl px-3 py-5 sm:px-6 sm:py-8 lg:py-10">
       {toast && (
         <div className={`fixed right-4 top-20 z-50 rounded-xl px-4 py-3 text-sm font-semibold shadow-lg ${toast.type === "error" ? "bg-rose-50 text-rose-700" : "bg-emerald-50 text-emerald-700"}`}>
           {toast.message}
         </div>
       )}
 
-      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-xs font-bold uppercase tracking-wide" style={{ color: "var(--brand-primary)" }}>Compra online sandbox</p>
-          <h1 className="mt-1 text-3xl font-extrabold" style={{ color: "var(--brand-text)" }}>Tu carrito</h1>
+          <h1 className="mt-1 text-2xl font-extrabold sm:text-3xl" style={{ color: "var(--brand-text)" }}>Tu carrito</h1>
           <p className="mt-2 max-w-2xl text-sm" style={{ color: "var(--brand-text-secondary)" }}>
             Probá productos, servicios y packs desde Airtable. Checkout, pagos, ventas y caja/POS siguen bloqueados.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Link to="/productos" className="rounded-xl border border-white/60 bg-white/60 px-4 py-2 text-center text-sm font-semibold" style={{ color: "var(--brand-text)" }}>
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+          <Link to="/productos" className="rounded-xl border border-white/60 bg-white/60 px-3 py-2 text-center text-sm font-semibold" style={{ color: "var(--brand-text)" }}>
             Ver productos
           </Link>
-          <Link to="/catalogo" className="rounded-xl border border-white/60 bg-white/60 px-4 py-2 text-center text-sm font-semibold" style={{ color: "var(--brand-text)" }}>
+          <Link to="/catalogo" className="rounded-xl border border-white/60 bg-white/60 px-3 py-2 text-center text-sm font-semibold" style={{ color: "var(--brand-text)" }}>
             Ver servicios
           </Link>
         </div>
@@ -211,14 +217,14 @@ export default function Carrito() {
           <MarketingSection title="Ideas para empezar" items={[...upsell, ...crossSell].slice(0, 4)} onAdd={addRecommendation} savingItem={savingItem} currency={currency} />
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px]">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-6">
           <div className="space-y-4">
             {items.map((item) => {
               const busy = savingItem === item.id;
               return (
-                <article key={item.id} className="glass-panel overflow-hidden rounded-3xl p-4 sm:p-5">
+                <article key={item.id} className="glass-panel overflow-hidden rounded-3xl p-3 sm:p-5">
                   <div className="flex flex-col gap-4 sm:flex-row">
-                    <button type="button" onClick={() => navigate(itemRoute(item))} className="h-28 w-full overflow-hidden rounded-2xl bg-white/70 sm:w-32">
+                    <button type="button" onClick={() => navigate(itemRoute(item))} className="h-28 w-full overflow-hidden rounded-2xl bg-white/70 sm:h-32 sm:w-32">
                       {item.image ? (
                         <img src={item.image} alt={item.name} className="h-full w-full object-cover" />
                       ) : (
@@ -268,7 +274,7 @@ export default function Carrito() {
             <PromoSection promotions={promotions} coupons={coupons} currency={currency} />
           </div>
 
-          <aside className="glass-panel h-fit rounded-3xl p-6">
+          <aside className="glass-panel h-fit rounded-3xl p-5 lg:sticky lg:top-24">
             <p className="text-xs font-bold uppercase tracking-wide" style={{ color: "var(--brand-primary)" }}>Resumen sandbox</p>
             <div className="mt-4 space-y-3 text-sm" style={{ color: "var(--brand-text)" }}>
               <div className="flex justify-between"><span>Items</span><strong>{cart.total_items}</strong></div>
@@ -301,31 +307,45 @@ export default function Carrito() {
 function MarketingSection({ title, subtitle, items = [], onAdd, savingItem, currency }) {
   if (!items.length) return null;
   return (
-    <section className="glass-panel rounded-3xl p-5 sm:p-6">
-      <h2 className="text-xl font-bold" style={{ color: "var(--brand-text)" }}>{title}</h2>
-      {subtitle && <p className="mt-1 text-sm" style={{ color: "var(--brand-text-secondary)" }}>{subtitle}</p>}
-      <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+    <section className="glass-panel rounded-3xl p-4 sm:p-5">
+      <div className="flex items-end justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-bold sm:text-xl" style={{ color: "var(--brand-text)" }}>{title}</h2>
+          {subtitle && <p className="mt-1 text-xs sm:text-sm" style={{ color: "var(--brand-text-secondary)" }}>{subtitle}</p>}
+        </div>
+      </div>
+      <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
         {items.map((item) => {
           const key = `${item.item_type}-${item.item_id}`;
+          const img = imageUrl(item.image);
           return (
-            <article key={key} className="rounded-2xl border border-white/50 bg-white/70 p-4">
-              <div className="mb-2 flex items-center justify-between gap-3">
-                <span className="rounded-full bg-white px-3 py-1 text-[11px] font-bold uppercase tracking-wide" style={{ color: "var(--brand-primary)" }}>
-                  {item.reason || itemKindLabel(item.item_type)}
-                </span>
-                {item.price != null && <strong className="text-sm" style={{ color: "var(--brand-text)" }}>{money(item.price, currency)}</strong>}
+            <article key={key} className="flex gap-3 rounded-2xl border border-white/50 bg-white/75 p-3">
+              <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-slate-100">
+                {img ? (
+                  <img src={img} alt={item.title || itemKindLabel(item.item_type)} className="h-full w-full object-cover" loading="lazy" />
+                ) : (
+                  <span className="flex h-full items-center justify-center text-2xl">✨</span>
+                )}
               </div>
-              <h3 className="font-semibold leading-snug" style={{ color: "var(--brand-text)" }}>{item.title}</h3>
-              {item.description && <p className="mt-2 line-clamp-2 text-sm" style={{ color: "var(--brand-text-secondary)" }}>{item.description}</p>}
-              <button
-                type="button"
-                disabled={savingItem === key}
-                onClick={() => onAdd(item)}
-                className="mt-4 rounded-xl px-4 py-2 text-sm font-bold text-white disabled:opacity-60"
-                style={{ background: "linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))" }}
-              >
-                {savingItem === key ? "Agregando…" : item.cta || "Agregar"}
-              </button>
+              <div className="min-w-0 flex-1">
+                <div className="mb-1 flex items-center justify-between gap-2">
+                  <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--brand-primary)" }}>
+                    {item.reason || itemKindLabel(item.item_type)}
+                  </span>
+                  {item.price != null && <strong className="shrink-0 text-xs sm:text-sm" style={{ color: "var(--brand-text)" }}>{money(item.price, currency)}</strong>}
+                </div>
+                <h3 className="line-clamp-2 text-sm font-bold leading-snug break-words" style={{ color: "var(--brand-text)" }}>{item.title}</h3>
+                {item.description && <p className="mt-1 line-clamp-2 text-xs" style={{ color: "var(--brand-text-secondary)" }}>{item.description}</p>}
+                <button
+                  type="button"
+                  disabled={savingItem === key}
+                  onClick={() => onAdd(item)}
+                  className="mt-2 rounded-lg px-3 py-1.5 text-xs font-bold text-white disabled:opacity-60"
+                  style={{ background: "linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))" }}
+                >
+                  {savingItem === key ? "Agregando…" : item.cta || "Agregar"}
+                </button>
+              </div>
             </article>
           );
         })}
@@ -338,12 +358,12 @@ function PromoSection({ promotions = [], coupons = [], currency }) {
   if (!promotions.length && !coupons.length) return null;
   const all = [...promotions, ...coupons];
   return (
-    <section className="glass-panel rounded-3xl p-5 sm:p-6">
-      <h2 className="text-xl font-bold" style={{ color: "var(--brand-text)" }}>Promos y cupones</h2>
-      <p className="mt-1 text-sm" style={{ color: "var(--brand-text-secondary)" }}>
+    <section className="glass-panel rounded-3xl p-4 sm:p-5">
+      <h2 className="text-lg font-bold sm:text-xl" style={{ color: "var(--brand-text)" }}>Promos y cupones</h2>
+      <p className="mt-1 text-xs sm:text-sm" style={{ color: "var(--brand-text-secondary)" }}>
         Visibles desde Airtable. En esta fase no aplican cobro ni checkout real.
       </p>
-      <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+      <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
         {all.map((item) => {
           const discount = item.discount_percent
             ? `${item.discount_percent}% OFF`
@@ -353,14 +373,14 @@ function PromoSection({ promotions = [], coupons = [], currency }) {
                 ? `Desde ${money(item.minimum_purchase, currency)}`
                 : "Beneficio";
           return (
-            <article key={`${item.type}-${item.id}`} className="rounded-2xl border border-white/50 bg-white/70 p-4">
+            <article key={`${item.type}-${item.id}`} className="rounded-2xl border border-white/50 bg-white/75 p-3">
               <div className="mb-2 flex items-center justify-between gap-3">
-                <span className="rounded-full bg-white px-3 py-1 text-[11px] font-bold uppercase tracking-wide" style={{ color: "var(--brand-primary)" }}>{item.type}</span>
-                <strong className="text-sm" style={{ color: "var(--brand-primary)" }}>{discount}</strong>
+                <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--brand-primary)" }}>{item.type}</span>
+                <strong className="text-xs sm:text-sm" style={{ color: "var(--brand-primary)" }}>{discount}</strong>
               </div>
-              <h3 className="font-semibold leading-snug" style={{ color: "var(--brand-text)" }}>{item.title}</h3>
-              {item.description && <p className="mt-2 line-clamp-2 text-sm" style={{ color: "var(--brand-text-secondary)" }}>{item.description}</p>}
-              {item.code && <p className="mt-3 inline-flex rounded-lg bg-slate-100 px-3 py-1 font-mono text-xs" style={{ color: "var(--brand-text)" }}>Cupón: {item.code}</p>}
+              <h3 className="line-clamp-2 text-sm font-bold leading-snug break-words" style={{ color: "var(--brand-text)" }}>{item.title}</h3>
+              {item.description && <p className="mt-1 line-clamp-2 text-xs" style={{ color: "var(--brand-text-secondary)" }}>{item.description}</p>}
+              {item.code && <p className="mt-2 inline-flex max-w-full truncate rounded-lg bg-slate-100 px-2 py-1 font-mono text-[11px]" style={{ color: "var(--brand-text)" }}>Cupón: {item.code}</p>}
             </article>
           );
         })}

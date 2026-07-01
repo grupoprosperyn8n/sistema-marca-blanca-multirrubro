@@ -64,3 +64,11 @@ Backend: Railway `earnest-comfort`
 - Railway: PASS online deployment `5546bd59-fd11-4898-947f-bd28c385c114`
 - Surge: PASS `https://bellezapro-demo.surge.sh`
 - Smoke live: health 200, carrito unauth 401, compras unauth 401, commerce public flags seguros, rutas Surge 200.
+
+## Polish posterior P4 — 2026-07-01
+
+- Agregado botón “Comprar” en tarjetas de servicio del catálogo; si el cliente está logueado agrega el servicio al carrito sandbox, si no redirige a login.
+- Separado el contador del carrito del botón “Mi Portal” en header público y portal.
+- Compactado el carrito mobile-first: cards de upsell/cross-sell/promos más chicas, ordenadas, con imagen cuando el backend la provee.
+- Ajustado portal cliente con hero/cards más compactos para teléfono/tablet/desktop.
+- Validación: `py_compile backend/routes/carrito.py`, `npm run build`, `git diff --check` y secret scan OK.

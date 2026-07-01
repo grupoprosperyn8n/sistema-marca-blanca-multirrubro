@@ -36,19 +36,19 @@ export default function PublicNavbar() {
             </NavLink>
           ))}
           {usuario ? (
-            <div className="ml-3 flex items-center gap-2">
+            <div className="ml-4 flex items-center gap-4">
               {role === ROLES.CLIENTE && (
-                <Link to="/carrito" className="relative rounded-lg bg-white/50 px-3 py-2 text-sm font-semibold" style={{ color: 'var(--brand-text)' }} aria-label={`Carrito con ${count} items`}>
+                <Link to="/carrito" className="inline-flex items-center rounded-xl bg-white/50 px-4 py-2 text-sm font-semibold" style={{ color: 'var(--brand-text)' }} aria-label={`Carrito con ${count} items`}>
                   <span aria-hidden="true">🛒</span>
                   <span className="ml-1">Carrito</span>
                   {count > 0 && (
-                    <span className="absolute -right-2 -top-2 min-w-5 rounded-full px-1.5 py-0.5 text-center text-[10px] font-bold text-white" style={{ background: 'var(--brand-primary)' }}>
+                    <span className="ml-2 min-w-5 rounded-full px-1.5 py-0.5 text-center text-[10px] font-bold text-white" style={{ background: 'var(--brand-primary)' }}>
                       {count}
                     </span>
                   )}
                 </Link>
               )}
-              <Link to="/portal" className="btn-primary text-sm px-4 py-2">
+              <Link to="/portal" className="btn-primary text-sm px-5 py-2.5">
                 Mi Portal
               </Link>
             </div>

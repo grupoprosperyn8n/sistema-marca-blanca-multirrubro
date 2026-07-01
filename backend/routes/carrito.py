@@ -479,17 +479,47 @@ def _marketing_records(at: AirtableClient) -> dict:
 def _cart_recommendations(items: list[dict], maps: dict[str, dict[str, dict]], at: AirtableClient) -> dict:
     in_cart = {(item.get("item_type"), item.get("item_id")) for item in items}
     packs = [
-        {"item_type": "PACK", "item_id": item["id"], "title": item.get("name"), "description": item.get("description"), "price": item.get("price"), "reason": "Upgrade recomendado", "cta": "Sumar pack"}
+        {
+            "item_type": "PACK",
+            "item_id": item["id"],
+            "title": item.get("name"),
+            "description": item.get("description"),
+            "price": item.get("price"),
+            "image": item.get("image"),
+            "category": item.get("category") or "",
+            "reason": "Upgrade",
+            "cta": "Sumar pack",
+        }
         for item in (maps.get("PACK") or {}).values()
         if ("PACK", item.get("id")) not in in_cart and (item.get("allows_purchase") or item.get("allows_reservation"))
     ][:3]
     services = [
-        {"item_type": "SERVICIO_WEB", "item_id": item["id"], "title": item.get("name"), "description": item.get("description"), "price": item.get("price"), "reason": "Servicio complementario", "cta": "Agregar servicio"}
+        {
+            "item_type": "SERVICIO_WEB",
+            "item_id": item["id"],
+            "title": item.get("name"),
+            "description": item.get("description"),
+            "price": item.get("price"),
+            "image": item.get("image"),
+            "category": item.get("category") or "",
+            "reason": "Servicio",
+            "cta": "Agregar",
+        }
         for item in (maps.get("SERVICIO_WEB") or {}).values()
         if ("SERVICIO_WEB", item.get("id")) not in in_cart and item.get("cart_enabled") and item.get("price")
     ][:3]
     products = [
-        {"item_type": "PRODUCTO_WEB", "item_id": item["id"], "title": item.get("nombre_visible"), "description": item.get("descripcion_visible"), "price": item.get("precio_visible"), "reason": "Cross-sell", "cta": "Agregar producto"}
+        {
+            "item_type": "PRODUCTO_WEB",
+            "item_id": item["id"],
+            "title": item.get("nombre_visible"),
+            "description": item.get("descripcion_visible"),
+            "price": item.get("precio_visible"),
+            "image": item.get("imagen_principal"),
+            "category": item.get("categoria_publica") or "",
+            "reason": "Producto",
+            "cta": "Agregar",
+        }
         for item in (maps.get("PRODUCTO_WEB") or {}).values()
         if ("PRODUCTO_WEB", item.get("id")) not in in_cart and item.get("cart_enabled") and item.get("precio_visible")
     ][:3]

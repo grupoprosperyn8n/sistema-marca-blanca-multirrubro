@@ -40,7 +40,7 @@ export default function PortalLayout() {
                 {config.brandName}
               </span>
             </Link>
-            <nav className="hidden sm:flex items-center gap-1">
+            <nav className="hidden sm:flex items-center gap-2">
               <Link
                 to="/portal"
                 className="px-3 py-2 rounded-lg text-sm font-medium bg-white/40"
@@ -51,13 +51,13 @@ export default function PortalLayout() {
               {role === ROLES.CLIENTE && (
                 <Link
                   to="/carrito"
-                  className="relative px-3 py-2 rounded-lg text-sm font-medium hover:bg-white/30 transition-colors"
+                  className="inline-flex items-center px-3 py-2 rounded-lg text-sm font-medium hover:bg-white/30 transition-colors"
                   style={{ color: 'var(--brand-text)' }}
                   aria-label={`Carrito con ${count} items`}
                 >
                   🛒 Carrito
                   {count > 0 && (
-                    <span className="absolute -right-2 -top-1 min-w-5 rounded-full px-1.5 py-0.5 text-center text-[10px] font-bold text-white" style={{ background: 'var(--brand-primary)' }}>
+                    <span className="ml-2 min-w-5 rounded-full px-1.5 py-0.5 text-center text-[10px] font-bold text-white" style={{ background: 'var(--brand-primary)' }}>
                       {count}
                     </span>
                   )}

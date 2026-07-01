@@ -209,41 +209,41 @@ export default function PortalCliente() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 sm:py-10">
+    <div className="mx-auto max-w-7xl px-3 py-5 sm:px-6 sm:py-8">
       {toast && (
         <div className={`fixed right-4 top-20 z-50 rounded-xl px-4 py-3 text-sm font-semibold shadow-lg ${toast.type === "error" ? "bg-rose-50 text-rose-700" : "bg-emerald-50 text-emerald-700"}`}>
           {toast.msg}
         </div>
       )}
 
-      <section className="mb-6 overflow-hidden rounded-3xl p-6 sm:p-8" style={{ background: "linear-gradient(135deg, rgba(255,255,255,.9), rgba(255,255,255,.65))" }}>
+      <section className="mb-5 overflow-hidden rounded-3xl p-5 sm:p-6" style={{ background: "linear-gradient(135deg, rgba(255,255,255,.9), rgba(255,255,255,.65))" }}>
         <p className="text-xs font-bold uppercase tracking-wide" style={{ color: "var(--brand-primary)" }}>Portal cliente</p>
         <div className="mt-2 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h1 className="text-3xl font-extrabold" style={{ color: "var(--brand-text)" }}>
+            <h1 className="text-2xl font-extrabold sm:text-3xl" style={{ color: "var(--brand-text)" }}>
               Hola, {perfil?.NOMBRE_CLIENTE || usuario?.nombre || "Cliente"}
             </h1>
             <p className="mt-2 text-sm" style={{ color: "var(--brand-text-secondary)" }}>
               Gestioná tus turnos, tu carrito y tu historial desde un solo lugar.
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
             <button onClick={() => setShowReservaModal(true)} className="btn-primary px-5 py-3 text-sm">Reservar turno</button>
-            <Link to="/carrito" className="rounded-xl border border-white/60 bg-white/70 px-5 py-3 text-sm font-bold" style={{ color: "var(--brand-text)" }}>🛒 Ver carrito</Link>
+            <Link to="/carrito" className="rounded-xl border border-white/60 bg-white/70 px-5 py-3 text-center text-sm font-bold" style={{ color: "var(--brand-text)" }}>🛒 Ver carrito</Link>
           </div>
         </div>
       </section>
 
-      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="mb-5 grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
         <InfoTile label="Próximas citas" value={citas.proximas?.length || 0} icon="📅" />
         <InfoTile label="Historial" value={citas.historial?.length || 0} icon="🧾" />
         <InfoTile label="Compras" value={historial.total_compras || 0} icon="🛍️" />
         <InfoTile label="Pagos" value={historial.total_pagos || 0} icon="💳" />
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[360px_1fr]">
-        <aside className="space-y-6">
-          <section className="glass-panel rounded-3xl p-6">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[340px_1fr] lg:gap-6">
+        <aside className="space-y-4">
+          <section className="glass-panel rounded-3xl p-5">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h2 className="text-xl font-bold" style={{ color: "var(--brand-text)" }}>Mi ficha</h2>
@@ -265,8 +265,8 @@ export default function PortalCliente() {
           <HistorySection compras={historial.compras || []} pagos={historial.pagos || []} />
         </aside>
 
-        <main className="space-y-6">
-          <section className="glass-panel rounded-3xl p-6">
+        <main className="space-y-4">
+          <section className="glass-panel rounded-3xl p-5 sm:p-6">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <h2 className="text-xl font-bold" style={{ color: "var(--brand-text)" }}>Mis turnos</h2>
@@ -340,9 +340,9 @@ export default function PortalCliente() {
 
 function InfoTile({ label, value, icon }) {
   return (
-    <div className="glass-panel rounded-2xl p-4">
-      <div className="text-2xl">{icon}</div>
-      <div className="mt-2 text-2xl font-extrabold" style={{ color: "var(--brand-text)" }}>{value}</div>
+    <div className="glass-panel rounded-2xl p-3 sm:p-4">
+      <div className="text-xl sm:text-2xl">{icon}</div>
+      <div className="mt-1 text-xl font-extrabold sm:text-2xl" style={{ color: "var(--brand-text)" }}>{value}</div>
       <div className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--brand-text-secondary)" }}>{label}</div>
     </div>
   );

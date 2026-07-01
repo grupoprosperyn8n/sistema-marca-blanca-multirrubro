@@ -4,11 +4,14 @@ import ServiceCard from "../components/ui/ServiceCard";
 import SectionHeader from "../components/ui/SectionHeader";
 import { isPublicService, normalizeServiceCategory, formatPublicName, getPublicServiceImage, toPublicSlug } from "../utils/publicDataFilters";
 import { useBrandConfig } from "../context/BrandConfigContext";
+import { ROLES, useAuth } from "../context/AuthContext";
+import { notifyCartUpdated } from "../hooks/useCartSummary";
 
 const API = import.meta.env.VITE_API_BASE_URL || "";
 
 export default function Catalogo() {
   const { config } = useBrandConfig();
+  const { role, usuario } = useAuth();
   const navigate = useNavigate();
   const [servicios, setServicios] = useState([]);
   const [categoriaActiva, setCategoriaActiva] = useState("Todos");
@@ -16,6 +19,8 @@ export default function Catalogo() {
   const [busqueda, setBusqueda] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [savingService, setSavingService] = useState(null);
+  const [toast, setToast] = useState(null);
 
   useEffect(() => {
     async function cargar() {
@@ -33,6 +38,7 @@ export default function Catalogo() {
           _duracion: s.DURACION_MINUTOS_WEB ?? s.DURACION_MINUTOS ?? null,
           _descripcion: s.DESCRIPCION_WEB || s.DESCRIPCION || '',
           _reserva: s.RESERVA_ONLINE_HABILITADA !== false,
+          _compra: Boolean(s.CARRITO_HABILITADO || s.VENTA_HABILITADA_WEB),
           _imagen: getPublicServiceImage(s),
           _slug: toPublicSlug(s.NOMBRE_PUBLICO_SERVICIO || s.NOMBRE_SERVICIO || s.SERVICIO_NOMBRE) || s.id,
         }));
@@ -61,6 +67,35 @@ export default function Catalogo() {
   });
   const catalogLabel = config?.business?.catalogLabel || "catálogo";
 
+  const showToast = (message, type = "success") => {
+    setToast({ message, type });
+    window.setTimeout(() => setToast(null), 3000);
+  };
+
+  const comprarServicio = async (service) => {
+    if (!usuario || role !== ROLES.CLIENTE) {
+      navigate("/login");
+      return;
+    }
+    setSavingService(service.id);
+    try {
+      const res = await fetch(`${API}/api/carrito/items`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ item_type: "SERVICIO_WEB", service_web_id: service.id, quantity: 1 }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.detail || `Error ${res.status}`);
+      notifyCartUpdated();
+      showToast("Servicio agregado al carrito.");
+    } catch (e) {
+      showToast(e.message || "No se pudo agregar el servicio.", "error");
+    } finally {
+      setSavingService(null);
+    }
+  };
+
   if (loading) return (
     <div className="max-w-7xl mx-auto px-4 py-20 text-center">
       <div className="animate-spin w-8 h-8 border-4 border-t-transparent rounded-full mx-auto" style={{ borderColor: 'var(--brand-secondary)', borderTopColor: 'transparent' }} />
@@ -78,6 +113,12 @@ export default function Catalogo() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-8 py-12">
+      {toast && (
+        <div className={`fixed right-4 top-20 z-50 rounded-xl px-4 py-3 text-sm font-semibold shadow-lg ${toast.type === "error" ? "bg-rose-50 text-rose-700" : "bg-emerald-50 text-emerald-700"}`}>
+          {toast.message}
+        </div>
+      )}
+
       <SectionHeader
         title={config.catalogTitle || `Catálogo de ${config.brandName}`}
         subtitle={config.catalogSubtitle || `Explorá ${String(catalogLabel).toLowerCase()} publicado por el negocio.`}
@@ -141,9 +182,13 @@ export default function Catalogo() {
                 duracion_minutos: sw._duracion,
                 categoria: sw._categoria,
                 reservaHabilitada: sw._reserva,
+                compraHabilitada: sw._compra,
                 imagen: sw._imagen,
                 imagenAlt: sw._nombre,
+                id: sw.id,
               }}
+              buying={savingService === sw.id}
+              onComprar={sw._compra ? comprarServicio : null}
               onReservar={sw._reserva ? () => navigate('/reserva') : null}
               onClick={() => navigate(`/servicios/${sw._slug}`)}
             />
