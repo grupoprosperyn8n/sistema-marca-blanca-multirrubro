@@ -38,7 +38,7 @@ export default function SucursalesPublicas() {
           {config.sucursalesTitle || "Nuestras Sucursales"}
         </h2>
         <p className="text-sm sm:text-base opacity-60" style={{ color: "var(--brand-text)" }}>
-          {config.sucursalesSubtitle || "Consultá sedes, puntos de atención o unidades operativas configuradas."}
+          {config.sucursalesSubtitle || "Consultá las sucursales publicadas para atención presencial, retiro o reservas."}
         </p>
       </div>
 
