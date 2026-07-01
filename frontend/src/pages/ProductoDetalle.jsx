@@ -4,6 +4,7 @@ import ImageCarousel from "../components/ui/ImageCarousel";
 import { useBrandConfig } from "../context/BrandConfigContext";
 import { ROLES, useAuth } from "../context/AuthContext";
 import { notifyCartUpdated } from "../hooks/useCartSummary";
+import { formatPublicName, getPublicServiceImage, isPublicService, normalizeServiceCategory, toPublicSlug } from "../utils/publicDataFilters";
 
 const API = import.meta.env.VITE_API_BASE_URL || "";
 
@@ -17,6 +18,81 @@ function slugify(value) {
     .replace(/[^a-z0-9-]/g, "");
 }
 
+function money(value, currency = "ARS") {
+  if (value == null || value === "") return "";
+  return new Intl.NumberFormat("es-AR", {
+    style: "currency",
+    currency,
+    maximumFractionDigits: Number(value) % 1 === 0 ? 0 : 2,
+  }).format(Number(value));
+}
+
+function imageUrl(image) {
+  const attachment = Array.isArray(image) ? image[0] : image;
+  if (!attachment) return "";
+  if (typeof attachment === "string") return attachment;
+  const thumb = attachment.thumbnails?.large || attachment.thumbnails?.full || attachment.thumbnails?.small;
+  return thumb?.url || attachment.url || "";
+}
+
+function imageList(value) {
+  if (!value) return [];
+  const list = Array.isArray(value) ? value : [value];
+  return list.map(imageUrl).filter(Boolean);
+}
+
+function cleanLabel(value) {
+  const clean = String(value || "").replace(/_/g, " ").trim();
+  return formatPublicName(clean) || clean;
+}
+
+function productCard(item) {
+  const name = cleanLabel(item.nombre_visible || item.NOMBRE_PRODUCTO || item.nombre || "Producto");
+  const routeSlug = slugify(item.slug || name || item.id);
+  return {
+    id: item.id,
+    type: "Producto",
+    name,
+    description: item.descripcion_visible || item.DESCRIPCION_WEB || item.descripcion || "",
+    price: item.precio_visible ?? item.precio_oferta_web ?? item.PRECIO_WEB ?? null,
+    image: imageUrl(item.imagen_principal || item.IMAGEN_PRINCIPAL_PRODUCTO || item.IMAGEN_PRODUCTO),
+    route: `/productos/${routeSlug || item.id}`,
+    cta: "Ver producto",
+  };
+}
+
+function serviceCard(item) {
+  const name = cleanLabel(item.NOMBRE_PUBLICO_SERVICIO || item.NOMBRE_SERVICIO || item.SERVICIO_NOMBRE || "Servicio");
+  const image = getPublicServiceImage(item);
+  return {
+    id: item.id,
+    type: "Servicio",
+    name,
+    description: item.DESCRIPCION_WEB || item.DESCRIPCION || "",
+    price: item.PRECIO_WEB ?? item.PRECIO_PUBLICITADO_WEB ?? item.PRECIO_BASE ?? null,
+    image: image?.url || "",
+    route: `/servicios/${toPublicSlug(name) || item.id}`,
+    category: normalizeServiceCategory(item),
+    cta: "Ver servicio",
+  };
+}
+
+function benefitValue(item, currency = "ARS") {
+  if (item.discount_percent) return `${Number(item.discount_percent).toLocaleString("es-AR")}% OFF`;
+  if (item.discount_amount) return `${money(item.discount_amount, currency)} OFF`;
+  if (item.price_promo) return money(item.price_promo, currency);
+  if (item.minimum_purchase) return `Desde ${money(item.minimum_purchase, currency)}`;
+  return "Beneficio";
+}
+
+function benefitIcon(type) {
+  const normalized = String(type || "").toUpperCase();
+  if (normalized.includes("CUPON")) return "🏷️";
+  if (normalized.includes("PROMO")) return "🎁";
+  if (normalized.includes("PACK")) return "✨";
+  return "💡";
+}
+
 export default function ProductoDetalle() {
   const { slug } = useParams();
   const navigate = useNavigate();
@@ -24,6 +100,8 @@ export default function ProductoDetalle() {
   const { role, usuario } = useAuth();
   const [producto, setProducto] = useState(null);
   const [commerce, setCommerce] = useState(null);
+  const [relatedProducts, setRelatedProducts] = useState([]);
+  const [relatedServices, setRelatedServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [cartLoading, setCartLoading] = useState(false);
@@ -32,15 +110,17 @@ export default function ProductoDetalle() {
   useEffect(() => {
     async function cargar() {
       try {
-        const [productosRes, commerceRes] = await Promise.all([
+        const [productosRes, commerceRes, serviciosRes] = await Promise.all([
           fetch(`${API}/api/productos-web`, { cache: "no-store" }),
           fetch(`${API}/api/commerce/public`, { cache: "no-store" }).catch(() => null),
+          fetch(`${API}/api/servicios-web`, { cache: "no-store" }).catch(() => null),
         ]);
         if (!productosRes.ok) throw new Error(`HTTP ${productosRes.status}`);
         const data = await productosRes.json();
         const commerceData = commerceRes?.ok ? await commerceRes.json() : null;
+        const servicesData = serviciosRes?.ok ? await serviciosRes.json() : null;
         const raw = Array.isArray(data) ? data : data.productos || [];
-        
+
         const match = raw.find(p => {
           const nombreSlug = slugify(p.nombre_visible);
           const apiSlug = slugify(p.slug);
@@ -52,20 +132,27 @@ export default function ProductoDetalle() {
           return;
         }
 
+        const productImages = [imageUrl(match.imagen_principal), ...imageList(match.imagenes_secundarias)].filter(Boolean);
         setProducto({
           id: match.id,
-          nombre: match.nombre_visible || "Producto",
+          nombre: cleanLabel(match.nombre_visible || "Producto"),
           descripcion: match.descripcion_visible || "",
           precio: match.precio_visible ?? match.precio_oferta_web ?? null,
           precioOferta: match.precio_oferta_web || null,
-          categoria: match.categoria_publica || null,
-          imagen: match.imagen_principal?.url || null,
-          imagenes: match.imagenes_secundarias || [],
+          categoria: cleanLabel(match.categoria_publica || ""),
+          imagen: productImages[0] || null,
+          imagenes: productImages.slice(1),
           disponibilidad: match.disponibilidad_visible || null,
           cta: match.cta || null,
           cartEnabled: Boolean(match.cart_enabled || match.purchase_enabled),
         });
         setCommerce(commerceData);
+        setRelatedProducts(raw.filter(item => item.id !== match.id).slice(0, 3).map(productCard));
+
+        const rawServices = Array.isArray(servicesData)
+          ? servicesData
+          : servicesData?.servicios_web || servicesData?.servicios || [];
+        setRelatedServices(rawServices.filter(isPublicService).slice(0, 3).map(serviceCard));
       } catch (e) {
         setError(e.message);
       } finally {
@@ -76,16 +163,17 @@ export default function ProductoDetalle() {
   }, [slug]);
 
   if (loading) return (
-    <div className="max-w-4xl mx-auto px-4 py-20 text-center">
-      <div className="animate-spin w-8 h-8 border-4 border-t-transparent rounded-full mx-auto" style={{ borderColor: "var(--brand-secondary)", borderTopColor: "transparent" }} />
+    <div className="mx-auto max-w-4xl px-4 py-20 text-center">
+      <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-t-transparent" style={{ borderColor: "var(--brand-secondary)", borderTopColor: "transparent" }} />
+      <p className="mt-3 text-sm" style={{ color: "var(--brand-text-secondary)" }}>Cargando producto…</p>
     </div>
   );
 
   if (error) return (
-    <div className="max-w-4xl mx-auto px-4 py-20 text-center">
-      <div className="glass-panel inline-block px-8 py-6 rounded-2xl">
+    <div className="mx-auto max-w-4xl px-4 py-20 text-center">
+      <div className="glass-panel inline-block rounded-2xl px-8 py-6">
         <p className="text-rose-500">{error}</p>
-        <button onClick={() => navigate("/productos")} className="mt-4 text-sm underline" style={{ color: "var(--brand-primary)" }}>Volver a productos</button>
+        <button type="button" onClick={() => navigate("/productos")} className="mt-4 text-sm underline" style={{ color: "var(--brand-primary)" }}>Volver a productos</button>
       </div>
     </div>
   );
@@ -93,13 +181,10 @@ export default function ProductoDetalle() {
   const p = producto;
   const todasImagenes = [p.imagen, ...(p.imagenes || [])].filter(Boolean);
   const whatsappDigits = String(config.whatsapp || "").replace(/\D/g, "");
-  const contactMessage = `Hola, quiero consultar por el producto ${p.nombre}`;
-  const contactHref = whatsappDigits
-    ? `https://wa.me/${whatsappDigits}?text=${encodeURIComponent(contactMessage)}`
-    : config.email
-      ? `mailto:${config.email}?subject=${encodeURIComponent(`Consulta por ${p.nombre}`)}`
-      : null;
-  const contactLabel = p.cta || (contactHref ? "Consultar Producto" : "Ver Más Productos");
+  const whatsappHref = whatsappDigits
+    ? `https://wa.me/${whatsappDigits}?text=${encodeURIComponent(`Hola, quiero consultar por el producto ${p.nombre}`)}`
+    : null;
+  const relatedCtaLabel = p.cta || "Ver servicios relacionados";
   const canUseSandboxCart = usuario && role === ROLES.CLIENTE;
   const sandboxCartEnabled = commerce?.cart_enabled && p.cartEnabled;
   const suggestions = [
@@ -107,205 +192,271 @@ export default function ProductoDetalle() {
     ...(commerce?.promotions || []),
     ...(commerce?.coupons || []),
   ].slice(0, 4);
+  const relatedItems = [...relatedProducts, ...relatedServices].slice(0, 6);
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-8 py-12">
-      <button type="button" onClick={() => navigate(-1)} className="mb-6 text-sm opacity-60 hover:opacity-100 flex items-center gap-1" style={{ color: "var(--brand-text)" }}>
+    <main className="mx-auto max-w-6xl overflow-x-hidden px-3 py-5 sm:px-6 sm:py-8 lg:py-10">
+      <button
+        type="button"
+        onClick={() => navigate(-1)}
+        className="mb-4 inline-flex items-center gap-1 rounded-full bg-white/60 px-3 py-2 text-sm font-semibold opacity-80 transition-opacity hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300"
+        style={{ color: "var(--brand-text)" }}
+      >
         ← Volver
       </button>
 
-      <div className="glass-panel rounded-3xl overflow-hidden" style={{ background: "rgba(255,255,255,0.85)" }}>
-        {/* Image section */}
-        {todasImagenes.length > 0 ? (
-          <ImageCarousel images={todasImagenes} alt={p.nombre} />
-        ) : (
-          <div className="w-full h-64 sm:h-80 flex items-center justify-center" style={{ background: "linear-gradient(135deg, #e0f2fe, #bae6fd)" }}>
-            <span className="text-6xl">💄</span>
-          </div>
-        )}
-
-        <div className="p-6 sm:p-8">
-          {p.categoria && (
-            <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold mb-4" style={{ background: "var(--brand-secondary)33", color: "var(--brand-primary)" }}>
-              {p.categoria.replace(/_/g, " ")}
-            </span>
-          )}
-
-          <h1 className="text-3xl sm:text-4xl font-bold mb-4" style={{ color: "var(--brand-text)" }}>{p.nombre}</h1>
-
-          <div className="flex flex-wrap gap-4 mb-6">
-            {p.precio != null && (
-              <div className="flex items-center gap-2 px-4 py-2 rounded-xl" style={{ background: "rgba(0,102,134,0.08)" }}>
-                <span className="text-2xl font-bold" style={{ color: "var(--brand-primary)" }}>
-                  ${Number(p.precio).toLocaleString("es-AR", { minimumFractionDigits: p.precio % 1 !== 0 ? 2 : 0 })}
-                </span>
-              </div>
-            )}
-            {p.disponibilidad && (
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium px-3 py-1.5 rounded-full" style={{ background: "#dcfce7", color: "#166534" }}>
-                  {p.disponibilidad === "EN_STOCK" ? "Disponible" : p.disponibilidad}
-                </span>
-              </div>
-            )}
-          </div>
-
-          {p.descripcion && (
-            <div className="mb-8">
-              <h3 className="text-lg font-semibold mb-2" style={{ color: "var(--brand-text)" }}>Descripción</h3>
-              <p className="text-sm leading-relaxed opacity-70" style={{ color: "var(--brand-text)" }}>{p.descripcion}</p>
-            </div>
-          )}
-
-          <div className="flex flex-col sm:flex-row gap-3">
-            {sandboxCartEnabled && (
-              canUseSandboxCart ? (
-                <button
-                  type="button"
-                  disabled={cartLoading}
-                  onClick={async () => {
-                    setCartLoading(true);
-                    setCartMessage(null);
-                    try {
-                      const res = await fetch(`${API}/api/carrito/items`, {
-                        method: "POST",
-                        credentials: "include",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ product_id: p.id, quantity: 1 }),
-                      });
-                      const body = await res.json().catch(() => ({}));
-                      if (!res.ok) throw new Error(body.detail || `Error ${res.status}`);
-                      notifyCartUpdated();
-                      setCartMessage({ type: "success", text: "Producto agregado al carrito sandbox." });
-                    } catch (e) {
-                      setCartMessage({ type: "error", text: e.message || "No se pudo agregar al carrito." });
-                    } finally {
-                      setCartLoading(false);
-                    }
-                  }}
-                  className="px-6 py-3 rounded-xl font-semibold text-sm text-center transition-opacity hover:opacity-90 disabled:opacity-60"
-                  style={{ background: "linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))", color: "#fff" }}
-                >
-                  {cartLoading ? "Agregando…" : "Agregar al carrito"}
-                </button>
-              ) : (
-                <Link
-                  to="/login"
-                  className="px-6 py-3 rounded-xl font-semibold text-sm text-center transition-opacity hover:opacity-90"
-                  style={{ background: "linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))", color: "#fff" }}
-                >
-                  Ingresar para comprar
-                </Link>
-              )
-            )}
-            {contactHref ? (
-              <a
-                href={contactHref}
-                target={whatsappDigits ? "_blank" : undefined}
-                rel={whatsappDigits ? "noreferrer" : undefined}
-                className="px-6 py-3 rounded-xl font-semibold text-sm text-center transition-opacity hover:opacity-90"
-                style={{ background: "linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))", color: "#fff" }}
-              >
-                {contactLabel}
-              </a>
+      <section className="glass-panel overflow-hidden rounded-[2rem] bg-white/85 shadow-sm">
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,0.95fr)_minmax(320px,1.05fr)]">
+          <div className="bg-gradient-to-br from-sky-50 via-white to-cyan-50">
+            {todasImagenes.length > 0 ? (
+              <ImageCarousel
+                images={todasImagenes}
+                alt={p.nombre}
+                mediaClassName="h-72 sm:h-80 lg:h-[460px]"
+                imageClassName="h-full w-full object-contain p-4 sm:p-6 lg:p-8"
+              />
             ) : (
-              <Link
-                to="/productos"
-                className="px-6 py-3 rounded-xl font-semibold text-sm text-center transition-opacity hover:opacity-90"
-                style={{ background: "linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))", color: "#fff" }}
-              >
-                {contactLabel}
-              </Link>
+              <div className="flex h-72 items-center justify-center sm:h-80 lg:h-[460px]">
+                <span className="text-6xl" aria-hidden="true">💄</span>
+              </div>
             )}
-            <button
-              type="button"
-              onClick={() => navigate("/productos")}
-              className="px-6 py-3 rounded-xl font-semibold text-sm border transition-all hover:bg-white/60"
-              style={{ color: "var(--brand-text)", borderColor: "#d1d5db" }}
-            >
-              Ver más productos
-            </button>
           </div>
 
-          {cartMessage && (
-            <div
-              className="mt-4 rounded-xl px-4 py-3 text-sm font-semibold"
-              style={{
-                background: cartMessage.type === "error" ? "#fff1f2" : "#ecfdf5",
-                color: cartMessage.type === "error" ? "#be123c" : "#047857",
-              }}
-            >
-              {cartMessage.text}
-              {cartMessage.type === "success" && (
-                <Link to="/carrito" className="ml-2 underline">Ver carrito</Link>
+          <div className="flex min-w-0 flex-col p-4 sm:p-6 lg:p-8">
+            <div className="min-w-0 flex-1">
+              <div className="mb-3 flex flex-wrap items-center gap-2">
+                {p.categoria && (
+                  <span className="rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wide" style={{ background: "var(--brand-secondary)33", color: "var(--brand-primary)" }}>
+                    {p.categoria}
+                  </span>
+                )}
+                {p.disponibilidad && (
+                  <span className="rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-bold text-emerald-700">
+                    {p.disponibilidad === "EN_STOCK" ? "Disponible" : cleanLabel(p.disponibilidad)}
+                  </span>
+                )}
+              </div>
+
+              <h1 className="text-balance text-2xl font-extrabold leading-tight break-words sm:text-3xl lg:text-4xl" style={{ color: "var(--brand-text)" }}>
+                {p.nombre}
+              </h1>
+
+              {p.precio != null && (
+                <div className="mt-4 inline-flex items-baseline gap-2 rounded-2xl px-4 py-2" style={{ background: "rgba(0,102,134,0.08)" }}>
+                  <span className="text-xs font-bold uppercase tracking-wide" style={{ color: "var(--brand-primary)" }}>Precio</span>
+                  <strong className="text-2xl font-extrabold tabular-nums sm:text-3xl" style={{ color: "var(--brand-primary)" }}>
+                    {money(p.precio)}
+                  </strong>
+                </div>
+              )}
+
+              {p.descripcion && (
+                <div className="mt-5 rounded-2xl bg-white/70 p-4">
+                  <h2 className="text-sm font-bold uppercase tracking-wide" style={{ color: "var(--brand-primary)" }}>Descripción</h2>
+                  <p className="mt-2 text-sm leading-relaxed" style={{ color: "var(--brand-text-secondary)" }}>{p.descripcion}</p>
+                </div>
               )}
             </div>
-          )}
 
-          <p className="mt-6 text-xs opacity-50 text-center" style={{ color: "var(--brand-text)" }}>
-            {p.cartEnabled
-              ? "Carrito sandbox activo. Checkout, pagos y caja/POS todavía no están habilitados."
-              : "Este producto se consulta por el canal configurado del negocio."}
-          </p>
-        </div>
-      </div>
+            <div className="mt-5 rounded-3xl border border-white/60 bg-white/70 p-3 sm:p-4">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {sandboxCartEnabled && (
+                  canUseSandboxCart ? (
+                    <button
+                      type="button"
+                      disabled={cartLoading}
+                      onClick={async () => {
+                        setCartLoading(true);
+                        setCartMessage(null);
+                        try {
+                          const res = await fetch(`${API}/api/carrito/items`, {
+                            method: "POST",
+                            credentials: "include",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ product_id: p.id, quantity: 1 }),
+                          });
+                          const body = await res.json().catch(() => ({}));
+                          if (!res.ok) throw new Error(body.detail || `Error ${res.status}`);
+                          notifyCartUpdated();
+                          setCartMessage({ type: "success", text: "Producto agregado al carrito sandbox." });
+                        } catch (e) {
+                          setCartMessage({ type: "error", text: e.message || "No se pudo agregar al carrito." });
+                        } finally {
+                          setCartLoading(false);
+                        }
+                      }}
+                      className="touch-manipulation rounded-2xl px-5 py-3 text-center text-sm font-bold text-white transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 disabled:opacity-60 sm:col-span-2"
+                      style={{ background: "linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))" }}
+                    >
+                      {cartLoading ? "Agregando…" : "Agregar al carrito"}
+                    </button>
+                  ) : (
+                    <Link
+                      to="/login"
+                      className="touch-manipulation rounded-2xl px-5 py-3 text-center text-sm font-bold text-white transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 sm:col-span-2"
+                      style={{ background: "linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))" }}
+                    >
+                      Ingresar para comprar
+                    </Link>
+                  )
+                )}
 
-      {suggestions.length > 0 && (
-        <section className="mt-8 glass-panel rounded-3xl p-6 sm:p-8">
-          <div className="mb-5 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--brand-primary)" }}>
-                Venta inteligente
-              </p>
-              <h2 className="text-xl font-bold" style={{ color: "var(--brand-text)" }}>
-                Packs, promos y beneficios relacionados
-              </h2>
-              <p className="mt-1 text-sm" style={{ color: "var(--brand-text-secondary)" }}>
-                Lectura comercial desde Airtable. Sin carrito, checkout ni pago activo en esta fase.
+                <Link
+                  to="/catalogo"
+                  className="touch-manipulation rounded-2xl border border-white/70 bg-white/80 px-4 py-3 text-center text-sm font-bold transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300"
+                  style={{ color: "var(--brand-text)" }}
+                >
+                  {relatedCtaLabel}
+                </Link>
+
+                <Link
+                  to="/productos"
+                  className="touch-manipulation rounded-2xl border border-white/70 bg-white/80 px-4 py-3 text-center text-sm font-bold transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300"
+                  style={{ color: "var(--brand-text)" }}
+                >
+                  Ver más productos
+                </Link>
+
+                {whatsappHref && (
+                  <a
+                    href={whatsappHref}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="touch-manipulation rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-center text-sm font-bold text-emerald-700 transition-colors hover:bg-emerald-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 sm:col-span-2"
+                  >
+                    Consultar por WhatsApp
+                  </a>
+                )}
+              </div>
+
+              {cartMessage && (
+                <div
+                  className="mt-3 rounded-2xl px-4 py-3 text-sm font-semibold"
+                  role={cartMessage.type === "error" ? "alert" : "status"}
+                  aria-live="polite"
+                  style={{
+                    background: cartMessage.type === "error" ? "#fff1f2" : "#ecfdf5",
+                    color: cartMessage.type === "error" ? "#be123c" : "#047857",
+                  }}
+                >
+                  {cartMessage.text}
+                  {cartMessage.type === "success" && (
+                    <Link to="/carrito" className="ml-2 underline">Ver carrito</Link>
+                  )}
+                </div>
+              )}
+
+              <p className="mt-3 text-center text-xs leading-relaxed" style={{ color: "var(--brand-text-secondary)" }}>
+                {p.cartEnabled
+                  ? "Carrito sandbox activo. Checkout, pagos y caja/POS siguen desactivados."
+                  : "Este producto se consulta por los canales configurados del negocio."}
               </p>
             </div>
           </div>
+        </div>
+      </section>
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            {suggestions.map((item) => {
-              const discount = item.discount_percent
-                ? `${item.discount_percent}% OFF`
-                : item.discount_amount
-                  ? `$${Number(item.discount_amount).toLocaleString("es-AR")} OFF`
-                  : item.price_promo
-                    ? `$${Number(item.price_promo).toLocaleString("es-AR")}`
-                    : "";
-              return (
-                <article key={`${item.type}-${item.id}`} className="rounded-2xl border border-white/50 bg-white/70 p-4">
-                  <div className="mb-2 flex items-center justify-between gap-3">
-                    <span className="rounded-full bg-white px-3 py-1 text-[11px] font-bold uppercase tracking-wide" style={{ color: "var(--brand-primary)" }}>
-                      {item.type}
-                    </span>
-                    {discount && (
-                      <span className="text-sm font-bold" style={{ color: "var(--brand-primary)" }}>
-                        {discount}
-                      </span>
-                    )}
-                  </div>
-                  <h3 className="font-semibold leading-snug" style={{ color: "var(--brand-text)" }}>
-                    {item.title}
-                  </h3>
-                  {item.description && (
-                    <p className="mt-2 line-clamp-2 text-sm" style={{ color: "var(--brand-text-secondary)" }}>
-                      {item.description}
-                    </p>
-                  )}
-                  {item.code && (
-                    <p className="mt-3 inline-flex rounded-lg bg-slate-100 px-3 py-1 font-mono text-xs" style={{ color: "var(--brand-text)" }}>
-                      Cupón: {item.code}
-                    </p>
-                  )}
-                </article>
-              );
-            })}
-          </div>
-        </section>
-      )}
-    </div>
+      {relatedItems.length > 0 && <RelatedItemsSection items={relatedItems} />}
+      {suggestions.length > 0 && <BenefitsSection items={suggestions} />}
+    </main>
+  );
+}
+
+function RelatedItemsSection({ items }) {
+  return (
+    <section className="mt-5 glass-panel rounded-[2rem] p-4 sm:p-5 lg:p-6">
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-wide" style={{ color: "var(--brand-primary)" }}>Cross-sell real</p>
+          <h2 className="text-xl font-extrabold sm:text-2xl" style={{ color: "var(--brand-text)" }}>Completá tu rutina</h2>
+        </div>
+        <p className="max-w-md text-xs sm:text-right" style={{ color: "var(--brand-text-secondary)" }}>
+          Productos y servicios publicados desde Airtable, sin datos ficticios.
+        </p>
+      </div>
+
+      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {items.map(item => (
+          <Link
+            key={`${item.type}-${item.id}`}
+            to={item.route}
+            className="group flex min-w-0 gap-3 rounded-3xl border border-white/60 bg-white/75 p-3 transition-transform hover:-translate-y-0.5 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300"
+          >
+            <div className="h-24 w-24 shrink-0 overflow-hidden rounded-2xl bg-slate-100 sm:h-28 sm:w-28">
+              {item.image ? (
+                <img src={item.image} alt={item.name} width="224" height="224" loading="lazy" className="h-full w-full object-cover" />
+              ) : (
+                <span className="flex h-full items-center justify-center text-3xl" aria-hidden="true">✨</span>
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="mb-1 flex flex-wrap items-center gap-2">
+                <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--brand-primary)" }}>{item.type}</span>
+                {item.category && <span className="rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-bold text-sky-700">{item.category}</span>}
+              </div>
+              <h3 className="line-clamp-2 break-words text-sm font-extrabold leading-snug" style={{ color: "var(--brand-text)" }}>{item.name}</h3>
+              {item.description && <p className="mt-1 line-clamp-2 text-xs" style={{ color: "var(--brand-text-secondary)" }}>{item.description}</p>}
+              <div className="mt-2 flex items-center justify-between gap-2">
+                {item.price != null ? <strong className="text-sm tabular-nums" style={{ color: "var(--brand-text)" }}>{money(item.price)}</strong> : <span />}
+                <span className="text-xs font-bold" style={{ color: "var(--brand-primary)" }}>{item.cta} →</span>
+              </div>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function BenefitsSection({ items }) {
+  return (
+    <section className="mt-5 glass-panel rounded-[2rem] p-4 sm:p-5 lg:p-6">
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-wide" style={{ color: "var(--brand-primary)" }}>Venta inteligente</p>
+          <h2 className="text-xl font-extrabold sm:text-2xl" style={{ color: "var(--brand-text)" }}>Packs, promos y beneficios</h2>
+        </div>
+        <p className="max-w-md text-xs sm:text-right" style={{ color: "var(--brand-text-secondary)" }}>
+          Reglas comerciales desde Airtable. Checkout y pagos reales siguen bloqueados.
+        </p>
+      </div>
+
+      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {items.map(item => {
+          const img = imageUrl(item.image);
+          const label = cleanLabel(item.type || "Beneficio");
+          const title = cleanLabel(item.title || item.name || "Beneficio disponible");
+          return (
+            <article key={`${item.type}-${item.id}`} className="min-w-0 rounded-3xl border border-white/60 bg-white/75 p-3">
+              <div className="mb-3 h-28 overflow-hidden rounded-2xl bg-gradient-to-br from-sky-50 to-cyan-100">
+                {img ? (
+                  <img src={img} alt={title} width="320" height="180" loading="lazy" className="h-full w-full object-cover" />
+                ) : (
+                  <span className="flex h-full items-center justify-center text-4xl" aria-hidden="true">{benefitIcon(item.type)}</span>
+                )}
+              </div>
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <span className="max-w-[65%] truncate rounded-full bg-white px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--brand-primary)" }}>{label}</span>
+                <strong className="shrink-0 text-xs" style={{ color: "var(--brand-primary)" }}>{benefitValue(item)}</strong>
+              </div>
+              <h3 className="line-clamp-2 break-words text-sm font-extrabold leading-snug" style={{ color: "var(--brand-text)" }}>{title}</h3>
+              {item.description && <p className="mt-1 line-clamp-2 text-xs" style={{ color: "var(--brand-text-secondary)" }}>{cleanLabel(item.description)}</p>}
+              {item.code && (
+                <p className="mt-2 inline-flex max-w-full truncate rounded-xl bg-slate-100 px-2 py-1 font-mono text-[11px]" style={{ color: "var(--brand-text)" }}>
+                  Cupón: {item.code}
+                </p>
+              )}
+              <Link
+                to="/catalogo"
+                className="mt-3 inline-flex w-full justify-center rounded-xl px-3 py-2 text-xs font-bold text-white transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300"
+                style={{ background: "linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))" }}
+              >
+                {item.cta ? cleanLabel(item.cta) : "Ver beneficio"}
+              </Link>
+            </article>
+          );
+        })}
+      </div>
+    </section>
   );
 }

@@ -72,3 +72,11 @@ Backend: Railway `earnest-comfort`
 - Compactado el carrito mobile-first: cards de upsell/cross-sell/promos más chicas, ordenadas, con imagen cuando el backend la provee.
 - Ajustado portal cliente con hero/cards más compactos para teléfono/tablet/desktop.
 - Validación: `py_compile backend/routes/carrito.py`, `npm run build`, `git diff --check` y secret scan OK.
+
+## Polish producto individual — 2026-07-01
+
+- Rediseñada la página individual de producto mobile-first: imagen acotada, layout compacto en mobile/tablet/desktop, CTAs claros y sección comercial más ordenada.
+- El CTA configurado en Airtable (por ejemplo “Ver tratamiento capilar”) ahora navega a `/catalogo` en vez de disparar mailto/apps externas.
+- Agregado cross-sell real desde Airtable con productos y servicios publicados, usando imágenes reales cuando existen.
+- Compactadas promos/cupones/packs con cards chicas, títulos normalizados, truncado seguro y CTA consistente.
+- Límites respetados: sin pagos, sin checkout, sin caja/POS, sin `RESERVAS`, sin schema Airtable, sin tocar secretos/env.
