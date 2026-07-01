@@ -7,7 +7,7 @@ Backend: Railway `earnest-comfort`
 ## Estado
 
 - Fase: PORTAL_CLIENTE_UX_COMMERCE_P4
-- Estado local: completado con build/py_compile OK; pendiente deploy/commit final.
+- Estado: completado, commiteado, pusheado y desplegado.
 - Dominio canónico comercial: `bellezapro-demo.surge.sh`.
 
 ## Implementado
@@ -56,7 +56,11 @@ Backend: Railway `earnest-comfort`
 
 ## Próximo paso recomendado
 
-- Deploy Railway + Surge.
-- Smoke live mínimo.
-- Commit/push final.
-- Luego abrir contrato P5 para checkout/pagos/caja/POS antes de cualquier pago real.
+- Abrir contrato P5 para checkout/pagos/caja/POS antes de cualquier pago real.
+
+## Deploy final
+
+- Commit principal: `b07ab91`
+- Railway: PASS online deployment `5546bd59-fd11-4898-947f-bd28c385c114`
+- Surge: PASS `https://bellezapro-demo.surge.sh`
+- Smoke live: health 200, carrito unauth 401, compras unauth 401, commerce public flags seguros, rutas Surge 200.

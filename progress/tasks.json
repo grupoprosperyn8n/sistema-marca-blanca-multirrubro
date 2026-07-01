@@ -1,6 +1,6 @@
 {
   "project": "sistema-marca-blanca-multirrubro",
-  "fase_actual": "PORTAL_CLIENTE_UX_COMMERCE_P4 — CERRADA_COMMIT_PENDIENTE_DEPLOY",
+  "fase_actual": "PORTAL_CLIENTE_UX_COMMERCE_P4 — CERRADA_QA_DEPLOY",
   "fase_siguiente": "COMMERCE_CHECKOUT_PAYMENTS_POS_CONTRACT_P5 (solo diseño/contrato; requiere aprobación explícita antes de pagos reales)",
   "tareas": {
     "FASE_3B_PORTAL_CLIENTE": {
@@ -430,7 +430,7 @@
       "notes": "Checkout, pagos y caja/POS permanecen desactivados. Se crearon escrituras QA mínimas autorizadas en CARRITOS/CARRITO_ITEMS; los items QA se bajaron lógicamente con ESTADO_ITEM_CARRITO=CANCELADO."
     },
     "PORTAL_CLIENTE_UX_COMMERCE_P4": {
-      "status": "completed_committed_pending_deploy",
+      "status": "completed_deployed",
       "closed_at": "2026-06-30",
       "commits": [
         "final_commit_reported_in_chat"
@@ -457,7 +457,15 @@
         "local_get_compras_sin_auth": "401_PASS",
         "local_commerce_public": "PASS_CART_TRUE_CHECKOUT_PAYMENTS_POS_FALSE",
         "local_servicios_web": "PASS_9_TOTAL_9_CART_8_IMAGES",
-        "local_sucursales_publicas": "NO_PUBLIC_ACTIVE_REAL_BRANCHES_DATA_ISSUE"
+        "local_sucursales_publicas": "NO_PUBLIC_ACTIVE_REAL_BRANCHES_DATA_ISSUE",
+        "railway_status": "ONLINE_DEPLOYMENT_5546bd59",
+        "surge_deploy_bellezapro": "PASS",
+        "live_health": "200_PASS",
+        "live_get_carrito_sin_auth": "401_PASS",
+        "live_get_compras_sin_auth": "401_PASS",
+        "live_commerce_public": "PASS_CART_TRUE_CHECKOUT_PAYMENTS_POS_FALSE",
+        "live_servicios_web": "PASS_9_TOTAL_9_CART_8_IMAGES",
+        "live_routes_surge": "PASS_200_HOME_CARRITO_PORTAL_SERVICIO_PRODUCTOS"
       },
       "secrets_free": true,
       "env_files_touched": false,
@@ -467,7 +475,11 @@
       "schema_changes": false,
       "delete_fisico": false,
       "commerce_writes": "ONLY_CARRITOS_AND_CARRITO_ITEMS_QA_SANDBOX",
-      "notes": "P4 mejora UX y matching de comercio/portal. Historial de compras/pagos es read-only. No hay sucursal pública real activa en Airtable; no se modificó porque el bloque no autoriza datos reales/schema."
+      "notes": "P4 mejora UX y matching de comercio/portal. Historial de compras/pagos es read-only. No hay sucursal pública real activa en Airtable; no se modificó porque el bloque no autoriza datos reales/schema.",
+      "deploy": {
+        "backend_railway": "PASS_ONLINE_DEPLOYMENT_5546bd59",
+        "frontend_surge": "PASS_https://bellezapro-demo.surge.sh"
+      }
     }
   },
   "deploys_activos": {
