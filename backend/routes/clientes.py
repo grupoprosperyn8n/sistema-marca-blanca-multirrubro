@@ -39,7 +39,7 @@ _BACKOFFICE_CLIENTES_FIELDS = {
 
 _CAMPOS_EDITABLES_CLIENTE = {
     "NOMBRE_CLIENTE", "TELEFONO", "DOCUMENTO_IDENTIDAD",
-    "CALLE_Y_N°", "LOCALIDAD", "PROVINCIA/PAIS", "CODIGO_POSTAL",
+    "CALLE_Y_N°", "LOCALIDAD", "PROVINCIA/PAIS", "CODIGO POSTAL", "CODIGO_POSTAL",
     "PREFERENCIAS_SERVICIOS", "ACEPTA_COMUNICACIONES", "FECHA_NACIMIENTO",
 }
 
@@ -157,6 +157,142 @@ def _format_cliente_record(record: dict, extra: dict | None = None) -> dict:
         data.update(extra)
     data.update(fields)
     return data
+
+
+def _first_link_id(value) -> str:
+    ids = _as_id_list(value)
+    return ids[0] if ids else ""
+
+
+def _text(value, default="") -> str:
+    return str(value or default).strip()
+
+
+def _number(value, default=0):
+    try:
+        if value is None or value == "":
+            return default
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _format_linked_name(table_name: str, fields: dict, fallback: str = "") -> str:
+    if table_name == "CLIENTES":
+        return _text(fields.get("NOMBRE_CLIENTE") or fields.get("EMAIL") or fallback)
+    if table_name == "SERVICIOS":
+        return _text(fields.get("NOMBRE_PUBLICO_SERVICIO") or fields.get("NOMBRE_SERVICIO") or fallback)
+    if table_name == "EMPLEADOS":
+        return _text(
+            fields.get("NOMBRE_EMPLEADO")
+            or fields.get("NOMBRE_COMPLETO")
+            or fields.get("NOMBRE")
+            or fields.get("EMAIL")
+            or fallback
+        )
+    if table_name == "SUCURSALES":
+        return _text(fields.get("NOMBRE_SUCURSAL") or fields.get("NOMBRE") or fallback)
+    if table_name == "AGENDA_SLOTS":
+        return _text(fields.get("NOMBRE_SLOT") or fallback)
+    return _text(fallback)
+
+
+def _linked_fields(at: AirtableClient, table_name: str, record_id: str, cache: dict) -> dict:
+    if not record_id:
+        return {}
+    if not str(record_id).startswith("rec"):
+        return {"_display": str(record_id)}
+    key = (table_name, record_id)
+    if key not in cache:
+        try:
+            cache[key] = at.get_record(table_name, record_id).get("fields", {})
+        except Exception:
+            cache[key] = {}
+    return cache[key]
+
+
+def _linked_name(at: AirtableClient, table_name: str, value, cache: dict) -> str:
+    record_id = _first_link_id(value)
+    if not record_id:
+        return ""
+    fields = _linked_fields(at, table_name, record_id, cache)
+    if fields.get("_display"):
+        return fields["_display"]
+    return _format_linked_name(table_name, fields, record_id)
+
+
+def _format_cita_cliente(at: AirtableClient, record: dict, cache: dict) -> dict:
+    fields = record.get("fields", {})
+    campos_internos = {
+        "OBSERVACIONES_INTERNAS", "DIAGNOSTICO_PREVIO", "REQUIERE_DIAGNOSTICO",
+        "REQUIERE_CONSENTIMIENTO", "CONSENTIMIENTO_FIRMADO", "REQUIERE_PRUEBA_ALERGIA",
+        "PRUEBA_ALERGIA_REALIZADA", "MOTIVO_CANCELACION", "FECHA_CANCELACION", "CANCELADO_POR",
+    }
+    safe_fields = {k: v for k, v in fields.items() if k not in campos_internos}
+
+    servicio_id = _first_link_id(fields.get("SERVICIO"))
+    profesional_id = _first_link_id(fields.get("PROFESIONAL"))
+    sucursal_id = _first_link_id(fields.get("SUCURSAL_ATENCION"))
+    slot_id = _first_link_id(fields.get("AGENDA_SLOT"))
+
+    servicio_nombre = _linked_name(at, "SERVICIOS", fields.get("SERVICIO"), cache)
+    profesional_nombre = _linked_name(at, "EMPLEADOS", fields.get("PROFESIONAL"), cache)
+    sucursal_nombre = _linked_name(at, "SUCURSALES", fields.get("SUCURSAL_ATENCION"), cache)
+    slot_fields = _linked_fields(at, "AGENDA_SLOTS", slot_id, cache) if slot_id else {}
+
+    raw_title = _text(fields.get("NOMBRE_CITA"))
+    visible_title = servicio_nombre or raw_title or "Turno"
+    if raw_title.upper().startswith("CITA_") and servicio_nombre:
+        visible_title = f"Turno de {servicio_nombre}"
+
+    return {
+        "id": record["id"],
+        "createdTime": record.get("createdTime"),
+        **safe_fields,
+        "TITULO_CITA": visible_title,
+        "SERVICIO_ID": servicio_id,
+        "PROFESIONAL_ID": profesional_id,
+        "SUCURSAL_ID": sucursal_id,
+        "AGENDA_SLOT_ID": slot_id,
+        "NOMBRE_SERVICIO": servicio_nombre,
+        "NOMBRE_PROFESIONAL": profesional_nombre,
+        "NOMBRE_SUCURSAL": sucursal_nombre,
+        "ESTADO_SLOT": slot_fields.get("ESTADO_SLOT") or "",
+    }
+
+
+def _format_pago_cliente(record: dict) -> dict:
+    fields = record.get("fields", {})
+    return {
+        "id": record.get("id"),
+        "venta_id": _first_link_id(fields.get("VENTA")),
+        "fecha": fields.get("FECHA_PAGO") or fields.get("FECHA_COBRO") or fields.get("FECHA_OPERACION") or "",
+        "metodo": fields.get("METODO_PAGO") or fields.get("METODO_COBRO") or "",
+        "estado": fields.get("ESTADO_PAGO") or fields.get("ESTADO_COBRO") or "",
+        "monto": _number(fields.get("MONTO_PAGO") or fields.get("MONTO_COBRO") or fields.get("MONTO"), 0),
+        "moneda": fields.get("MONEDA") or "ARS",
+    }
+
+
+def _format_venta_cliente(record: dict, pagos: list[dict]) -> dict:
+    fields = record.get("fields", {})
+    venta_id = record.get("id")
+    venta_pagos = [p for p in pagos if p.get("venta_id") == venta_id]
+    return {
+        "id": venta_id,
+        "fecha": fields.get("FECHA_VENTA") or fields.get("FECHA_OPERACION") or fields.get("FECHA_CREACION") or "",
+        "numero": fields.get("NUMERO_VENTA") or fields.get("CODIGO_VENTA") or "",
+        "canal": fields.get("CANAL_VENTA") or "",
+        "origen": fields.get("ORIGEN_VENTA") or "",
+        "tipo": fields.get("TIPO_VENTA") or "",
+        "estado": fields.get("ESTADO_VENTA") or "",
+        "total": _number(fields.get("TOTAL_VENTA") or fields.get("TOTAL") or fields.get("IMPORTE_TOTAL"), 0),
+        "saldo": _number(fields.get("SALDO_PENDIENTE") or fields.get("MONTO_PENDIENTE"), 0),
+        "moneda": fields.get("MONEDA") or "ARS",
+        "items_count": len(_as_list(fields.get("ITEMS_VENTA"))),
+        "pagos": venta_pagos,
+        "monto_pagado": sum(_number(p.get("monto"), 0) for p in venta_pagos),
+    }
 
 
 @router.get("/clientes")
@@ -282,15 +418,9 @@ async def get_my_citas(user: dict = Depends(get_current_user)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al obtener citas: {str(e)}")
     citas = []
-    _campos_internos = {
-        "OBSERVACIONES_INTERNAS", "DIAGNOSTICO_PREVIO", "REQUIERE_DIAGNOSTICO",
-        "REQUIERE_CONSENTIMIENTO", "CONSENTIMIENTO_FIRMADO", "REQUIERE_PRUEBA_ALERGIA",
-        "PRUEBA_ALERGIA_REALIZADA", "MOTIVO_CANCELACION", "FECHA_CANCELACION", "CANCELADO_POR",
-    }
+    cache = {}
     for r in records:
-        fields = r.get("fields", {})
-        safe_fields = {k: v for k, v in fields.items() if k not in _campos_internos}
-        citas.append({"id": r["id"], "createdTime": r.get("createdTime"), **safe_fields})
+        citas.append(_format_cita_cliente(at, r, cache))
     hoy = date.today().isoformat()
     proximas, historial = [], []
     for c in citas:
@@ -306,6 +436,52 @@ async def get_my_citas(user: dict = Depends(get_current_user)):
         "total": len(citas),
         "proximas": sorted(proximas, key=lambda c: c.get("FECHA_CITA", "")),
         "historial": sorted(historial, key=lambda c: c.get("FECHA_CITA", ""), reverse=True),
+    }
+
+
+@router.get("/clientes/me/compras")
+async def get_my_compras(user: dict = Depends(get_current_user)):
+    """Historial read-only de compras y pagos del CLIENTE autenticado.
+
+    No crea ventas, pagos, cobros, checkout ni caja/POS. Solo resume registros
+    existentes ya vinculados al cliente.
+    """
+    cliente_id = (user.get("cliente") or "").strip()
+    if not cliente_id:
+        raise HTTPException(status_code=404, detail="No tenes un perfil de cliente vinculado.")
+
+    try:
+        at = AirtableClient()
+        ventas_records = [
+            record for record in at.list_records("VENTAS", by_name=True)
+            if _record_links_to(record.get("fields", {}), "CLIENTE", cliente_id)
+        ]
+        venta_ids = {record.get("id") for record in ventas_records}
+        try:
+            pagos_records = [
+                record for record in at.list_records("PAGOS_COBROS", by_name=True)
+                if venta_ids.intersection(set(_as_id_list(record.get("fields", {}).get("VENTA"))))
+            ]
+        except Exception:
+            pagos_records = []
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al obtener historial de compras: {str(e)}")
+
+    pagos = [_format_pago_cliente(record) for record in pagos_records]
+    ventas = [_format_venta_cliente(record, pagos) for record in ventas_records]
+    ventas.sort(key=lambda item: item.get("fecha") or "", reverse=True)
+    pagos.sort(key=lambda item: item.get("fecha") or "", reverse=True)
+
+    return {
+        "total_compras": len(ventas),
+        "total_pagos": len(pagos),
+        "compras": ventas,
+        "pagos": pagos,
+        "read_only": True,
+        "checkout_enabled": False,
+        "online_payments_enabled": False,
+        "physical_pos_enabled": False,
+        "message": "Historial de compras/pagos en solo lectura. No se crean pagos ni ventas desde el portal.",
     }
 
 

@@ -1,57 +1,62 @@
-# progress/session-summary.md — COMMERCE_MUTATION_P3_CART_CHECKOUT_SANDBOX
+# progress/session-summary.md — PORTAL_CLIENTE_UX_COMMERCE_P4
 
-## Sesión
-- Fecha: 2026-06-29
-- Fase: COMMERCE_MUTATION_P3_CART_CHECKOUT_SANDBOX
-- Estado: CERRADA_QA_DEPLOY
-- Commit feature: d4541ad
+Fecha: 2026-06-30
+Dominio comercial: https://bellezapro-demo.surge.sh
+Backend: Railway `earnest-comfort`
 
-## Objetivo
-Activar carrito web sandbox para cliente sin pagos reales, checkout real, caja/POS, ventas, cobros ni RESERVAS.
+## Estado
+
+- Fase: PORTAL_CLIENTE_UX_COMMERCE_P4
+- Estado local: completado con build/py_compile OK; pendiente deploy/commit final.
+- Dominio canónico comercial: `bellezapro-demo.surge.sh`.
 
 ## Implementado
-- Backend `backend/routes/carrito.py`:
-  - `GET /api/carrito`
-  - `POST /api/carrito/items`
-  - `PATCH /api/carrito/items/{item_id}`
-  - `DELETE /api/carrito/items/{item_id}` con baja lógica.
-- `GET /api/commerce/public` ahora declara `cart_enabled=true`, `cart_mode=SANDBOX`, `checkout_enabled=false`, `online_payments_enabled=false`, `physical_pos_enabled=false`.
-- `PRODUCTOS_WEB` expone flags públicos seguros `cart_enabled`, `purchase_enabled`, `availability_state`.
-- Frontend:
-  - `ProductoDetalle.jsx` agrega CTA `Agregar al carrito` para cliente.
-  - Nueva página `/carrito` protegida para cliente.
-  - Navbar público y portal agregan link `Carrito`.
 
-## QA
-- `py_compile`: PASS.
+- Carrito sandbox ampliado a productos, servicios y packs.
+- Reglas comerciales visibles: upsell, cross-sell, promociones y cupones desde Airtable.
+- Header público y portal con icono 🛒 y contador.
+- Servicio detalle puede agregar servicios al carrito sandbox si Airtable lo habilita.
+- Portal cliente rediseñado:
+  - ficha cliente con un solo botón de edición;
+  - modal de edición;
+  - turnos con nombres humanos;
+  - historial de compras/pagos read-only.
+- ReservaTurnoModal mejorado:
+  - filtros de sucursales públicas reales;
+  - strings corregidos;
+  - UX de selección más clara.
+- Backend `/api/clientes/me/compras` agregado en modo solo lectura.
+
+## Validación local
+
+- `python3 -m py_compile backend/routes/carrito.py backend/routes/clientes.py backend/main.py`: PASS.
 - `npm run build`: PASS.
 - `git diff --check`: PASS.
-- Secret scan estricto en diff: PASS.
-- Local:
-  - sin auth `/api/carrito` → 401.
-  - login cliente QA → 200.
-  - agregar item → 201.
-  - editar cantidad → 200.
-  - quitar item → 200, baja lógica.
-- Live:
-  - `/health` → 200 con `/api/carrito`.
-  - `/api/commerce/public` → cart sandbox true, checkout/pagos false.
-  - `/api/productos-web` → flags carrito presentes.
-  - `/api/carrito` sin auth → 401.
-  - login cliente QA + add/delete lógico → PASS.
+- Secret scan archivos modificados: PASS.
+- `/health` local: 200.
+- `/api/carrito` sin auth: 401.
+- `/api/clientes/me/compras` sin auth: 401.
+- `/api/commerce/public`: carrito sandbox true; checkout/pagos/POS false.
+- `/api/servicios-web`: 9 servicios, 9 con carrito habilitado, 8 con imágenes.
 
-## Garantías
-- No se tocó `.env`, `backend/.env`, `frontend/.env` ni `CREDENCIALES.md`.
-- No se expusieron secretos, passwords, cookies, JWT ni hashes.
-- No DELETE físico.
-- No schema changes Airtable.
+## Límites respetados
+
+- No pagos reales.
+- No checkout.
+- No caja/POS.
 - No `RESERVAS`.
-- No pagos, checkout, caja/POS, `VENTAS`, `ITEMS_VENTA` ni `PAGOS_COBROS`.
-- Escrituras autorizadas solo en `CARRITOS` y `CARRITO_ITEMS` QA/sandbox.
+- No DELETE físico.
+- No cambios de schema Airtable.
+- No escrituras en `VENTAS`, `ITEMS_VENTA` ni `PAGOS_COBROS`.
+- No se tocaron `.env`, `backend/.env`, `frontend/.env` ni `CREDENCIALES.md`.
 
-## Deploy
-- Railway `earnest-comfort`: SUCCESS/RUNNING en commit `d4541ad`.
-- Surge comercial: https://bellezapro-demo.surge.sh
+## Riesgo/dato pendiente
 
-## Próximo bloque recomendado
-COMMERCE_MUTATION_P4_CHECKOUT_SANDBOX_OR_POS_DESIGN: diseñar checkout/caja como contrato primero, sin pagos reales hasta aprobación explícita.
+- Airtable no tiene sucursal pública real activa para mostrar en reserva. Hay sucursales ficticias/internas y una `Sucursal Centro` pública pero `ACTIVO=false`. No se modificó porque este bloque no autoriza cambios de datos reales/schema.
+
+## Próximo paso recomendado
+
+- Deploy Railway + Surge.
+- Smoke live mínimo.
+- Commit/push final.
+- Luego abrir contrato P5 para checkout/pagos/caja/POS antes de cualquier pago real.

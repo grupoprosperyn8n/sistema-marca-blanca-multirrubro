@@ -1,12 +1,14 @@
 import React from 'react';
 import { Outlet, Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { ROLES, useAuth } from '../context/AuthContext';
 import { useBrandConfig } from '../context/BrandConfigContext';
 import PublicFooter from '../components/PublicFooter';
+import useCartSummary from '../hooks/useCartSummary';
 
 export default function PortalLayout() {
-  const { usuario, logout } = useAuth();
+  const { usuario, role, logout } = useAuth();
   const { config } = useBrandConfig();
+  const { count } = useCartSummary();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -46,13 +48,21 @@ export default function PortalLayout() {
               >
                 Mi Portal
               </Link>
-              <Link
-                to="/carrito"
-                className="px-3 py-2 rounded-lg text-sm font-medium hover:bg-white/30 transition-colors"
-                style={{ color: 'var(--brand-text)' }}
-              >
-                Carrito
-              </Link>
+              {role === ROLES.CLIENTE && (
+                <Link
+                  to="/carrito"
+                  className="relative px-3 py-2 rounded-lg text-sm font-medium hover:bg-white/30 transition-colors"
+                  style={{ color: 'var(--brand-text)' }}
+                  aria-label={`Carrito con ${count} items`}
+                >
+                  🛒 Carrito
+                  {count > 0 && (
+                    <span className="absolute -right-2 -top-1 min-w-5 rounded-full px-1.5 py-0.5 text-center text-[10px] font-bold text-white" style={{ background: 'var(--brand-primary)' }}>
+                      {count}
+                    </span>
+                  )}
+                </Link>
+              )}
               <Link
                 to="/catalogo"
                 className="px-3 py-2 rounded-lg text-sm font-medium hover:bg-white/30 transition-colors"

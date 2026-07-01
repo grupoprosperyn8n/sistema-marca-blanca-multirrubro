@@ -2,11 +2,13 @@ import React, { useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { ROLES, useAuth } from '../context/AuthContext';
 import { getPublicNavigation, useBrandConfig } from '../context/BrandConfigContext';
+import useCartSummary from '../hooks/useCartSummary';
 
 export default function PublicNavbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const { role, usuario } = useAuth();
   const { config } = useBrandConfig();
+  const { count } = useCartSummary();
   const publicLinks = getPublicNavigation(config);
   const showDomainPill = config.domainRole && config.domainRole !== 'COMERCIAL_CANONICO';
 
@@ -36,8 +38,14 @@ export default function PublicNavbar() {
           {usuario ? (
             <div className="ml-3 flex items-center gap-2">
               {role === ROLES.CLIENTE && (
-                <Link to="/carrito" className="rounded-lg bg-white/50 px-4 py-2 text-sm font-semibold" style={{ color: 'var(--brand-text)' }}>
-                  Carrito
+                <Link to="/carrito" className="relative rounded-lg bg-white/50 px-3 py-2 text-sm font-semibold" style={{ color: 'var(--brand-text)' }} aria-label={`Carrito con ${count} items`}>
+                  <span aria-hidden="true">🛒</span>
+                  <span className="ml-1">Carrito</span>
+                  {count > 0 && (
+                    <span className="absolute -right-2 -top-2 min-w-5 rounded-full px-1.5 py-0.5 text-center text-[10px] font-bold text-white" style={{ background: 'var(--brand-primary)' }}>
+                      {count}
+                    </span>
+                  )}
                 </Link>
               )}
               <Link to="/portal" className="btn-primary text-sm px-4 py-2">
@@ -81,7 +89,7 @@ export default function PublicNavbar() {
                   <Link to="/carrito" onClick={() => setMenuOpen(false)}
                     className="px-4 py-3 rounded-lg text-sm font-medium hover:bg-white/30"
                     style={{ color: 'var(--brand-text)' }}>
-                    Carrito
+                    🛒 Carrito {count > 0 ? `(${count})` : ''}
                   </Link>
                 )}
                 <Link to="/portal" onClick={() => setMenuOpen(false)}

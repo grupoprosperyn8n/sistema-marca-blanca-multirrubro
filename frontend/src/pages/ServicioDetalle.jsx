@@ -1,15 +1,20 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import { formatPublicName, getPublicServiceImage, isPublicService, normalizeServiceCategory, toPublicSlug } from "../utils/publicDataFilters";
+import { ROLES, useAuth } from "../context/AuthContext";
+import { notifyCartUpdated } from "../hooks/useCartSummary";
 
 const API = import.meta.env.VITE_API_BASE_URL || "";
 
 export default function ServicioDetalle() {
   const { slug } = useParams();
   const navigate = useNavigate();
+  const { role, usuario } = useAuth();
   const [servicio, setServicio] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [cartLoading, setCartLoading] = useState(false);
+  const [cartMessage, setCartMessage] = useState(null);
 
   useEffect(() => {
     async function cargar() {
@@ -37,6 +42,7 @@ export default function ServicioDetalle() {
           duracion: match.DURACION_MINUTOS_WEB ?? match.DURACION_MINUTOS ?? null,
           categoria: normalizeServiceCategory(match),
           reserva: match.RESERVA_ONLINE_HABILITADA !== false,
+          cartEnabled: Boolean(match.CARRITO_HABILITADO || match.VENTA_HABILITADA_WEB),
           anticipo: match.ANTICIPO_REQUERIDO_WEB || 0,
           beneficios: match.BENEFICIOS_WEB || match.BENEFICIOS || "",
           imagen: getPublicServiceImage(match),
@@ -66,6 +72,29 @@ export default function ServicioDetalle() {
   );
 
   const s = servicio;
+  const canUseSandboxCart = usuario && role === ROLES.CLIENTE;
+  const sandboxCartEnabled = s.cartEnabled && s.precio != null;
+
+  const addServiceToCart = async () => {
+    setCartLoading(true);
+    setCartMessage(null);
+    try {
+      const res = await fetch(`${API}/api/carrito/items`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ item_type: "SERVICIO_WEB", service_web_id: s.id, quantity: 1 }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.detail || `Error ${res.status}`);
+      notifyCartUpdated();
+      setCartMessage({ type: "success", text: "Servicio agregado al carrito sandbox." });
+    } catch (e) {
+      setCartMessage({ type: "error", text: e.message || "No se pudo agregar el servicio al carrito." });
+    } finally {
+      setCartLoading(false);
+    }
+  };
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-8 py-12">
@@ -141,11 +170,32 @@ export default function ServicioDetalle() {
         )}
 
         <div className="flex gap-3">
+          {sandboxCartEnabled && (
+            canUseSandboxCart ? (
+              <button
+                type="button"
+                disabled={cartLoading}
+                onClick={addServiceToCart}
+                className="px-6 py-3 rounded-xl font-semibold text-sm transition-all hover:opacity-90 disabled:opacity-60"
+                style={{ background: "linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))", color: "#fff" }}
+              >
+                {cartLoading ? "Agregando…" : "Agregar servicio al carrito"}
+              </button>
+            ) : (
+              <Link
+                to="/login"
+                className="px-6 py-3 rounded-xl font-semibold text-sm transition-all hover:opacity-90"
+                style={{ background: "linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))", color: "#fff" }}
+              >
+                Ingresar para comprar
+              </Link>
+            )
+          )}
           {s.reserva && (
             <a
               href="/reserva"
-              className="px-6 py-3 rounded-xl font-semibold text-sm transition-all hover:opacity-90"
-              style={{ background: "linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))", color: "#fff" }}
+              className="px-6 py-3 rounded-xl font-semibold text-sm border transition-all hover:bg-white/60"
+              style={{ color: "var(--brand-text)", borderColor: "#d1d5db" }}
             >
               Reservar este servicio
             </a>
@@ -158,6 +208,25 @@ export default function ServicioDetalle() {
             Ver más servicios
           </button>
         </div>
+
+        {cartMessage && (
+          <div
+            className="mt-4 rounded-xl px-4 py-3 text-sm font-semibold"
+            style={{
+              background: cartMessage.type === "error" ? "#fff1f2" : "#ecfdf5",
+              color: cartMessage.type === "error" ? "#be123c" : "#047857",
+            }}
+          >
+            {cartMessage.text}
+            {cartMessage.type === "success" && <Link to="/carrito" className="ml-2 underline">Ver carrito</Link>}
+          </div>
+        )}
+
+        <p className="mt-6 text-xs opacity-50 text-center" style={{ color: "var(--brand-text)" }}>
+          {sandboxCartEnabled
+            ? "Carrito sandbox activo para servicios. Si el servicio requiere turno, se informa en el resumen."
+            : "Este servicio se reserva o consulta por los canales configurados del negocio."}
+        </p>
         </div>
       </div>
     </div>

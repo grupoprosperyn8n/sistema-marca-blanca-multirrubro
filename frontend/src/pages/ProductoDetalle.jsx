@@ -3,6 +3,7 @@ import { Link, useParams, useNavigate } from "react-router-dom";
 import ImageCarousel from "../components/ui/ImageCarousel";
 import { useBrandConfig } from "../context/BrandConfigContext";
 import { ROLES, useAuth } from "../context/AuthContext";
+import { notifyCartUpdated } from "../hooks/useCartSummary";
 
 const API = import.meta.env.VITE_API_BASE_URL || "";
 
@@ -174,6 +175,7 @@ export default function ProductoDetalle() {
                       });
                       const body = await res.json().catch(() => ({}));
                       if (!res.ok) throw new Error(body.detail || `Error ${res.status}`);
+                      notifyCartUpdated();
                       setCartMessage({ type: "success", text: "Producto agregado al carrito sandbox." });
                     } catch (e) {
                       setCartMessage({ type: "error", text: e.message || "No se pudo agregar al carrito." });

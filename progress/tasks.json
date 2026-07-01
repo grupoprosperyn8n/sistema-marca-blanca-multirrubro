@@ -1,7 +1,7 @@
 {
   "project": "sistema-marca-blanca-multirrubro",
-  "fase_actual": "COMMERCE_MUTATION_P3_CART_CHECKOUT_SANDBOX — CERRADA_QA_DEPLOY",
-  "fase_siguiente": "COMMERCE_MUTATION_P4_CHECKOUT_SANDBOX_OR_POS_DESIGN (requiere aprobación explícita; sin pagos reales hasta contrato)",
+  "fase_actual": "PORTAL_CLIENTE_UX_COMMERCE_P4 — CERRADA_COMMIT_PENDIENTE_DEPLOY",
+  "fase_siguiente": "COMMERCE_CHECKOUT_PAYMENTS_POS_CONTRACT_P5 (solo diseño/contrato; requiere aprobación explícita antes de pagos reales)",
   "tareas": {
     "FASE_3B_PORTAL_CLIENTE": {
       "status": "completed",
@@ -428,6 +428,46 @@
       "delete_fisico": false,
       "commerce_writes": "ONLY_CARRITOS_AND_CARRITO_ITEMS_QA_SANDBOX",
       "notes": "Checkout, pagos y caja/POS permanecen desactivados. Se crearon escrituras QA mínimas autorizadas en CARRITOS/CARRITO_ITEMS; los items QA se bajaron lógicamente con ESTADO_ITEM_CARRITO=CANCELADO."
+    },
+    "PORTAL_CLIENTE_UX_COMMERCE_P4": {
+      "status": "completed_committed_pending_deploy",
+      "closed_at": "2026-06-30",
+      "commits": [
+        "final_commit_reported_in_chat"
+      ],
+      "deliverables": [
+        "backend/routes/carrito.py (items PRODUCTO_WEB/SERVICIO_WEB/PACK + marketing recommendations)",
+        "backend/routes/clientes.py (/api/clientes/me/citas DTO humano + /api/clientes/me/compras read-only)",
+        "frontend/src/hooks/useCartSummary.js (contador carrito)",
+        "frontend/src/components/PublicNavbar.jsx (icono carrito)",
+        "frontend/src/layouts/PortalLayout.jsx (icono carrito)",
+        "frontend/src/pages/Carrito.jsx (items mixtos + upsell/cross-sell/promos/cupones)",
+        "frontend/src/pages/ServicioDetalle.jsx (agregar servicio al carrito sandbox)",
+        "frontend/src/pages/PortalCliente.jsx (ficha cliente modal + historial compras/pagos read-only)",
+        "frontend/src/components/ReservaTurnoModal.jsx (filtro sucursal pública + UX strings)",
+        "docs/commerce/PORTAL_CLIENTE_UX_COMMERCE_P4.md"
+      ],
+      "qa_results": {
+        "backend_py_compile": "PASS",
+        "frontend_build": "PASS",
+        "git_diff_check": "PASS",
+        "strict_secret_scan": "PASS",
+        "local_health": "200_PASS",
+        "local_get_carrito_sin_auth": "401_PASS",
+        "local_get_compras_sin_auth": "401_PASS",
+        "local_commerce_public": "PASS_CART_TRUE_CHECKOUT_PAYMENTS_POS_FALSE",
+        "local_servicios_web": "PASS_9_TOTAL_9_CART_8_IMAGES",
+        "local_sucursales_publicas": "NO_PUBLIC_ACTIVE_REAL_BRANCHES_DATA_ISSUE"
+      },
+      "secrets_free": true,
+      "env_files_touched": false,
+      "payments_checkout_pos": false,
+      "ventas_items_venta_pagos_cobros_writes": false,
+      "reservas_table_used": false,
+      "schema_changes": false,
+      "delete_fisico": false,
+      "commerce_writes": "ONLY_CARRITOS_AND_CARRITO_ITEMS_QA_SANDBOX",
+      "notes": "P4 mejora UX y matching de comercio/portal. Historial de compras/pagos es read-only. No hay sucursal pública real activa en Airtable; no se modificó porque el bloque no autoriza datos reales/schema."
     }
   },
   "deploys_activos": {

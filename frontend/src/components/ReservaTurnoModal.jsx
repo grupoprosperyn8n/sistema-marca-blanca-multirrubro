@@ -1,13 +1,14 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
+import { isPublicBranch, isPublicService } from "../utils/publicDataFilters";
 
 const API = import.meta.env.VITE_API_BASE_URL || "";
 
 const STEPS = [
-  { key: "servicio", label: "Servicio", icon: "\ud83d\udc87" },
-  { key: "sucursal", label: "Sucursal", icon: "\ud83d\udccd" },
-  { key: "slot",     label: "Horario", icon: "\ud83d\udd50" },
-  { key: "confirmar",label: "Confirmar", icon: "\u2705" },
+  { key: "servicio", label: "Servicio", icon: "💇" },
+  { key: "sucursal", label: "Sucursal", icon: "📍" },
+  { key: "slot", label: "Horario", icon: "🕐" },
+  { key: "confirmar", label: "Confirmar", icon: "✅" },
 ];
 
 function getServiceDuration(servicio) {
@@ -71,7 +72,7 @@ export default function ReservaTurnoModal({ onClose }) {
       try {
         const data = await fetchWithCookie("/api/servicios-web", { cache: "no-store" });
         const active = (data.servicios_web || data.servicios || []).filter(
-          (s) => s.ACTIVO_EN_WEB && s.RESERVA_ONLINE_HABILITADA
+          (s) => isPublicService(s) && s.ACTIVO_EN_WEB && s.RESERVA_ONLINE_HABILITADA
         );
         setServicios(active);
       } catch (e) {
@@ -89,7 +90,9 @@ export default function ReservaTurnoModal({ onClose }) {
       setLoadingOptions(true);
       try {
         const data = await fetchWithCookie("/api/sucursales");
-        const active = (data.sucursales || []).filter((s) => s.ACTIVO);
+        const active = (data.sucursales || []).filter(
+          (s) => isPublicBranch(s) && s.PERMITE_RESERVAS_WEB !== false
+        );
         setSucursales(active);
       } catch (e) {
         setErrorFetch("No se pudieron cargar las sucursales");
@@ -200,7 +203,7 @@ export default function ReservaTurnoModal({ onClose }) {
   };
 
   const fmtDate = (iso) => {
-    if (!iso) return "\u2014";
+    if (!iso) return "—";
     try {
       return new Date(iso).toLocaleDateString("es-AR", {
         day: "2-digit", month: "short", year: "numeric",
@@ -221,8 +224,8 @@ export default function ReservaTurnoModal({ onClose }) {
       <div style={modalStyle}>
         {/* Header */}
         <div style={modalHeader}>
-          <h2 style={{ margin: 0, fontSize: "1.25rem" }}>\ud83d\udcde Reservar Turno</h2>
-          <button onClick={onClose} style={closeBtn}>\u2715</button>
+          <h2 style={{ margin: 0, fontSize: "1.25rem" }}>📞 Reservar turno</h2>
+          <button onClick={onClose} style={closeBtn}>✕</button>
         </div>
 
         {/* Stepper */}
@@ -240,12 +243,12 @@ export default function ReservaTurnoModal({ onClose }) {
         <div style={contentStyle}>
           {loadingOptions && (
             <div style={centerMsgStyle}>
-              Cargando opciones\u2026
+              Cargando opciones…
             </div>
           )}
           {errorFetch && !loadingOptions && (
             <div style={{ ...centerMsgStyle, color: "#ef4444" }}>
-              \u26a0\ufe0f {errorFetch}
+              ⚠️ {errorFetch}
             </div>
           )}
 
@@ -253,11 +256,11 @@ export default function ReservaTurnoModal({ onClose }) {
           {step === 0 && !loadingOptions && !errorFetch && (
             <div>
               <p style={{ color: "#6b7280", marginBottom: "1rem" }}>
-                Eleg\u00ed el servicio que quer\u00e9s reservar:
+              Elegí el servicio que querés reservar:
               </p>
               {servicios.length === 0 ? (
                 <p style={{ color: "#9ca3af", textAlign: "center", padding: "2rem" }}>
-                  No hay servicios con reserva online disponibles.
+                  No hay servicios públicos con reserva online disponibles.
                 </p>
               ) : (
                 <div style={{ maxHeight: 250, overflowY: "auto" }}>
@@ -296,7 +299,7 @@ export default function ReservaTurnoModal({ onClose }) {
           {step === 1 && !loadingOptions && !errorFetch && (
             <div>
               <p style={{ color: "#6b7280", marginBottom: "1rem" }}>
-                Eleg\u00ed d\u00f3nde quer\u00e9s el turno:
+                Elegí dónde querés el turno:
               </p>
               {sucursales.length === 0 ? (
                 <p style={{ color: "#9ca3af", textAlign: "center", padding: "2rem" }}>
@@ -315,11 +318,11 @@ export default function ReservaTurnoModal({ onClose }) {
                       style={optionStyle(suc.id === selectedSucursal?.id)}
                     >
                       <div style={{ fontWeight: 600 }}>
-                        \ud83d\udccd {suc.NOMBRE_SUCURSAL || suc.NOMBRE}
+                        📍 {suc.NOMBRE_SUCURSAL || suc.NOMBRE}
                       </div>
-                      {suc.DIRECCION && (
+                      {(suc.DIRECCION || suc["CALLE Y N°"] || suc.LOCALIDAD) && (
                         <div style={{ fontSize: ".85rem", color: "#6b7280", marginTop: ".2rem" }}>
-                          {suc.DIRECCION}
+                          {[suc.DIRECCION || suc["CALLE Y N°"], suc.LOCALIDAD].filter(Boolean).join(", ")}
                         </div>
                       )}
                     </div>
@@ -333,7 +336,7 @@ export default function ReservaTurnoModal({ onClose }) {
           {step === 2 && !loadingOptions && !errorFetch && (
             <div>
               <p style={{ color: "#6b7280", marginBottom: "1rem" }}>
-                Eleg\u00ed el d\u00eda y horario:
+                Elegí el día y horario:
               </p>
               {slots.length === 0 ? (
                 <p style={{ color: "#9ca3af", textAlign: "center", padding: "2rem" }}>
@@ -348,14 +351,14 @@ export default function ReservaTurnoModal({ onClose }) {
                       style={optionStyle(slot.id === selectedSlot?.id)}
                     >
                       <div style={{ fontWeight: 600 }}>
-                        \ud83d\uddd3\ufe0f {fmtDate(slot.FECHA_SLOT)}
-                        {" \u00b7 "}
-                        \ud83d\udd50 {fmtTime(slot.HORA_INICIO)} \u2013 {fmtTime(slot.HORA_FIN)}
+                        🗓️ {fmtDate(slot.FECHA_SLOT)}
+                        {" · "}
+                        🕐 {fmtTime(slot.HORA_INICIO)} – {fmtTime(slot.HORA_FIN)}
                       </div>
                       <div style={{ fontSize: ".8rem", color: "#6b7280", marginTop: ".2rem" }}>
                         {slot.DURACION_MINUTOS && `${slot.DURACION_MINUTOS} min`}
                         {slot.CAPACIDAD_DISPONIBLE > 0 &&
-                          ` \u00b7 ${slot.CAPACIDAD_DISPONIBLE} turno(s) disponible(s)`}
+                          ` · ${slot.CAPACIDAD_DISPONIBLE} turno(s) disponible(s)`}
                       </div>
                     </div>
                   ))}
@@ -368,7 +371,7 @@ export default function ReservaTurnoModal({ onClose }) {
           {step === 3 && (
             <div>
               <p style={{ color: "#6b7280", marginBottom: "1rem" }}>
-                Revis\u00e1 los datos de tu turno:
+                Revisá los datos de tu turno:
               </p>
 
               {/* Summary */}
@@ -388,7 +391,7 @@ export default function ReservaTurnoModal({ onClose }) {
                 <div style={summaryRow}>
                   <span style={{ color: "#6b7280" }}>Horario</span>
                   <strong>
-                    {fmtTime(selectedSlot?.HORA_INICIO)} \u2013 {fmtTime(selectedSlot?.HORA_FIN)}
+                    {fmtTime(selectedSlot?.HORA_INICIO)} – {fmtTime(selectedSlot?.HORA_FIN)}
                     {selectedSlot?.DURACION_MINUTOS && ` (${selectedSlot.DURACION_MINUTOS} min)`}
                   </strong>
                 </div>
@@ -405,19 +408,19 @@ export default function ReservaTurnoModal({ onClose }) {
               {/* Dry-run button */}
               {!dryRunResult && !dryRunLoading && (
                 <button onClick={runDryRun} style={validateBtn}>
-                  \ud83d\udd0d Verificar disponibilidad
+                  🔍 Verificar disponibilidad
                 </button>
               )}
 
               {dryRunLoading && (
                 <div style={centerMsgStyle}>
-                  Verificando disponibilidad\u2026
+                  Verificando disponibilidad…
                 </div>
               )}
 
               {dryRunError && (
                 <div style={resultBox("#fef2f2", "#ef4444")}>
-                  \u26a0\ufe0f Error: {dryRunError}
+                  ⚠️ Error: {dryRunError}
                 </div>
               )}
 
@@ -502,7 +505,7 @@ export default function ReservaTurnoModal({ onClose }) {
 
               {dryRunResult && !dryRunResult.disponible && (
                 <div style={resultBox("#fef2f2", "#ef4444")}>
-                  <div style={{ fontSize: "1.5rem", marginBottom: ".5rem" }}>\u274c</div>
+                  <div style={{ fontSize: "1.5rem", marginBottom: ".5rem" }}>❌</div>
                   <div style={{ fontWeight: 700 }}>{dryRunResult.mensaje}</div>
                   {dryRunResult.errores && (
                     <ul style={{ marginTop: ".5rem", paddingLeft: "1.25rem", fontSize: ".85rem", textAlign: "left" }}>
@@ -512,7 +515,7 @@ export default function ReservaTurnoModal({ onClose }) {
                     </ul>
                   )}
                   <div style={{ fontSize: ".8rem", color: "#6b7280", marginTop: ".75rem" }}>
-                    Prob\u00e1 con otra combinaci\u00f3n de servicio, sucursal u horario.
+                    Probá con otra combinación de servicio, sucursal u horario.
                   </div>
                 </div>
               )}
@@ -525,7 +528,7 @@ export default function ReservaTurnoModal({ onClose }) {
           <div>
             {step > 0 && (
               <button onClick={handleBack} style={secondaryBtn}>
-                \u2190 Atr\u00e1s
+                ← Atrás
               </button>
             )}
           </div>
@@ -536,7 +539,7 @@ export default function ReservaTurnoModal({ onClose }) {
                 disabled={!canNext() || loadingOptions}
                 style={canNext() && !loadingOptions ? primaryBtn : disabledBtn}
               >
-                Siguiente \u2192
+                Siguiente →
               </button>
             ) : (
               !dryRunResult?.disponible && (
@@ -553,7 +556,7 @@ export default function ReservaTurnoModal({ onClose }) {
 }
 
 /* ===========================================================
-   Inline styles \u2014 mobile-first
+   Inline styles — mobile-first
    =========================================================== */
 
 const overlayStyle = {
