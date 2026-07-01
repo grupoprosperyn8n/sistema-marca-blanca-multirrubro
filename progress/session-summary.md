@@ -87,3 +87,9 @@ Backend: Railway `earnest-comfort`
 - Eliminados textos visibles de cross-sell/upgrade en el carrito; quedaron etiquetas comerciales entendibles para cliente final.
 - Rediseñado el grid general de productos mobile-first con cards más compactas y 4 columnas en desktop para evitar páginas gigantes con muchos productos.
 - Alineados botones en cards de packs/promos/beneficios mediante estructura flex de altura completa.
+
+## Microajuste producto grid — 2026-07-01 11:50
+
+- Reducido nuevamente el tamaño del grid de productos con auto-fill y ancho mínimo menor para evitar tarjetas gigantes en desktop.
+- Quitada descripción de las cards del catálogo para bajar altura y densidad visual.
+- Reemplazados CTAs variables/cortados por un CTA estable “Ver producto” en todas las cards.

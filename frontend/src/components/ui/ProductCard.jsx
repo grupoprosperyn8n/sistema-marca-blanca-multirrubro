@@ -8,12 +8,10 @@ import { formatCategoria, toPublicTitle } from '../../utils/displayFormatters';
 export default function ProductCard({ producto, onClick }) {
   const {
     nombre_visible,
-    descripcion_visible,
     precio_visible,
     categoria_publica,
     imagen_principal,
     destacado,
-    cta,
     alt_text,
   } = producto || {};
 
@@ -46,7 +44,7 @@ export default function ProductCard({ producto, onClick }) {
               alt={alt_text || nombre}
               width="420"
               height="315"
-              className="h-full w-full object-contain p-2 transition-transform duration-500 group-hover:scale-105 sm:p-3"
+              className="h-full w-full object-contain p-2 transition-transform duration-500 group-hover:scale-105"
               loading="lazy"
             />
           ) : (
@@ -64,34 +62,27 @@ export default function ProductCard({ producto, onClick }) {
           )}
         </div>
 
-        <div className="flex min-w-0 flex-1 flex-col p-3 sm:p-4">
+        <div className="flex min-w-0 flex-1 flex-col p-2.5 sm:p-3">
           {categoriaHumana && (
             <span className="mb-1.5 block truncate text-[10px] font-bold uppercase tracking-wide sm:text-[11px]" style={{ color: 'var(--brand-primary)', opacity: 0.8 }}>
               {categoriaHumana}
             </span>
           )}
 
-          <h3 className="line-clamp-2 min-h-[2.25rem] break-words text-sm font-extrabold leading-tight sm:min-h-[2.5rem] sm:text-base" style={{ color: 'var(--brand-text)', fontFamily: 'var(--font-heading, Manrope)' }}>
+          <h3 className="line-clamp-2 min-h-[2.1rem] break-words text-[13px] font-extrabold leading-tight sm:min-h-[2.25rem] sm:text-sm" style={{ color: 'var(--brand-text)', fontFamily: 'var(--font-heading, Manrope)' }}>
             {nombre}
           </h3>
 
-          {descripcion_visible && (
-            <p className="mt-2 hidden line-clamp-2 text-xs sm:block" style={{ color: 'var(--brand-text-secondary)', lineHeight: 1.5 }}>
-              {descripcion_visible}
-            </p>
-          )}
-
-          <div className="mt-auto flex items-end justify-between gap-2 border-t border-white/30 pt-3">
-            <div className="min-w-0">
+          <div className="mt-auto grid gap-2 border-t border-white/30 pt-2.5">
+            <div className="min-w-0 text-center">
               {precio_visible != null && (
-                <span className="block truncate text-base font-extrabold tabular-nums sm:text-lg" style={{ color: 'var(--brand-primary)' }}>
+                <span className="block truncate text-base font-extrabold tabular-nums" style={{ color: 'var(--brand-primary)' }}>
                   {formatearPrecio(precio_visible)}
                 </span>
               )}
             </div>
-            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-white/70 px-2.5 py-1 text-[11px] font-bold transition-opacity group-hover:opacity-100 sm:text-xs" style={{ color: 'var(--brand-text)' }}>
-              <span className="hidden max-w-24 truncate sm:inline">{cta || "Ver"}</span>
-              <span className="sm:hidden">Ver</span>
+            <span className="inline-flex w-full items-center justify-center gap-1 rounded-full bg-white/75 px-2.5 py-1.5 text-[11px] font-bold transition-colors group-hover:bg-white sm:text-xs" style={{ color: 'var(--brand-text)' }}>
+              Ver producto
               <span className="material-symbols-outlined text-sm" aria-hidden="true">arrow_forward</span>
             </span>
           </div>

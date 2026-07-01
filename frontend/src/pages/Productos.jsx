@@ -140,7 +140,7 @@ export default function Productos() {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(145px,1fr))] gap-3 sm:grid-cols-[repeat(auto-fill,minmax(165px,1fr))] lg:grid-cols-[repeat(auto-fill,minmax(180px,1fr))]">
           {filtrados.map((p, i) => (
             <ProductCard key={p._slug || p.nombre_visible || i} producto={p} onClick={() => navigate(`/productos/${p._slug}`)} />
           ))}
