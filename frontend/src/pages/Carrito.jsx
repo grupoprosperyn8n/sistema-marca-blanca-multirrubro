@@ -269,8 +269,8 @@ export default function Carrito() {
               );
             })}
 
-            <MarketingSection title="Mejorá tu compra" subtitle="Packs y upgrades sugeridos por las reglas comerciales cargadas en Airtable." items={upsell} onAdd={addRecommendation} savingItem={savingItem} currency={currency} />
-            <MarketingSection title="También te puede servir" subtitle="Cross-sell de productos y servicios compatibles." items={crossSell} onAdd={addRecommendation} savingItem={savingItem} currency={currency} />
+            <MarketingSection title="Mejorá tu compra" subtitle="Packs y beneficios sugeridos por las reglas comerciales cargadas en Airtable." items={upsell} onAdd={addRecommendation} savingItem={savingItem} currency={currency} />
+            <MarketingSection title="También te puede servir" subtitle="Productos y servicios compatibles para sumar al carrito." items={crossSell} onAdd={addRecommendation} savingItem={savingItem} currency={currency} />
             <PromoSection promotions={promotions} coupons={coupons} currency={currency} />
           </div>
 
@@ -319,7 +319,7 @@ function MarketingSection({ title, subtitle, items = [], onAdd, savingItem, curr
           const key = `${item.item_type}-${item.item_id}`;
           const img = imageUrl(item.image);
           return (
-            <article key={key} className="flex gap-3 rounded-2xl border border-white/50 bg-white/75 p-3">
+            <article key={key} className="flex h-full gap-3 rounded-2xl border border-white/50 bg-white/75 p-3">
               <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-slate-100">
                 {img ? (
                   <img src={img} alt={item.title || itemKindLabel(item.item_type)} className="h-full w-full object-cover" loading="lazy" />
@@ -327,20 +327,20 @@ function MarketingSection({ title, subtitle, items = [], onAdd, savingItem, curr
                   <span className="flex h-full items-center justify-center text-2xl">✨</span>
                 )}
               </div>
-              <div className="min-w-0 flex-1">
+              <div className="flex min-w-0 flex-1 flex-col">
                 <div className="mb-1 flex items-center justify-between gap-2">
                   <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--brand-primary)" }}>
                     {item.reason || itemKindLabel(item.item_type)}
                   </span>
                   {item.price != null && <strong className="shrink-0 text-xs sm:text-sm" style={{ color: "var(--brand-text)" }}>{money(item.price, currency)}</strong>}
                 </div>
-                <h3 className="line-clamp-2 text-sm font-bold leading-snug break-words" style={{ color: "var(--brand-text)" }}>{item.title}</h3>
+                <h3 className="line-clamp-2 min-h-[2.25rem] text-sm font-bold leading-snug break-words" style={{ color: "var(--brand-text)" }}>{item.title}</h3>
                 {item.description && <p className="mt-1 line-clamp-2 text-xs" style={{ color: "var(--brand-text-secondary)" }}>{item.description}</p>}
                 <button
                   type="button"
                   disabled={savingItem === key}
                   onClick={() => onAdd(item)}
-                  className="mt-2 rounded-lg px-3 py-1.5 text-xs font-bold text-white disabled:opacity-60"
+                  className="mt-auto rounded-lg px-3 py-1.5 text-xs font-bold text-white disabled:opacity-60"
                   style={{ background: "linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))" }}
                 >
                   {savingItem === key ? "Agregando…" : item.cta || "Agregar"}

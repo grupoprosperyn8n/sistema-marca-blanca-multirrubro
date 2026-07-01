@@ -4,7 +4,7 @@ import ImageCarousel from "../components/ui/ImageCarousel";
 import { useBrandConfig } from "../context/BrandConfigContext";
 import { ROLES, useAuth } from "../context/AuthContext";
 import { notifyCartUpdated } from "../hooks/useCartSummary";
-import { formatPublicName, getPublicServiceImage, isPublicService, normalizeServiceCategory, toPublicSlug } from "../utils/publicDataFilters";
+import { formatPublicName } from "../utils/publicDataFilters";
 
 const API = import.meta.env.VITE_API_BASE_URL || "";
 
@@ -46,37 +46,6 @@ function cleanLabel(value) {
   return formatPublicName(clean) || clean;
 }
 
-function productCard(item) {
-  const name = cleanLabel(item.nombre_visible || item.NOMBRE_PRODUCTO || item.nombre || "Producto");
-  const routeSlug = slugify(item.slug || name || item.id);
-  return {
-    id: item.id,
-    type: "Producto",
-    name,
-    description: item.descripcion_visible || item.DESCRIPCION_WEB || item.descripcion || "",
-    price: item.precio_visible ?? item.precio_oferta_web ?? item.PRECIO_WEB ?? null,
-    image: imageUrl(item.imagen_principal || item.IMAGEN_PRINCIPAL_PRODUCTO || item.IMAGEN_PRODUCTO),
-    route: `/productos/${routeSlug || item.id}`,
-    cta: "Ver producto",
-  };
-}
-
-function serviceCard(item) {
-  const name = cleanLabel(item.NOMBRE_PUBLICO_SERVICIO || item.NOMBRE_SERVICIO || item.SERVICIO_NOMBRE || "Servicio");
-  const image = getPublicServiceImage(item);
-  return {
-    id: item.id,
-    type: "Servicio",
-    name,
-    description: item.DESCRIPCION_WEB || item.DESCRIPCION || "",
-    price: item.PRECIO_WEB ?? item.PRECIO_PUBLICITADO_WEB ?? item.PRECIO_BASE ?? null,
-    image: image?.url || "",
-    route: `/servicios/${toPublicSlug(name) || item.id}`,
-    category: normalizeServiceCategory(item),
-    cta: "Ver servicio",
-  };
-}
-
 function benefitValue(item, currency = "ARS") {
   if (item.discount_percent) return `${Number(item.discount_percent).toLocaleString("es-AR")}% OFF`;
   if (item.discount_amount) return `${money(item.discount_amount, currency)} OFF`;
@@ -100,8 +69,6 @@ export default function ProductoDetalle() {
   const { role, usuario } = useAuth();
   const [producto, setProducto] = useState(null);
   const [commerce, setCommerce] = useState(null);
-  const [relatedProducts, setRelatedProducts] = useState([]);
-  const [relatedServices, setRelatedServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [cartLoading, setCartLoading] = useState(false);
@@ -110,15 +77,13 @@ export default function ProductoDetalle() {
   useEffect(() => {
     async function cargar() {
       try {
-        const [productosRes, commerceRes, serviciosRes] = await Promise.all([
+        const [productosRes, commerceRes] = await Promise.all([
           fetch(`${API}/api/productos-web`, { cache: "no-store" }),
           fetch(`${API}/api/commerce/public`, { cache: "no-store" }).catch(() => null),
-          fetch(`${API}/api/servicios-web`, { cache: "no-store" }).catch(() => null),
         ]);
         if (!productosRes.ok) throw new Error(`HTTP ${productosRes.status}`);
         const data = await productosRes.json();
         const commerceData = commerceRes?.ok ? await commerceRes.json() : null;
-        const servicesData = serviciosRes?.ok ? await serviciosRes.json() : null;
         const raw = Array.isArray(data) ? data : data.productos || [];
 
         const match = raw.find(p => {
@@ -147,12 +112,6 @@ export default function ProductoDetalle() {
           cartEnabled: Boolean(match.cart_enabled || match.purchase_enabled),
         });
         setCommerce(commerceData);
-        setRelatedProducts(raw.filter(item => item.id !== match.id).slice(0, 3).map(productCard));
-
-        const rawServices = Array.isArray(servicesData)
-          ? servicesData
-          : servicesData?.servicios_web || servicesData?.servicios || [];
-        setRelatedServices(rawServices.filter(isPublicService).slice(0, 3).map(serviceCard));
       } catch (e) {
         setError(e.message);
       } finally {
@@ -192,7 +151,6 @@ export default function ProductoDetalle() {
     ...(commerce?.promotions || []),
     ...(commerce?.coupons || []),
   ].slice(0, 4);
-  const relatedItems = [...relatedProducts, ...relatedServices].slice(0, 6);
 
   return (
     <main className="mx-auto max-w-6xl overflow-x-hidden px-3 py-5 sm:px-6 sm:py-8 lg:py-10">
@@ -356,55 +314,8 @@ export default function ProductoDetalle() {
         </div>
       </section>
 
-      {relatedItems.length > 0 && <RelatedItemsSection items={relatedItems} />}
       {suggestions.length > 0 && <BenefitsSection items={suggestions} />}
     </main>
-  );
-}
-
-function RelatedItemsSection({ items }) {
-  return (
-    <section className="mt-5 glass-panel rounded-[2rem] p-4 sm:p-5 lg:p-6">
-      <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-wide" style={{ color: "var(--brand-primary)" }}>Cross-sell real</p>
-          <h2 className="text-xl font-extrabold sm:text-2xl" style={{ color: "var(--brand-text)" }}>Completá tu rutina</h2>
-        </div>
-        <p className="max-w-md text-xs sm:text-right" style={{ color: "var(--brand-text-secondary)" }}>
-          Productos y servicios publicados desde Airtable, sin datos ficticios.
-        </p>
-      </div>
-
-      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {items.map(item => (
-          <Link
-            key={`${item.type}-${item.id}`}
-            to={item.route}
-            className="group flex min-w-0 gap-3 rounded-3xl border border-white/60 bg-white/75 p-3 transition-transform hover:-translate-y-0.5 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300"
-          >
-            <div className="h-24 w-24 shrink-0 overflow-hidden rounded-2xl bg-slate-100 sm:h-28 sm:w-28">
-              {item.image ? (
-                <img src={item.image} alt={item.name} width="224" height="224" loading="lazy" className="h-full w-full object-cover" />
-              ) : (
-                <span className="flex h-full items-center justify-center text-3xl" aria-hidden="true">✨</span>
-              )}
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="mb-1 flex flex-wrap items-center gap-2">
-                <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--brand-primary)" }}>{item.type}</span>
-                {item.category && <span className="rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-bold text-sky-700">{item.category}</span>}
-              </div>
-              <h3 className="line-clamp-2 break-words text-sm font-extrabold leading-snug" style={{ color: "var(--brand-text)" }}>{item.name}</h3>
-              {item.description && <p className="mt-1 line-clamp-2 text-xs" style={{ color: "var(--brand-text-secondary)" }}>{item.description}</p>}
-              <div className="mt-2 flex items-center justify-between gap-2">
-                {item.price != null ? <strong className="text-sm tabular-nums" style={{ color: "var(--brand-text)" }}>{money(item.price)}</strong> : <span />}
-                <span className="text-xs font-bold" style={{ color: "var(--brand-primary)" }}>{item.cta} →</span>
-              </div>
-            </div>
-          </Link>
-        ))}
-      </div>
-    </section>
   );
 }
 
@@ -413,7 +324,7 @@ function BenefitsSection({ items }) {
     <section className="mt-5 glass-panel rounded-[2rem] p-4 sm:p-5 lg:p-6">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-wide" style={{ color: "var(--brand-primary)" }}>Venta inteligente</p>
+          <p className="text-xs font-bold uppercase tracking-wide" style={{ color: "var(--brand-primary)" }}>Beneficios disponibles</p>
           <h2 className="text-xl font-extrabold sm:text-2xl" style={{ color: "var(--brand-text)" }}>Packs, promos y beneficios</h2>
         </div>
         <p className="max-w-md text-xs sm:text-right" style={{ color: "var(--brand-text-secondary)" }}>
@@ -427,8 +338,8 @@ function BenefitsSection({ items }) {
           const label = cleanLabel(item.type || "Beneficio");
           const title = cleanLabel(item.title || item.name || "Beneficio disponible");
           return (
-            <article key={`${item.type}-${item.id}`} className="min-w-0 rounded-3xl border border-white/60 bg-white/75 p-3">
-              <div className="mb-3 h-28 overflow-hidden rounded-2xl bg-gradient-to-br from-sky-50 to-cyan-100">
+            <article key={`${item.type}-${item.id}`} className="flex h-full min-w-0 flex-col rounded-3xl border border-white/60 bg-white/75 p-3">
+              <div className="mb-3 h-24 overflow-hidden rounded-2xl bg-gradient-to-br from-sky-50 to-cyan-100 sm:h-28">
                 {img ? (
                   <img src={img} alt={title} width="320" height="180" loading="lazy" className="h-full w-full object-cover" />
                 ) : (
@@ -437,15 +348,17 @@ function BenefitsSection({ items }) {
               </div>
               <div className="mb-2 flex items-center justify-between gap-2">
                 <span className="max-w-[65%] truncate rounded-full bg-white px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide" style={{ color: "var(--brand-primary)" }}>{label}</span>
-                <strong className="shrink-0 text-xs" style={{ color: "var(--brand-primary)" }}>{benefitValue(item)}</strong>
+                <strong className="shrink-0 text-xs tabular-nums" style={{ color: "var(--brand-primary)" }}>{benefitValue(item)}</strong>
               </div>
-              <h3 className="line-clamp-2 break-words text-sm font-extrabold leading-snug" style={{ color: "var(--brand-text)" }}>{title}</h3>
-              {item.description && <p className="mt-1 line-clamp-2 text-xs" style={{ color: "var(--brand-text-secondary)" }}>{cleanLabel(item.description)}</p>}
-              {item.code && (
-                <p className="mt-2 inline-flex max-w-full truncate rounded-xl bg-slate-100 px-2 py-1 font-mono text-[11px]" style={{ color: "var(--brand-text)" }}>
-                  Cupón: {item.code}
-                </p>
-              )}
+              <div className="flex flex-1 flex-col">
+                <h3 className="line-clamp-2 min-h-[2.45rem] break-words text-sm font-extrabold leading-snug" style={{ color: "var(--brand-text)" }}>{title}</h3>
+                {item.description && <p className="mt-1 line-clamp-2 text-xs" style={{ color: "var(--brand-text-secondary)" }}>{cleanLabel(item.description)}</p>}
+                {item.code && (
+                  <p className="mt-2 inline-flex max-w-full truncate rounded-xl bg-slate-100 px-2 py-1 font-mono text-[11px]" style={{ color: "var(--brand-text)" }}>
+                    Cupón: {item.code}
+                  </p>
+                )}
+              </div>
               <Link
                 to="/catalogo"
                 className="mt-3 inline-flex w-full justify-center rounded-xl px-3 py-2 text-xs font-bold text-white transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300"

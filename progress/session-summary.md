@@ -80,3 +80,10 @@ Backend: Railway `earnest-comfort`
 - Agregado cross-sell real desde Airtable con productos y servicios publicados, usando imágenes reales cuando existen.
 - Compactadas promos/cupones/packs con cards chicas, títulos normalizados, truncado seguro y CTA consistente.
 - Límites respetados: sin pagos, sin checkout, sin caja/POS, sin `RESERVAS`, sin schema Airtable, sin tocar secretos/env.
+
+## Polish producto/catalogo — 2026-07-01 01:25
+
+- Quitada la sección pública de cross-sell/“Completá tu rutina” de la ficha individual de producto.
+- Eliminados textos visibles de cross-sell/upgrade en el carrito; quedaron etiquetas comerciales entendibles para cliente final.
+- Rediseñado el grid general de productos mobile-first con cards más compactas y 4 columnas en desktop para evitar páginas gigantes con muchos productos.
+- Alineados botones en cards de packs/promos/beneficios mediante estructura flex de altura completa.

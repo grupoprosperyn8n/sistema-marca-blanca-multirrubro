@@ -72,23 +72,23 @@ export default function Productos() {
   );
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-8 py-12">
+    <main className="mx-auto max-w-7xl overflow-x-hidden px-3 py-6 sm:px-6 sm:py-8 lg:py-10">
       {/* Header */}
-      <div className="text-center mb-12">
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium mb-6"
+      <div className="mb-7 text-center sm:mb-9">
+        <div className="mb-4 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold"
           style={{ background: "rgba(125,211,252,0.15)", color: "var(--brand-primary)", border: "1px solid rgba(125,211,252,0.3)" }}>
           <span className="material-symbols-outlined text-sm" aria-hidden="true">inventory_2</span>
           Catálogo
         </div>
-        <h1 className="display-lg mb-3" style={{ color: "var(--brand-text)", fontSize: "clamp(2rem, 4vw, 2.75rem)" }}>
+        <h1 className="text-balance text-3xl font-extrabold sm:text-4xl" style={{ color: "var(--brand-text)" }}>
           {config.productsTitle || "Productos"}
         </h1>
-        <p className="text-base max-w-lg mx-auto" style={{ color: "var(--brand-text-secondary)", lineHeight: 1.7 }}>
+        <p className="mx-auto mt-2 max-w-lg text-sm sm:text-base" style={{ color: "var(--brand-text-secondary)", lineHeight: 1.7 }}>
           {config.productsSubtitle || "Productos publicados por el negocio para consulta, promoción o venta según configuración."}
         </p>
       </div>
 
-      <div className="mx-auto mb-6 max-w-xl">
+      <div className="mx-auto mb-4 max-w-xl sm:mb-5">
         <label htmlFor="productos-busqueda" className="sr-only">Buscar productos</label>
         <input
           id="productos-busqueda"
@@ -98,20 +98,20 @@ export default function Productos() {
           value={busqueda}
           onChange={(event) => setBusqueda(event.target.value)}
           placeholder="Buscar por producto o categoría…"
-          className="w-full rounded-2xl border border-white/50 bg-white/70 px-4 py-3 text-sm shadow-sm backdrop-blur focus-visible:ring-2 focus-visible:ring-sky-500"
+          className="w-full rounded-2xl border border-white/50 bg-white/70 px-4 py-3 text-sm shadow-sm backdrop-blur focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
           style={{ color: "var(--brand-text)" }}
         />
       </div>
 
       {/* Filtros por categoría */}
       {categorias.length > 1 && (
-        <div className="flex flex-wrap gap-2 mb-10 justify-center">
+        <div className="-mx-3 mb-6 flex gap-2 overflow-x-auto px-3 pb-2 sm:mx-0 sm:flex-wrap sm:justify-center sm:px-0 lg:mb-8">
           {categorias.map((cat) => (
             <button
               type="button"
               key={cat}
               onClick={() => setCategoriaActiva(cat)}
-              className={`px-5 py-2 rounded-full text-sm font-medium transition-[background-color,color,box-shadow] duration-300 ${
+              className={`shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition-[background-color,color,box-shadow] duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${
                 categoriaActiva === cat
                   ? "text-white shadow-md"
                   : "bg-white/60 text-gray-600 hover:bg-white/90 border border-gray-200"
@@ -140,7 +140,7 @@ export default function Productos() {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
           {filtrados.map((p, i) => (
             <ProductCard key={p._slug || p.nombre_visible || i} producto={p} onClick={() => navigate(`/productos/${p._slug}`)} />
           ))}
@@ -149,9 +149,9 @@ export default function Productos() {
 
       {/* CTA no transaccional */}
       {filtrados.length > 0 && (
-        <div className="text-center mt-12">
-          <div className="glass-panel inline-block px-8 py-5 rounded-2xl">
-            <p className="text-sm mb-1" style={{ color: "var(--brand-text-secondary)" }}>
+        <div className="mt-8 text-center sm:mt-10">
+          <div className="glass-panel inline-block rounded-2xl px-5 py-4 sm:px-7">
+            <p className="mb-1 text-sm" style={{ color: "var(--brand-text-secondary)" }}>
               ¿Te interesa algún producto?
             </p>
             <span className="text-sm font-medium inline-flex items-center gap-1" style={{ color: "var(--brand-primary)" }}>
@@ -177,6 +177,6 @@ export default function Productos() {
           </details>
         </div>
       )}
-    </div>
+    </main>
   );
 }
