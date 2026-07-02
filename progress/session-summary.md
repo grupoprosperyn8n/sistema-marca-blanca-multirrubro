@@ -7,7 +7,7 @@ Backend: Railway `earnest-comfort`
 ## Estado
 
 - Fase: RESERVA_MULTI_SERVICIO_UI_P7
-- Estado: QA local completo, pendiente de commit/push/deploy.
+- Estado: completado, commiteado, pusheado y desplegado.
 
 ## Implementado
 
@@ -36,6 +36,18 @@ Backend: Railway `earnest-comfort`
 - `/api/reserva/agenda-opciones`: PASS, 6 slots para 2026-07-03 con `AUTO`.
 - `/api/clientes/citas/dry-run-multiple` sin auth: 401 PASS.
 
+## Deploy final
+
+- Commit feature: `aefe97a`.
+- Push origin/main: PASS.
+- Railway `earnest-comfort`: SUCCESS/RUNNING para `aefe97a`.
+- Surge: PASS `https://bellezapro-demo.surge.sh`.
+- Smoke live:
+  - `/health`: 200, endpoints de reserva presentes.
+  - `/api/reserva/profesionales`: 200, total 2.
+  - `/api/reserva/agenda-opciones`: 200, total 6 para 2026-07-03 con `AUTO`.
+  - `/reserva` en Surge: 200.
+
 ## Límites respetados
 
 - Sin pagos.
@@ -49,5 +61,5 @@ Backend: Railway `earnest-comfort`
 
 ## Próximo paso recomendado
 
-- Deploy y smoke live en `https://bellezapro-demo.surge.sh/reserva`.
-- Después: QA navegador del flujo completo con usuario cliente demo, usando datos QA.
+- QA navegador del flujo completo con usuario cliente demo, usando datos QA.
+- Después: contrato de pagos/caja/POS solo si el usuario lo aprueba explícitamente.
