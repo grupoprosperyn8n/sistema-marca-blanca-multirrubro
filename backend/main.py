@@ -45,6 +45,7 @@ from routes.clientes import router as clientes_router
 from routes.servicios import router as servicios_router
 from routes.servicios_web import router as servicios_web_router
 from routes.agenda_slots import router as agenda_slots_router
+from routes.agenda_config import router as agenda_config_router
 from routes.citas import router as citas_router
 from auth.routes import router as auth_router
 
@@ -81,6 +82,7 @@ app.include_router(clientes_router)
 app.include_router(servicios_router)
 app.include_router(servicios_web_router)
 app.include_router(agenda_slots_router)
+app.include_router(agenda_config_router)
 app.include_router(citas_router)
 # Técnico (no P0)
 app.include_router(productos_web_router)

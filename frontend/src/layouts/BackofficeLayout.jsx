@@ -6,6 +6,7 @@ import { useAuth, getNavLinks } from '../context/AuthContext';
 const ICON_MAP = {
   '/backoffice': '\ud83d\udcca',
   '/backoffice/agenda': '\ud83d\udcc5',
+  '/backoffice/agenda-config': '\ud83d\uddd3\ufe0f',
   '/backoffice/clientes': '\ud83d\udc65',
   '/backoffice/servicios': '\ud83d\udc87',
   '/backoffice/sucursales': '\ud83d\udccd',

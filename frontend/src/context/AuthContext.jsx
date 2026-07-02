@@ -52,6 +52,7 @@ const PERMISOS = {
 
 const MODULE_BY_PERMISSION = {
   agenda: ["CITAS"],
+  agenda_config: ["CITAS"],
   citas: ["CITAS"],
   clientes: ["CLIENTES"],
   configuracion: ["MARCA_BLANCA", "CONFIGURACION"],
@@ -150,6 +151,7 @@ export function getNavLinks(role, access = null) {
   if (p.servicios) links.push({ to: "/backoffice/servicios", label: "Servicios" });
   if (p.clientes) links.push({ to: "/backoffice/clientes", label: "Clientes" });
   if (p.agenda) links.push({ to: "/backoffice/agenda", label: "Agenda" });
+  if (p.agenda && p.editar) links.push({ to: "/backoffice/agenda-config", label: "Configurar Agenda" });
   if (p.citas) links.push({ to: "/backoffice/citas", label: "Citas" });
   if (p.configuracion) links.push({ to: "/backoffice/configuracion", label: "Configuracion" });
   if (role === ROLES.ADMINISTRADOR) links.push({ to: "/backoffice/usuarios", label: "Usuarios" });
@@ -178,6 +180,7 @@ export function getDashboardCards(role, access = null) {
   if (p.servicios) cards.push({ title: "Servicios", desc: "Catalogo de servicios activos", to: "/backoffice/servicios" });
   if (p.clientes) cards.push({ title: "Clientes", desc: "Base de clientes registrados", to: "/backoffice/clientes" });
   if (p.agenda) cards.push({ title: "Agenda", desc: "Slots y disponibilidad", to: "/backoffice/agenda" });
+  if (p.agenda && p.editar) cards.push({ title: "Configurar Agenda", desc: "Generar slots, feriados y cierres", to: "/backoffice/agenda-config" });
   if (p.citas) cards.push({ title: "Citas", desc: "Citas programadas", to: "/backoffice/citas" });
   if (p.configuracion) cards.push({ title: "Configuracion", desc: "Parametros del sistema", to: "/backoffice/configuracion" });
   if (role === ROLES.ADMINISTRADOR) cards.push({ title: "Usuarios", desc: "Gestion de cuentas y accesos", to: "/backoffice/usuarios" });

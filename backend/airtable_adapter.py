@@ -182,6 +182,37 @@ class AirtableClient:
             logger.error(f"Airtable CREATE connection error: {e.reason}")
             raise
 
+    def create_records(self, table_name_or_id: str, records_fields: list[dict]) -> list[dict]:
+        """Crea registros en lote usando el límite nativo de Airtable (10 por request)."""
+        if not records_fields:
+            return []
+        table = self.get_table(table_name_or_id)
+        if not table:
+            raise ValueError(f"Tabla no encontrada: {table_name_or_id}")
+
+        created: list[dict] = []
+        for index in range(0, len(records_fields), 10):
+            batch = records_fields[index:index + 10]
+            data = json.dumps({
+                "records": [{"fields": fields} for fields in batch],
+            }).encode("utf-8")
+            url = f"{self.config.api_url}/v0/{self.config.base_id}/{table.id}"
+            req = Request(url, data=data, method="POST")
+            req.add_header("Authorization", f"Bearer {self.config.api_token}")
+            req.add_header("Content-Type", "application/json")
+            req.add_header("Accept", "application/json")
+            try:
+                with urlopen(req, timeout=30) as resp:
+                    created.extend(json.loads(resp.read().decode()).get("records", []))
+            except HTTPError as e:
+                body_text = e.read().decode() if e.fp else ""
+                logger.error(f"Airtable BATCH CREATE HTTP {e.code}: {body_text[:500]}")
+                raise
+            except URLError as e:
+                logger.error(f"Airtable BATCH CREATE connection error: {e.reason}")
+                raise
+        return created
+
     # ── Escritura controlada (solo auth fields) ──
 
     def patch_record(
@@ -198,6 +229,44 @@ class AirtableClient:
             f"{self.config.base_id}/{table.id}/{record_id}",
             {"fields": fields},
         )
+
+    def patch_records(self, table_name_or_id: str, records: list[dict]) -> list[dict]:
+        """Actualiza registros en lote. Cada item requiere {id, fields}."""
+        if not records:
+            return []
+        table = self.get_table(table_name_or_id)
+        if not table:
+            raise ValueError(f"Tabla no encontrada: {table_name_or_id}")
+
+        patched: list[dict] = []
+        for index in range(0, len(records), 10):
+            batch = records[index:index + 10]
+            payload_records = [
+                {"id": item["id"], "fields": item.get("fields", {})}
+                for item in batch
+                if item.get("id")
+            ]
+            if not payload_records:
+                continue
+            data = json.dumps({
+                "records": payload_records,
+            }).encode("utf-8")
+            url = f"{self.config.api_url}/v0/{self.config.base_id}/{table.id}"
+            req = Request(url, data=data, method="PATCH")
+            req.add_header("Authorization", f"Bearer {self.config.api_token}")
+            req.add_header("Content-Type", "application/json")
+            req.add_header("Accept", "application/json")
+            try:
+                with urlopen(req, timeout=30) as resp:
+                    patched.extend(json.loads(resp.read().decode()).get("records", []))
+            except HTTPError as e:
+                body_text = e.read().decode() if e.fp else ""
+                logger.error(f"Airtable BATCH PATCH HTTP {e.code}: {body_text[:500]}")
+                raise
+            except URLError as e:
+                logger.error(f"Airtable BATCH PATCH connection error: {e.reason}")
+                raise
+        return patched
 
 
     def _paginate(self, path: str, params: Optional[dict] = None) -> list[dict]:

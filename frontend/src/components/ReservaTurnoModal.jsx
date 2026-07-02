@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ROLES, useAuth } from "../context/AuthContext";
 import { isPublicBranch, formatPublicName } from "../utils/publicDataFilters";
+import ProfessionalPicker from "./reserva/ProfessionalPicker";
 
 const API = import.meta.env.VITE_API_BASE_URL || "";
 const AUTO_PROFESSIONAL = "AUTO";
@@ -344,7 +345,13 @@ export default function ReservaTurnoModal({ onClose }) {
                     <button type="button" onClick={() => goToStep(1)} className="mb-3 text-sm font-bold" style={{ color: "var(--brand-primary)" }}>← Cambiar sucursal</button>
                     <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
                       <Select label="Servicio" value={serviceId} onChange={setServiceId} placeholder="Seleccionar servicio…" options={servicios.map((service) => ({ value: service.id, label: `${serviceName(service)} · ${money(servicePrice(service))}` }))} />
-                      <Select label="Profesional" value={professionalId} onChange={setProfessionalId} disabled={!serviceId || professionalsLoading} options={[{ value: AUTO_PROFESSIONAL, label: professionalsLoading ? "Buscando…" : "Automático: menor carga" }, ...professionals.map((prof) => ({ value: prof.id, label: prof.nombre }))]} />
+                      <ProfessionalPicker
+                        value={professionalId}
+                        onChange={setProfessionalId}
+                        professionals={professionals}
+                        disabled={!serviceId || professionalsLoading}
+                        loading={professionalsLoading}
+                      />
                       <div className="flex items-end"><button type="button" onClick={addServiceItem} className="w-full rounded-2xl px-4 py-3 text-sm font-bold text-white" style={{ background: "linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))" }}>Agregar</button></div>
                     </div>
                     <div className="mt-4 space-y-2">

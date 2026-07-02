@@ -1,7 +1,7 @@
 {
   "project": "sistema-marca-blanca-multirrubro",
-  "fase_actual": "ANNUAL_AGENDA_SLOTS_P9 — CERRADA_QA_DEPLOY",
-  "fase_siguiente": "QA_NAVEGADOR_PORTAL_CLIENTE_RESERVA_ANUAL o CHECKOUT_PAYMENTS_POS_CONTRACT_P5 (requiere aprobación explícita para pagos reales)",
+  "fase_actual": "AGENDA_CONFIGURATOR_P10 — COMPLETADA_LOCAL_PENDIENTE_DEPLOY",
+  "fase_siguiente": "QA_NAVEGADOR_AGENDA_CONFIG_PORTAL_RESERVA o REPROGRAMACION_MULTISERVICIO_P11",
   "tareas": {
     "FASE_3B_PORTAL_CLIENTE": {
       "status": "completed",
@@ -658,6 +658,60 @@
         "backend_railway": "PASS_SUCCESS_a8948b3_earnest_comfort",
         "frontend_surge": "PASS_https://bellezapro-demo.surge.sh"
       }
+    },
+    "AGENDA_CONFIGURATOR_P10": {
+      "status": "completed_local_pending_deploy",
+      "closed_at": "2026-07-02",
+      "commits": [
+        "pending"
+      ],
+      "deliverables": [
+        "backend/routes/agenda_config.py (bootstrap, generar-slots dry-run/crear, bloquear-slots lógico)",
+        "backend/routes/reserva_opciones.py (oculta slots ocupados por slot_id y por profesional+fecha+horario)",
+        "backend/routes/agenda_slots.py (filtros fecha/rango y exclusión por citas activas)",
+        "backend/routes/clientes.py y backend/routes/citas.py (doble defensa contra solapes por profesional/hora al confirmar/backoffice)",
+        "backend/airtable_adapter.py (batch create/patch para slots)",
+        "frontend/src/pages/AgendaConfig.jsx (configurador mobile-first)",
+        "frontend/src/components/reserva/ProfessionalPicker.jsx (selector con foto/descripcion)",
+        "frontend/src/pages/Reserva.jsx y ReservaTurnoModal.jsx (selector profesional enriquecido)",
+        "frontend/src/pages/Citas.jsx (slot select acotado por rango para no leer 22k slots)"
+      ],
+      "agenda_rules_supported": {
+        "horario_corrido": true,
+        "horario_cortado": true,
+        "dias_semana_globales": true,
+        "feriados_globales": true,
+        "cierres_individuales_por_fecha": true,
+        "bloqueo_logico_de_slots_existentes": true,
+        "todos_los_empleados_o_seleccion_individual": true,
+        "sin_delete_fisico": true
+      },
+      "double_booking_protection": {
+        "read_availability_excludes_active_cita_slot_ids": true,
+        "read_availability_excludes_professional_time_overlaps": true,
+        "client_confirmation_rechecks_slot_id": true,
+        "client_confirmation_rechecks_professional_time_overlap": true,
+        "backoffice_citas_rechecks_professional_time_overlap": true
+      },
+      "qa_results": {
+        "backend_py_compile": "PASS",
+        "frontend_build": "PASS",
+        "local_agenda_config_dry_run_existing_day": "PASS_0_NEW_42_EXISTING_SKIPPED",
+        "local_existing_slot_index": "PASS_63_KEYS_7_RANGE_GROUPS",
+        "local_reserva_agenda_opciones": "PASS_200_TOTAL_8_GROUPED",
+        "local_agenda_slots_filtered": "PASS_200_TOTAL_63",
+        "local_profesionales_media_dto": "PASS_FOTOURL_DESCRIPCION_KEYS",
+        "git_diff_check": "PENDING",
+        "strict_secret_scan": "PENDING",
+        "deploy": "PENDING"
+      },
+      "secrets_free": true,
+      "env_files_touched": false,
+      "payments_checkout_pos": false,
+      "reservas_table_used": false,
+      "schema_changes": false,
+      "delete_fisico": false,
+      "notes": "No se crearon tablas ni campos. El configurador usa campos existentes de AGENDA_SLOTS, EMPLEADOS y SUCURSALES. La generación masiva tiene límite por request para evitar timeouts; para anual completo se recomienda operar por tramos o futura automatización background."
     }
   },
   "deploys_activos": {

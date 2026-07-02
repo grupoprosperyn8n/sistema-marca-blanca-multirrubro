@@ -1,4 +1,4 @@
-# progress/session-summary.md — ANNUAL_AGENDA_SLOTS_P9
+# progress/session-summary.md — AGENDA_CONFIGURATOR_P10
 
 Fecha: 2026-07-02
 Dominio comercial: https://bellezapro-demo.surge.sh
@@ -6,47 +6,43 @@ Backend: Railway `earnest-comfort`
 
 ## Estado
 
-- Fase: ANNUAL_AGENDA_SLOTS_P9
-- Estado: completada, commiteada, pusheada y desplegada.
+- Fase: AGENDA_CONFIGURATOR_P10
+- Estado: completada localmente; pendiente commit/deploy final.
 
 ## Implementado
 
-- Agenda operativa anual para Lopez&Lopez:
-  - Sucursal: `rec9eQyuzpZjlDrkY`.
-  - Rango: 2026-07-02 a 2027-07-01.
-  - Horario: 09:00 a 18:00.
-  - Empleados activos: 7.
-  - Slots creados: 22.935.
-  - Slots teóricos: 22.995.
-  - Omitidos por solape existente: 60.
-- Se usan slots atómicos de 60 minutos para evitar solapes y doble reserva.
-- El backend agrupa slots consecutivos para ofrecer turnos de servicios largos, hasta 180 minutos.
-- La UI envía `slot_ids` y el backend reserva/libera todos los slots atómicos correspondientes.
-- Se optimizó `/api/reserva/agenda-opciones` para filtrar `AGENDA_SLOTS` por fecha en Airtable antes de procesar, evitando leer 22k+ registros por request.
+- Configurador de agenda en backoffice:
+  - Ruta frontend: `/backoffice/agenda-config`.
+  - Backend: `/api/backoffice/agenda-config/bootstrap`.
+  - Backend: `/api/backoffice/agenda-config/generar-slots`.
+  - Backend: `/api/backoffice/agenda-config/bloquear-slots`.
+- Permite horario corrido y horario cortado.
+- Permite días laborables globales, fines de semana, feriados y días cerrados.
+- Permite aplicar configuración a todos los empleados o selección individual.
+- Permite bloquear slots existentes con baja lógica (`BLOQUEADO`), sin DELETE físico.
+- Agregado selector profesional con miniatura, nombre, descripción/puesto/especialidad en reserva pública y modal del portal.
+- La disponibilidad ya no confía solo en `ESTADO_SLOT`; ahora excluye:
+  - slots vinculados a CITAS activas;
+  - cualquier solape por profesional + fecha + rango horario, aunque sea otro slot duplicado.
+- Backoffice Citas y confirmación cliente también revalidan solape por profesional/hora.
 
-## Validación
+## Validación local
 
-- `python3 -m py_compile routes/reserva_opciones.py routes/clientes.py main.py`: PASS.
-- `git diff --check`: PASS.
-- Secret scan sobre diff: PASS.
-- Filtro Airtable por fecha `2026-07-10`: PASS, 63 slots.
-- Agenda local Alisado + Diego: PASS, opciones agrupadas de 120 minutos con 2 `slotIds`.
-- Agenda local Corte + Lucas: PASS, opciones de 60 minutos.
-- Agenda local Corte + AUTO: PASS.
+- `python3 -m py_compile ...`: PASS.
+- `npm run build`: PASS.
+- Dry-run configurador sobre día existente: PASS, 0 nuevos, 42 existentes omitidos.
+- Índice de slots existentes 2026-07-10: PASS, 63 keys y 7 grupos por profesional.
+- `/api/reserva/agenda-opciones`: PASS 200, total 8, slot agrupado.
+- `/api/agenda-slots` con rango: PASS 200, total 63.
+- `/api/reserva/profesionales`: PASS, DTO incluye `fotoUrl` y `descripcion`.
 
-## Deploy final
+## Pendiente antes de cerrar
 
-- Commits:
-  - `7054ed1 feat(reservas): support grouped booking slots`.
-  - `a8948b3 fix(reservas): filter agenda slots by date`.
-- Railway `earnest-comfort`: SUCCESS/RUNNING para `a8948b3`.
-- Surge: PASS `https://bellezapro-demo.surge.sh`.
-- Smoke live:
-  - `/health`: 200.
-  - `/api/reserva/agenda-opciones` Alisado + Diego + 2026-07-10: total 8, primer slot 09:00-11:00, 2 `slotIds`, 120 min.
-  - `/api/reserva/agenda-opciones` Corte + Lucas + 2026-07-10: total 9.
-  - `/api/reserva/agenda-opciones` Corte + AUTO + 2026-07-10: total 18.
-  - Surge `/`, `/reserva`, `/portal`: 200.
+- `git diff --check`.
+- Secret scan estricto.
+- Commit/push.
+- Deploy Railway + Surge.
+- Smoke live.
 
 ## Límites respetados
 
@@ -56,10 +52,6 @@ Backend: Railway `earnest-comfort`
 - Sin `RESERVAS`.
 - Sin DELETE físico.
 - Sin cambios de schema Airtable.
+- Sin crear tablas ni campos.
 - Sin tocar `.env`, `backend/.env`, `frontend/.env` ni `CREDENCIALES.md`.
 - Sin secretos impresos/commiteados.
-
-## Próximo paso recomendado
-
-- QA navegador del portal cliente: crear turno desde landing/portal y verificar historial.
-- Si se quiere reprogramación multi-servicio real, abrir bloque separado para elegir nuevo slot por cada item de `CITA_ITEMS`.

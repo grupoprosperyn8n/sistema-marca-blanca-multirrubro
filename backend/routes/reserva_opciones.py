@@ -80,6 +80,19 @@ def _date_cita_filter(target_date: str) -> str:
     return f"AND(DATETIME_FORMAT({{FECHA_CITA}}, 'YYYY-MM-DD')='{safe_date}',OR({states}))"
 
 
+def _attachment_url(value: Any) -> str:
+    if not isinstance(value, list) or not value:
+        return ""
+    first = value[0] if isinstance(value[0], dict) else {}
+    thumbnails = first.get("thumbnails") or {}
+    return (
+        ((thumbnails.get("small") or {}).get("url"))
+        or ((thumbnails.get("large") or {}).get("url"))
+        or first.get("url")
+        or ""
+    )
+
+
 def _slot_available(fields: dict) -> bool:
     return (
         _text(fields.get("ESTADO_SLOT")).upper() == "DISPONIBLE"
@@ -159,6 +172,8 @@ def _eligible_professionals(client: AirtableClient, sucursal_id: str, service_id
         result.append({
             "id": employee_id,
             "nombre": fields.get("NOMBRE_EMPLEADO") or "Profesional",
+            "descripcion": fields.get("PERFIL_PROFESIONAL") or fields.get("HORARIO_TRABAJO") or "",
+            "fotoUrl": _attachment_url(fields.get("FOTO_PERFIL")),
             "especialidad": fields.get("ESPECIALIDAD") or "",
             "puesto": fields.get("PUESTO") or "",
         })
@@ -187,6 +202,79 @@ def _daily_load_counts(client: AirtableClient, fecha: str) -> dict[str, int]:
         for employee_id in _links(fields.get("PROFESIONAL")):
             counts[employee_id] = counts.get(employee_id, 0) + 1
     return counts
+
+
+def _occupied_slot_ids(client: AirtableClient, fecha: str) -> set[str]:
+    occupied: set[str] = set()
+    if not fecha:
+        return occupied
+    try:
+        records = client.list_records(
+            "CITAS",
+            fields=["AGENDA_SLOT", "FECHA_CITA", "ESTADO_CITA", "ACTIVO"],
+            filter_formula=_date_cita_filter(fecha),
+            by_name=True,
+        )
+    except Exception:
+        return occupied
+    for record in records:
+        fields = record.get("fields", {})
+        if fields.get("ACTIVO") is False:
+            continue
+        if _text(fields.get("ESTADO_CITA")).upper() not in ACTIVE_CITA_STATES:
+            continue
+        occupied.update(_links(fields.get("AGENDA_SLOT")))
+    return occupied
+
+
+def _ranges_overlap(start_a: int, end_a: int, start_b: int, end_b: int) -> bool:
+    return start_a < end_b and start_b < end_a
+
+
+def _occupied_ranges_by_professional(client: AirtableClient, fecha: str) -> dict[str, list[tuple[int, int]]]:
+    ranges: dict[str, list[tuple[int, int]]] = {}
+    if not fecha:
+        return ranges
+    try:
+        records = client.list_records(
+            "CITAS",
+            fields=["PROFESIONAL", "FECHA_CITA", "HORA_INICIO", "HORA_FIN", "DURACION_MINUTOS", "ESTADO_CITA", "ACTIVO"],
+            filter_formula=_date_cita_filter(fecha),
+            by_name=True,
+        )
+    except Exception:
+        return ranges
+    for record in records:
+        fields = record.get("fields", {})
+        if fields.get("ACTIVO") is False:
+            continue
+        if _text(fields.get("ESTADO_CITA")).upper() not in ACTIVE_CITA_STATES:
+            continue
+        start = _time_to_minutes(fields.get("HORA_INICIO"))
+        end = _time_to_minutes(fields.get("HORA_FIN"))
+        duration = _number(fields.get("DURACION_MINUTOS"), 0)
+        if start is not None and end is None and duration:
+            end = start + duration
+        if start is None or end is None or end <= start:
+            continue
+        for professional_id in _links(fields.get("PROFESIONAL")):
+            ranges.setdefault(professional_id, []).append((start, end))
+    return ranges
+
+
+def _slot_time_range(fields: dict) -> tuple[int | None, int | None]:
+    start = _time_to_minutes(fields.get("HORA_INICIO"))
+    end = _time_to_minutes(fields.get("HORA_FIN"))
+    duration = _number(fields.get("DURACION_MINUTOS"), 0)
+    if start is not None and end is None and duration:
+        end = start + duration
+    return start, end
+
+
+def _professional_is_busy(professional_id: str, start: int | None, end: int | None, occupied: dict[str, list[tuple[int, int]]]) -> bool:
+    if start is None or end is None or end <= start:
+        return True
+    return any(_ranges_overlap(start, end, busy_start, busy_end) for busy_start, busy_end in occupied.get(professional_id, []))
 
 
 def _rotation_rank(fecha: str, sucursal_id: str, service_id: str, employee_id: str) -> int:
@@ -356,6 +444,8 @@ async def listar_agenda_opciones(
         professionals = [item for item in professionals if item["id"] == profesional_id]
 
     load_counts = _daily_load_counts(client, target_date)
+    occupied_slots = _occupied_slot_ids(client, target_date)
+    occupied_ranges = _occupied_ranges_by_professional(client, target_date)
     try:
         slot_records = client.list_records(
             "AGENDA_SLOTS",
@@ -382,6 +472,8 @@ async def listar_agenda_opciones(
     allowed_professional_ids = {item["id"] for item in professionals}
     for record in slot_records:
         fields = record.get("fields", {})
+        if record.get("id") in occupied_slots:
+            continue
         slot_date = _text(fields.get("FECHA_SLOT"))
         if target_date and slot_date != target_date:
             continue
@@ -389,7 +481,12 @@ async def listar_agenda_opciones(
             continue
         if not _slot_available(fields):
             continue
-        slot_professionals = [pid for pid in _links(fields.get("PROFESIONAL")) if pid in allowed_professional_ids]
+        start, end = _slot_time_range(fields)
+        slot_professionals = [
+            pid
+            for pid in _links(fields.get("PROFESIONAL"))
+            if pid in allowed_professional_ids and not _professional_is_busy(pid, start, end, occupied_ranges)
+        ]
         for employee_id in slot_professionals:
             if professional_by_id.get(employee_id):
                 slots_by_professional.setdefault(employee_id, []).append(record)

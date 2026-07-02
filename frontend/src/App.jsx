@@ -29,6 +29,7 @@ import UsersAdmin from "./pages/UsersAdmin";
 // Backoffice
 import Backoffice from "./pages/Backoffice";
 import Agenda from "./pages/Agenda";
+import AgendaConfig from "./pages/AgendaConfig";
 import Clientes from "./pages/Clientes";
 import Servicios from "./pages/Servicios";
 import Sucursales from "./pages/Sucursales";
@@ -95,6 +96,7 @@ export default function App() {
       <Route element={<ProtectedRoute roles={ROLES_BACKOFFICE}><BackofficeLayout /></ProtectedRoute>}>
         <Route path="/backoffice" element={<Backoffice />} />
         <Route path="/backoffice/agenda" element={<ProtectedRoute roles={ROLES_BACKOFFICE} module="agenda"><Agenda /></ProtectedRoute>} />
+        <Route path="/backoffice/agenda-config" element={<ProtectedRoute roles={ROLES_BACKOFFICE} module="agenda" action="edit"><AgendaConfig /></ProtectedRoute>} />
         <Route path="/backoffice/citas" element={<ProtectedRoute roles={ROLES_BACKOFFICE} module="citas"><Citas /></ProtectedRoute>} />
       </Route>
 

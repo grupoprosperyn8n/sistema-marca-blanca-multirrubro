@@ -73,6 +73,28 @@ def _to_bool(value, default=False):
     return default
 
 
+def _time_to_minutes(value) -> int | None:
+    text = str(value or "").strip()
+    try:
+        hour, minute = text.split(":")[:2]
+        return int(hour) * 60 + int(minute)
+    except Exception:
+        return None
+
+
+def _formula_text(value: str) -> str:
+    return value.replace("\\", "\\\\").replace("'", "\\'")
+
+
+def _date_cita_filter(target_date: str) -> str:
+    states = ",".join(f"{{ESTADO_CITA}}='{_formula_text(state)}'" for state in _ACTIVE_CITA_STATES)
+    return f"AND(DATETIME_FORMAT({{FECHA_CITA}}, 'YYYY-MM-DD')='{_formula_text(target_date)}',OR({states}))"
+
+
+def _ranges_overlap(start_a: int, end_a: int, start_b: int, end_b: int) -> bool:
+    return start_a < end_b and start_b < end_a
+
+
 def _require_citas_action(user: dict, action: str):
     rol = user.get("rol") or ""
     if can_module(rol, "CITAS", action):
@@ -197,6 +219,20 @@ def _slot_is_available(at: AirtableClient, slot_id: str, exclude_cita_id: str | 
         and not _to_bool(fields.get("BLOQUEO_MANUAL"), False)
         and not _has_active_cita_for_slot(at, slot_id, exclude_cita_id)
     )
+    if available:
+        start = _time_to_minutes(fields.get("HORA_INICIO"))
+        end = _time_to_minutes(fields.get("HORA_FIN"))
+        duration = int(fields.get("DURACION_MINUTOS") or 0)
+        if start is not None and end is None and duration:
+            end = start + duration
+        available = not _has_active_cita_for_professional_time(
+            at,
+            [str(item) for item in _as_list(fields.get("PROFESIONAL")) if str(item).startswith("rec")],
+            str(fields.get("FECHA_SLOT") or ""),
+            start,
+            end,
+            exclude_cita_id=exclude_cita_id,
+        )
     return available, fields
 
 
@@ -211,6 +247,51 @@ def _has_active_cita_for_slot(at: AirtableClient, slot_id: str, exclude_cita_id:
         if str(fields.get("ESTADO_CITA") or "").upper() not in _ACTIVE_CITA_STATES:
             continue
         if slot_id in [str(item) for item in _as_list(fields.get("AGENDA_SLOT"))]:
+            return True
+    return False
+
+
+def _has_active_cita_for_professional_time(
+    at: AirtableClient,
+    professional_ids: list[str],
+    fecha: str,
+    start: int | None,
+    end: int | None,
+    exclude_cita_id: str | None = None,
+) -> bool:
+    if not professional_ids or not fecha or start is None or end is None or end <= start:
+        return False
+    try:
+        records = at.list_records(
+            "CITAS",
+            fields=["PROFESIONAL", "FECHA_CITA", "HORA_INICIO", "HORA_FIN", "DURACION_MINUTOS", "ESTADO_CITA", "ACTIVO"],
+            filter_formula=_date_cita_filter(fecha),
+            by_name=True,
+        )
+    except Exception:
+        records = at.list_records("CITAS", fields=["PROFESIONAL", "FECHA_CITA", "HORA_INICIO", "HORA_FIN", "DURACION_MINUTOS", "ESTADO_CITA", "ACTIVO"], by_name=True)
+    requested = set(professional_ids)
+    for record in records:
+        if exclude_cita_id and record.get("id") == exclude_cita_id:
+            continue
+        fields = record.get("fields", {})
+        if not _to_bool(fields.get("ACTIVO"), True):
+            continue
+        if str(fields.get("ESTADO_CITA") or "").upper() not in _ACTIVE_CITA_STATES:
+            continue
+        if str(fields.get("FECHA_CITA") or "") != fecha:
+            continue
+        record_professionals = {str(item) for item in _as_list(fields.get("PROFESIONAL"))}
+        if not (requested & record_professionals):
+            continue
+        busy_start = _time_to_minutes(fields.get("HORA_INICIO"))
+        busy_end = _time_to_minutes(fields.get("HORA_FIN"))
+        duration = int(fields.get("DURACION_MINUTOS") or 0)
+        if busy_start is not None and busy_end is None and duration:
+            busy_end = busy_start + duration
+        if busy_start is None or busy_end is None or busy_end <= busy_start:
+            continue
+        if _ranges_overlap(start, end, busy_start, busy_end):
             return True
     return False
 

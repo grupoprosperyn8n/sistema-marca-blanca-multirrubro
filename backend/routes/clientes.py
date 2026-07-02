@@ -98,6 +98,69 @@ def _has_active_cita_for_slot(
     return False
 
 
+def _formula_text(value: str) -> str:
+    return value.replace("\\", "\\\\").replace("'", "\\'")
+
+
+def _date_cita_filter(target_date: str) -> str:
+    safe_date = _formula_text(target_date)
+    states = ",".join(f"{{ESTADO_CITA}}='{_formula_text(state)}'" for state in _ESTADOS_CITA_ACTIVA)
+    return f"AND(DATETIME_FORMAT({{FECHA_CITA}}, 'YYYY-MM-DD')='{safe_date}',OR({states}))"
+
+
+def _ranges_overlap(start_a: int, end_a: int, start_b: int, end_b: int) -> bool:
+    return start_a < end_b and start_b < end_a
+
+
+def _has_active_cita_for_professional_time(
+    at: AirtableClient,
+    professional_ids: list[str],
+    fecha: str,
+    start: int | None,
+    end: int | None,
+    exclude_cita_id: str | None = None,
+) -> bool:
+    """True if any active appointment overlaps the same professional/date/time.
+
+    This catches duplicate-slot situations where two different slot records
+    represent the same professional and time range.
+    """
+    if not professional_ids or not fecha or start is None or end is None or end <= start:
+        return False
+    try:
+        records = at.list_records(
+            "CITAS",
+            fields=["PROFESIONAL", "FECHA_CITA", "HORA_INICIO", "HORA_FIN", "DURACION_MINUTOS", "ESTADO_CITA", "ACTIVO"],
+            filter_formula=_date_cita_filter(fecha),
+            by_name=True,
+        )
+    except Exception:
+        records = at.list_records("CITAS", fields=["PROFESIONAL", "FECHA_CITA", "HORA_INICIO", "HORA_FIN", "DURACION_MINUTOS", "ESTADO_CITA", "ACTIVO"], by_name=True)
+    requested = set(professional_ids)
+    for record in records:
+        if exclude_cita_id and record.get("id") == exclude_cita_id:
+            continue
+        fields = record.get("fields", {})
+        if fields.get("ACTIVO") is False:
+            continue
+        if (fields.get("ESTADO_CITA") or "").upper() not in _ESTADOS_CITA_ACTIVA:
+            continue
+        if str(fields.get("FECHA_CITA") or "") != fecha:
+            continue
+        if not (requested & set(_as_id_list(fields.get("PROFESIONAL")))):
+            continue
+        busy_start = _time_to_minutes(fields.get("HORA_INICIO"))
+        busy_end = _time_to_minutes(fields.get("HORA_FIN"))
+        duration = int(_number(fields.get("DURACION_MINUTOS"), 0))
+        if busy_start is not None and busy_end is None and duration:
+            busy_end = busy_start + duration
+        if busy_start is None or busy_end is None or busy_end <= busy_start:
+            continue
+        if _ranges_overlap(start, end, busy_start, busy_end):
+            return True
+    return False
+
+
 def _rollback_payload(fields: dict, field_names: list[str]) -> dict:
     """Arma payload para restaurar campos; None limpia valores creados."""
     return {field_name: fields.get(field_name, None) for field_name in field_names}
@@ -775,6 +838,19 @@ async def confirmar_reserva(payload: dict, user: dict = Depends(get_current_user
     hora_fin = sfields.get("HORA_FIN", "")
     duracion = sfields.get("DURACION_MINUTOS", "")
     profesional_ids = sfields.get("PROFESIONAL", [])
+    start_min = _time_to_minutes(hora_inicio)
+    end_min = _time_to_minutes(hora_fin)
+    if start_min is not None and end_min is None and duracion:
+        end_min = start_min + int(_number(duracion, 0))
+    if _has_active_cita_for_professional_time(at, _as_id_list(profesional_ids), fecha_cita, start_min, end_min):
+        errores.append("El profesional ya tiene una cita activa en ese horario.")
+
+    if errores:
+        return {
+            "confirmado": False,
+            "errores": errores,
+            "mensaje": "No se puede confirmar: " + "; ".join(errores),
+        }
 
     # 8. Obtener nombre del cliente para NOMBRE_CITA
     try:
@@ -967,6 +1043,8 @@ def _validate_multi_booking(at: AirtableClient, payload: dict, cliente_id: str) 
             if start_min is None or end_min is None or end_min <= start_min:
                 item_errors.append(f"Slot {slot_id} tiene horario invalido.")
             else:
+                if _has_active_cita_for_professional_time(at, slot_profesional_ids, current_fecha, start_min, end_min):
+                    item_errors.append(f"El profesional ya tiene una cita activa en el horario del slot {slot_id}.")
                 starts.append(start_min)
                 ends.append(end_min)
                 reserved_duration += end_min - start_min

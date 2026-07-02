@@ -5,6 +5,7 @@ import { ROLES, useAuth } from "../context/AuthContext";
 import { useBrandConfig } from "../context/BrandConfigContext";
 import GlassCard from "../components/ui/GlassCard";
 import SectionHeader from "../components/ui/SectionHeader";
+import ProfessionalPicker from "../components/reserva/ProfessionalPicker";
 
 const API = import.meta.env.VITE_API_BASE_URL || "";
 const AUTO_PROFESSIONAL = "AUTO";
@@ -390,23 +391,13 @@ export default function Reserva() {
                     ))}
                   </select>
                 </div>
-                <div>
-                  <label htmlFor="reserva-profesional" className="mb-1 block text-xs font-bold uppercase tracking-wide" style={{ color: "var(--brand-primary)" }}>Profesional</label>
-                  <select
-                    id="reserva-profesional"
-                    name="profesional_id"
-                    value={professionalId}
-                    onChange={(event) => setProfessionalId(event.target.value)}
-                    disabled={!serviceId || professionalsLoading}
-                    className="w-full rounded-2xl border border-white/70 bg-white/80 px-3 py-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 disabled:opacity-60"
-                    style={{ color: "var(--brand-text)" }}
-                  >
-                    <option value={AUTO_PROFESSIONAL}>{professionalsLoading ? "Buscando…" : "Automático: menor carga del día"}</option>
-                    {professionals.map((professional) => (
-                      <option key={professional.id} value={professional.id}>{professional.nombre}</option>
-                    ))}
-                  </select>
-                </div>
+                <ProfessionalPicker
+                  value={professionalId}
+                  onChange={setProfessionalId}
+                  professionals={professionals}
+                  disabled={!serviceId || professionalsLoading}
+                  loading={professionalsLoading}
+                />
                 <div className="flex items-end">
                   <button type="button" onClick={addServiceItem} className="w-full rounded-2xl px-4 py-3 text-sm font-bold text-white transition-opacity hover:opacity-90" style={{ background: "linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))" }}>
                     Agregar

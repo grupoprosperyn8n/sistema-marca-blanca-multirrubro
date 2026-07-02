@@ -34,6 +34,13 @@ const emptyForm = {
   OBSERVACIONES_INTERNAS: "",
 };
 
+function addDaysISO(days) {
+  const now = new Date();
+  now.setDate(now.getDate() + days);
+  const offset = now.getTimezoneOffset();
+  return new Date(now.getTime() - offset * 60000).toISOString().slice(0, 10);
+}
+
 function option(value, label) {
   return { value, label: label || value };
 }
@@ -83,11 +90,18 @@ export default function Citas() {
   async function loadAll() {
     setLoading(true);
     try {
+      const slotParams = new URLSearchParams({
+        disponible: "true",
+        future_only: "true",
+        fecha_desde: addDaysISO(0),
+        fecha_hasta: addDaysISO(45),
+        max_records: "1000",
+      });
       const [citasRes, clientesRes, serviciosRes, slotsRes] = await Promise.all([
         fetch(`${API}/api/citas`),
         fetch(`${API}/api/clientes`),
         fetch(`${API}/api/servicios`),
-        fetch(`${API}/api/agenda-slots?disponible=true&future_only=true`),
+        fetch(`${API}/api/agenda-slots?${slotParams.toString()}`),
       ]);
       const [citasData, clientesData, serviciosData, slotsData] = await Promise.all([
         citasRes.json(),

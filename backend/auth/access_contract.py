@@ -181,10 +181,13 @@ def _menu_items_for_permission(permission: dict) -> list[dict]:
     if not (permission["visible"] and permission["implemented"]):
         return []
     if permission["module"] == "CITAS":
-        return [
+        items = [
             _menu_item(permission, "/backoffice/agenda", label="Agenda", icon="📅"),
             _menu_item(permission, "/backoffice/citas", label="Citas", icon="📋"),
         ]
+        if permission["edit"] or permission["create"]:
+            items.append(_menu_item(permission, "/backoffice/agenda-config", label="Configurar Agenda", icon="🗓️"))
+        return items
     return [_menu_item(permission, permission["frontend_route"])]
 
 
