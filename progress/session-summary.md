@@ -1,4 +1,4 @@
-# progress/session-summary.md — PORTAL_BOOKING_HISTORY_UX_P8
+# progress/session-summary.md — ANNUAL_AGENDA_SLOTS_P9
 
 Fecha: 2026-07-02
 Dominio comercial: https://bellezapro-demo.surge.sh
@@ -6,40 +6,47 @@ Backend: Railway `earnest-comfort`
 
 ## Estado
 
-- Fase: PORTAL_BOOKING_HISTORY_UX_P8
-- Estado: completado, commiteado, pusheado y desplegado.
+- Fase: ANNUAL_AGENDA_SLOTS_P9
+- Estado: completada, commiteada, pusheada y desplegada.
 
 ## Implementado
 
-- Portal cliente:
-  - El modal “Reservar turno” ahora usa la misma estructura visual que la landing: Sucursal → Servicios → Agenda → Confirmar.
-  - Permite múltiples servicios y profesional por servicio desde el portal.
-  - El historial de turnos se compactó para que los turnos cancelados/completados no ocupen tarjetas gigantes.
-  - Próximos turnos muestran acciones más claras: cancelar y cambiar horario cuando corresponde.
-- Backend:
-  - `/api/clientes/me/citas` ahora expone `ITEMS_CITA`, `CANTIDAD_SERVICIOS`, `NOMBRE_SERVICIOS`, `SERVICIO_WEB_ID` y `ES_MULTISERVICIO`.
-  - Esto mejora cómo aparecen en portal los turnos creados desde landing con `/confirmar-multiple`.
-  - Cancelar una cita compuesta ahora libera todos los `AGENDA_SLOT` vinculados, no solo el primero.
-  - Reprogramar una cita multi-servicio devuelve 409 seguro para evitar inconsistencias; por ahora se debe cancelar y crear de nuevo.
+- Agenda operativa anual para Lopez&Lopez:
+  - Sucursal: `rec9eQyuzpZjlDrkY`.
+  - Rango: 2026-07-02 a 2027-07-01.
+  - Horario: 09:00 a 18:00.
+  - Empleados activos: 7.
+  - Slots creados: 22.935.
+  - Slots teóricos: 22.995.
+  - Omitidos por solape existente: 60.
+- Se usan slots atómicos de 60 minutos para evitar solapes y doble reserva.
+- El backend agrupa slots consecutivos para ofrecer turnos de servicios largos, hasta 180 minutos.
+- La UI envía `slot_ids` y el backend reserva/libera todos los slots atómicos correspondientes.
+- Se optimizó `/api/reserva/agenda-opciones` para filtrar `AGENDA_SLOTS` por fecha en Airtable antes de procesar, evitando leer 22k+ registros por request.
 
-## Validación local
+## Validación
 
-- `python3 -m py_compile backend/routes/clientes.py backend/main.py`: PASS.
-- `npm run build`: PASS.
+- `python3 -m py_compile routes/reserva_opciones.py routes/clientes.py main.py`: PASS.
 - `git diff --check`: PASS.
 - Secret scan sobre diff: PASS.
+- Filtro Airtable por fecha `2026-07-10`: PASS, 63 slots.
+- Agenda local Alisado + Diego: PASS, opciones agrupadas de 120 minutos con 2 `slotIds`.
+- Agenda local Corte + Lucas: PASS, opciones de 60 minutos.
+- Agenda local Corte + AUTO: PASS.
 
 ## Deploy final
 
-- Commit: `5178c87`.
-- Push origin/main: PASS.
-- Railway `earnest-comfort`: SUCCESS/RUNNING para `5178c87`.
+- Commits:
+  - `7054ed1 feat(reservas): support grouped booking slots`.
+  - `a8948b3 fix(reservas): filter agenda slots by date`.
+- Railway `earnest-comfort`: SUCCESS/RUNNING para `a8948b3`.
 - Surge: PASS `https://bellezapro-demo.surge.sh`.
 - Smoke live:
   - `/health`: 200.
-  - `/api/reserva/agenda-opciones` para Alisado + Diego + 2026-07-02: total 1.
-  - `/api/clientes/me/citas` sin auth: 401.
-  - `/portal` en Surge: 200.
+  - `/api/reserva/agenda-opciones` Alisado + Diego + 2026-07-10: total 8, primer slot 09:00-11:00, 2 `slotIds`, 120 min.
+  - `/api/reserva/agenda-opciones` Corte + Lucas + 2026-07-10: total 9.
+  - `/api/reserva/agenda-opciones` Corte + AUTO + 2026-07-10: total 18.
+  - Surge `/`, `/reserva`, `/portal`: 200.
 
 ## Límites respetados
 
@@ -54,5 +61,5 @@ Backend: Railway `earnest-comfort`
 
 ## Próximo paso recomendado
 
-- QA navegador con cliente demo: crear turno desde landing y verificar que aparezca en portal.
-- Si se quiere reprogramación multi-servicio real, abrir un bloque separado porque requiere elegir nuevo slot por cada item de `CITA_ITEMS`.
+- QA navegador del portal cliente: crear turno desde landing/portal y verificar historial.
+- Si se quiere reprogramación multi-servicio real, abrir bloque separado para elegir nuevo slot por cada item de `CITA_ITEMS`.

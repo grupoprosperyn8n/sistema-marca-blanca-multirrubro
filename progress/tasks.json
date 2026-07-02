@@ -1,7 +1,7 @@
 {
   "project": "sistema-marca-blanca-multirrubro",
-  "fase_actual": "PORTAL_BOOKING_HISTORY_UX_P8 — CERRADA_QA_DEPLOY",
-  "fase_siguiente": "QA_NAVEGADOR_PORTAL_CLIENTE_RESERVA o CHECKOUT_PAYMENTS_POS_CONTRACT_P5 (requiere aprobación explícita para pagos reales)",
+  "fase_actual": "ANNUAL_AGENDA_SLOTS_P9 — CERRADA_QA_DEPLOY",
+  "fase_siguiente": "QA_NAVEGADOR_PORTAL_CLIENTE_RESERVA_ANUAL o CHECKOUT_PAYMENTS_POS_CONTRACT_P5 (requiere aprobación explícita para pagos reales)",
   "tareas": {
     "FASE_3B_PORTAL_CLIENTE": {
       "status": "completed",
@@ -600,6 +600,62 @@
       "notes": "El portal ahora usa el mismo orden visual que /reserva: sucursal, servicios, agenda, confirmar. /api/clientes/me/citas devuelve items de CITA_ITEMS para que turnos creados desde landing se vean mejor en portal. Reprogramar citas multi-servicio se bloquea con 409 seguro; cancelar sí libera todos los slots vinculados.",
       "deploy": {
         "backend_railway": "PASS_SUCCESS_5178c87_earnest_comfort",
+        "frontend_surge": "PASS_https://bellezapro-demo.surge.sh"
+      }
+    },
+    "ANNUAL_AGENDA_SLOTS_P9": {
+      "status": "completed_deployed",
+      "closed_at": "2026-07-02",
+      "commits": [
+        "7054ed1",
+        "a8948b3"
+      ],
+      "deliverables": [
+        "Airtable AGENDA_SLOTS anuales Lopez&Lopez 2026-07-02 a 2027-07-01",
+        "backend/routes/reserva_opciones.py (agrupación de slots atómicos consecutivos y filtro Airtable por fecha)",
+        "backend/routes/clientes.py (confirmación multi-slot con slot_ids)",
+        "frontend/src/pages/Reserva.jsx y frontend/src/components/ReservaTurnoModal.jsx (envío de slot_ids agrupados)"
+      ],
+      "data_loaded": {
+        "sucursal": "Lopez&Lopez",
+        "sucursal_id": "rec9eQyuzpZjlDrkY",
+        "empleados_activos": 7,
+        "fecha_desde": "2026-07-02",
+        "fecha_hasta": "2027-07-01",
+        "horario": "09:00-18:00",
+        "slot_atomico_minutos": 60,
+        "slots_creados_total": 22935,
+        "slots_teoricos": 22995,
+        "slots_omitidos_por_solape_existente": 60,
+        "duracion_servicio_soportada_minutos": "hasta 180 agrupando slots consecutivos"
+      },
+      "qa_results": {
+        "backend_py_compile": "PASS",
+        "local_airtable_date_filter": "PASS_63_SLOTS_FOR_2026_07_10",
+        "local_agenda_alisado_diego": "PASS_TOTAL_8_GROUPED_2_SLOTIDS_120_MIN",
+        "local_agenda_corte_lucas": "PASS_TOTAL_9_1_SLOTID",
+        "local_agenda_auto_corte": "PASS_TOTAL_18",
+        "railway_auto_deploy_7054ed1": "PASS_SUCCESS",
+        "surge_deploy_bellezapro_7054ed1": "PASS",
+        "live_smoke_final": "PASS",
+        "git_diff_check": "PASS",
+        "strict_secret_scan": "PASS",
+        "railway_auto_deploy_a8948b3": "PASS_SUCCESS",
+        "live_health": "PASS_200",
+        "live_agenda_alisado_diego": "PASS_200_TOTAL_8_GROUPED_2_SLOTIDS_120_MIN_MS_2066",
+        "live_agenda_corte_lucas": "PASS_200_TOTAL_9_MS_1373",
+        "live_agenda_auto_corte": "PASS_200_TOTAL_18_MS_1292",
+        "live_surge_routes": "PASS_200_HOME_RESERVA_PORTAL"
+      },
+      "secrets_free": true,
+      "env_files_touched": false,
+      "payments_checkout_pos": false,
+      "reservas_table_used": false,
+      "schema_changes": false,
+      "delete_fisico": false,
+      "notes": "Se usan slots atómicos no solapados de 60 minutos para evitar doble reserva. Servicios largos se muestran como una opción lógica y el backend reserva todos los slot_ids internos. Se agregó filtro Airtable por fecha para evitar leer toda AGENDA_SLOTS luego de cargar 22k+ registros.",
+      "deploy": {
+        "backend_railway": "PASS_SUCCESS_a8948b3_earnest_comfort",
         "frontend_surge": "PASS_https://bellezapro-demo.surge.sh"
       }
     }
