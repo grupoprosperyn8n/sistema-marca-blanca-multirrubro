@@ -32,8 +32,8 @@ function buildLandingDraft(row = {}) {
     CONTENIDO_PUBLICO: row.CONTENIDO_PUBLICO || "",
     TEXTO_BOTON_CTA: row.TEXTO_BOTON_CTA || "",
     URL_BOTON_CTA: row.URL_BOTON_CTA || "",
-    IMAGEN_PRINCIPAL_URL: firstAttachmentUrl(row.IMAGEN_PRINCIPAL),
-    IMAGENES_CARRUSEL_URLS: attachmentUrls(row.IMAGENES_CARRUSEL).join("\n"),
+    IMAGEN_PRINCIPAL_URL: "",
+    IMAGENES_CARRUSEL_URLS: "",
     COLOR_FONDO_HEX: row.COLOR_FONDO_HEX || "",
     COLOR_TEXTO_HEX: row.COLOR_TEXTO_HEX || "",
     VISIBLE_MOBILE: row.VISIBLE_MOBILE !== false,
@@ -116,18 +116,6 @@ function sortByOrder(a, b) {
   return (a.ORDEN_VISUAL ?? 999) - (b.ORDEN_VISUAL ?? 999) || String(a.CLAVE_SECCION || a.CLAVE_CONFIGURACION || "").localeCompare(String(b.CLAVE_SECCION || b.CLAVE_CONFIGURACION || ""));
 }
 
-function attachmentUrls(value) {
-  if (!Array.isArray(value)) return [];
-  return value
-    .map((item) => item?.url || item?.download_url || "")
-    .map((url) => String(url || "").trim())
-    .filter(Boolean);
-}
-
-function firstAttachmentUrl(value) {
-  return attachmentUrls(value)[0] || "";
-}
-
 function urlsToAttachments(value) {
   const raw = Array.isArray(value) ? value : String(value || "").split(/\n|,/);
   return raw
@@ -136,15 +124,80 @@ function urlsToAttachments(value) {
     .map((url) => ({ url }));
 }
 
-function buildLandingPayload(draft = {}) {
+function attachmentKeepPayload(attachment) {
+  const id = String(attachment?.id || "").trim();
+  const url = String(attachment?.url || attachment?.download_url || "").trim();
+  const filename = String(attachment?.filename || "").trim();
+  if (id) return { id };
+  if (!url) return null;
+  return {
+    url,
+    ...(filename ? { filename } : {}),
+  };
+}
+
+function mergeAttachmentPayload(existing = [], draftUrls = "", { replace = false } = {}) {
+  const kept = replace ? [] : (Array.isArray(existing) ? existing : []).map(attachmentKeepPayload).filter(Boolean);
+  const added = urlsToAttachments(draftUrls);
+  return [...kept, ...added];
+}
+
+function buildLandingPayload(draft = {}, currentRow = {}) {
   const {
     IMAGEN_PRINCIPAL_URL,
     IMAGENES_CARRUSEL_URLS,
     ...payload
   } = draft;
-  payload.IMAGEN_PRINCIPAL = urlsToAttachments(IMAGEN_PRINCIPAL_URL);
-  payload.IMAGENES_CARRUSEL = urlsToAttachments(IMAGENES_CARRUSEL_URLS);
+  payload.IMAGEN_PRINCIPAL = mergeAttachmentPayload(currentRow.IMAGEN_PRINCIPAL, IMAGEN_PRINCIPAL_URL);
+  payload.IMAGENES_CARRUSEL = mergeAttachmentPayload(currentRow.IMAGENES_CARRUSEL, IMAGENES_CARRUSEL_URLS);
   return payload;
+}
+
+function attachmentPreviewItems(existing = [], draftUrlValue = "") {
+  const liveItems = (Array.isArray(existing) ? existing : [])
+    .map((item, index) => ({
+      id: item?.id || `existing-${index}-${item?.url || item?.download_url || ""}`,
+      url: item?.url || item?.download_url || "",
+      filename: item?.filename || "",
+      type: item?.type || "",
+      source: "existing",
+    }))
+    .filter((item) => item.url);
+  const draftItems = urlsToAttachments(draftUrlValue).map((item, index) => ({
+    id: `draft-${index}-${item.url}`,
+    url: item.url,
+    filename: item.filename || "URL nueva",
+    type: "",
+    source: "draft",
+  }));
+  return [...liveItems, ...draftItems];
+}
+
+function isVideoAttachment(item = {}) {
+  const type = String(item.type || "").toLowerCase();
+  const url = String(item.url || "").toLowerCase();
+  return type.startsWith("video/") || /\.(mp4|webm|mov|m4v)(\?|#|$)/.test(url);
+}
+
+function removeUrlLine(value, urlToRemove) {
+  const target = String(urlToRemove || "").trim();
+  return String(value || "")
+    .split(/\n|,/)
+    .map((url) => url.trim())
+    .filter((url) => url && url !== target)
+    .join("\n");
+}
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = String(reader.result || "");
+      resolve(result.includes(",") ? result.split(",", 2)[1] : result);
+    };
+    reader.onerror = () => reject(reader.error || new Error("No se pudo leer el archivo."));
+    reader.readAsDataURL(file);
+  });
 }
 
 function normalizeHexInput(value) {
@@ -234,6 +287,204 @@ function TextAreaField({ label, value, onChange, disabled, placeholder = "", row
   );
 }
 
+function MediaAttachmentManager({
+  row,
+  field,
+  label,
+  draftValue,
+  onDraftChange,
+  disabled,
+  uploading,
+  onUpload,
+  onDelete,
+  multiple = false,
+  textarea = false,
+}) {
+  const items = attachmentPreviewItems(row?.[field], draftValue);
+
+  async function handleFiles(event) {
+    const files = Array.from(event.target.files || []);
+    event.target.value = "";
+    if (!files.length || disabled || uploading) return;
+    for (const file of files) {
+      await onUpload(row, field, file);
+    }
+  }
+
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white/70 p-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-sm font-semibold" style={{ color: "var(--brand-text)" }}>{label}</p>
+          <p className="text-xs text-slate-500">URL pública o archivo adjunto. Soporta imagen y video.</p>
+        </div>
+        <label className={`inline-flex cursor-pointer items-center justify-center rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-bold text-sky-700 ${disabled || uploading ? "pointer-events-none opacity-50" : ""}`}>
+          {uploading ? "Subiendo..." : "Subir archivo"}
+          <input
+            type="file"
+            accept="image/*,video/*"
+            multiple={multiple}
+            disabled={disabled || uploading}
+            onChange={handleFiles}
+            className="hidden"
+          />
+        </label>
+      </div>
+
+      <div className="mt-3">
+        {textarea ? (
+          <textarea
+            value={draftValue || ""}
+            placeholder={"Agregar URLs nuevas, una por línea\nhttps://imagen.jpg\nhttps://video.mp4"}
+            disabled={disabled}
+            rows={3}
+            onChange={(event) => onDraftChange(event.target.value)}
+            className={`${inputClass} min-h-20 ${disabled ? "opacity-60" : ""}`}
+          />
+        ) : (
+          <input
+            type="text"
+            value={draftValue || ""}
+            placeholder="Agregar URL nueva https://..."
+            disabled={disabled}
+            onChange={(event) => onDraftChange(event.target.value)}
+            className={`${inputClass} ${disabled ? "opacity-60" : ""}`}
+          />
+        )}
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+        {items.map((item) => (
+          <div key={`${item.source}:${item.id}`} className="group overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
+            <div className="relative aspect-[4/3] bg-slate-100">
+              {isVideoAttachment(item) ? (
+                <video src={item.url} controls muted preload="metadata" className="h-full w-full object-cover" />
+              ) : (
+                <img src={item.url} alt={item.filename || label} className="h-full w-full object-cover" loading="lazy" />
+              )}
+              <span className="absolute left-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-bold uppercase text-white">
+                {item.source === "draft" ? "URL" : "ATT"}
+              </span>
+            </div>
+            <div className="flex items-center justify-between gap-2 p-2">
+              <p className="min-w-0 truncate text-[11px] text-slate-500">{item.filename || item.url}</p>
+              <button
+                type="button"
+                disabled={disabled || uploading}
+                onClick={() => {
+                  if (item.source === "draft") {
+                    onDraftChange(removeUrlLine(draftValue, item.url));
+                    return;
+                  }
+                  onDelete(row, field, item.id, item.url);
+                }}
+                className="shrink-0 rounded-lg bg-red-50 px-2 py-1 text-[11px] font-bold text-red-600 disabled:opacity-50"
+              >
+                Eliminar
+              </button>
+            </div>
+          </div>
+        ))}
+        {items.length === 0 && (
+          <div className="col-span-full rounded-2xl border border-dashed border-slate-300 bg-white/60 p-4 text-center text-xs text-slate-500">
+            Sin media cargada todavía.
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function BackgroundLandingPanel({ form, canEdit, updateNested }) {
+  const imageUrl = form?.textos_publicos?.hero_imagen_url || "";
+  const isImageMode = !!imageUrl;
+  return (
+    <div className="mt-5 rounded-3xl border border-slate-200 bg-white/80 p-4 shadow-sm">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.1fr_1.5fr]">
+        <div>
+          <p className="text-sm font-bold uppercase tracking-wide opacity-60" style={{ color: "var(--brand-text)" }}>
+            Fondo de landing
+          </p>
+          <h4 className="mt-1 text-lg font-bold" style={{ color: "var(--brand-text)" }}>
+            Fondo público de la página
+          </h4>
+          <p className="mt-1 text-sm text-slate-500">
+            Usá color sólido para una marca limpia o imagen de fondo si querés una landing más visual.
+          </p>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            {[
+              ["SOLIDO", "Color sólido"],
+              ["IMAGEN", "Imagen URL"],
+            ].map(([value, label]) => {
+              const active = value === "IMAGEN" ? isImageMode : !isImageMode;
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  disabled={!canEdit}
+                  onClick={() => {
+                    if (value === "SOLIDO") updateNested("textos_publicos", "hero_imagen_url", "");
+                    if (value === "IMAGEN" && !imageUrl) updateNested("textos_publicos", "hero_imagen_url", "https://");
+                  }}
+                  className={`rounded-xl border px-3 py-2 text-xs font-bold disabled:opacity-60 ${active ? "border-sky-400 bg-sky-50 text-sky-700" : "border-slate-200 bg-white text-slate-600"}`}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_220px]">
+          <div className="space-y-3">
+            <ColorField
+              label="Color sólido de fondo"
+              value={form.colores.fondo}
+              disabled={!canEdit}
+              placeholder="#F8F9FF"
+              onChange={(value) => updateNested("colores", "fondo", value)}
+            />
+            <Field
+              label="URL imagen de fondo"
+              value={imageUrl}
+              disabled={!canEdit || !isImageMode}
+              placeholder="https://..."
+              onChange={(value) => updateNested("textos_publicos", "hero_imagen_url", value)}
+            />
+            <p className="text-[11px] text-slate-500">
+              Hoy este campo vive en MARCAS como URL. Para attachment directo en fondo hace falta agregar un campo attachment en schema.
+            </p>
+          </div>
+          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
+            <div className="relative aspect-[4/3]">
+              {imageUrl && imageUrl !== "https://" ? (
+                <img src={imageUrl} alt="Vista previa fondo landing" className="h-full w-full object-cover" />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-xs font-semibold text-slate-500" style={{ background: form.colores.fondo || "#F8F9FF" }}>
+                  Color sólido
+                </div>
+              )}
+            </div>
+            <div className="flex items-center justify-between gap-2 p-2">
+              <span className="truncate text-[11px] text-slate-500">{imageUrl && imageUrl !== "https://" ? "Imagen de fondo" : form.colores.fondo || "Sin color"}</span>
+              {imageUrl && (
+                <button
+                  type="button"
+                  disabled={!canEdit}
+                  onClick={() => updateNested("textos_publicos", "hero_imagen_url", "")}
+                  className="rounded-lg bg-red-50 px-2 py-1 text-[11px] font-bold text-red-600 disabled:opacity-50"
+                >
+                  Eliminar
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Toggle({ label, checked, onChange, disabled }) {
   return (
     <label className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white/70 px-3 py-2 text-sm" style={{ color: "var(--brand-text)" }}>
@@ -297,6 +548,7 @@ export default function Configuracion() {
   const [landingDrafts, setLandingDrafts] = useState({});
   const [rowSaving, setRowSaving] = useState({});
   const [rowMessages, setRowMessages] = useState({});
+  const [mediaUploading, setMediaUploading] = useState({});
   const [previewOpen, setPreviewOpen] = useState(false);
 
   useEffect(() => {
@@ -462,7 +714,7 @@ export default function Configuracion() {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify(buildLandingPayload(landingDrafts[row.id] || buildLandingDraft(row))),
+        body: JSON.stringify(buildLandingPayload(landingDrafts[row.id] || buildLandingDraft(row), row)),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -479,6 +731,84 @@ export default function Configuracion() {
       setRowMessages((prev) => ({ ...prev, [key]: `Error: ${error.message}` }));
     } finally {
       setRowSaving((prev) => ({ ...prev, [key]: false }));
+    }
+  }
+
+  async function uploadLandingAttachment(row, field, file) {
+    if (!canEdit || !row?.id || !file) return;
+    const key = `media:${row.id}:${field}`;
+    const messageKey = `landing:${row.id}`;
+    setMediaUploading((prev) => ({ ...prev, [key]: true }));
+    setRowMessages((prev) => ({ ...prev, [messageKey]: "" }));
+    try {
+      const fileBase64 = await fileToBase64(file);
+      const res = await fetch(`${API}/api/backoffice/landing-secciones/${row.id}/attachments/${field}/upload`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          filename: file.name,
+          content_type: file.type || "application/octet-stream",
+          file_base64: fileBase64,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const detail = data?.detail?.message || data?.detail || `HTTP ${res.status}`;
+        throw new Error(typeof detail === "string" ? detail : "No se pudo subir el archivo.");
+      }
+      const updated = data.record || data;
+      setState((prev) => ({
+        ...prev,
+        landing: prev.landing.map((item) => (item.id === row.id ? { ...item, ...updated } : item)),
+      }));
+      setLandingDrafts((prev) => ({ ...prev, [row.id]: buildLandingDraft(updated) }));
+      setRowMessages((prev) => ({ ...prev, [messageKey]: "Archivo cargado" }));
+    } catch (error) {
+      setRowMessages((prev) => ({ ...prev, [messageKey]: `Error: ${error.message}` }));
+    } finally {
+      setMediaUploading((prev) => ({ ...prev, [key]: false }));
+    }
+  }
+
+  async function deleteLandingAttachment(row, field, attachmentId, attachmentUrl) {
+    if (!canEdit || !row?.id) return;
+    const key = `media:${row.id}:${field}`;
+    const messageKey = `landing:${row.id}`;
+    const currentRow = state.landing.find((item) => item.id === row.id) || row;
+    const remaining = (Array.isArray(currentRow[field]) ? currentRow[field] : [])
+      .filter((item) => {
+        const itemId = String(item?.id || "");
+        const itemUrl = String(item?.url || item?.download_url || "");
+        return itemId !== String(attachmentId || "") && itemUrl !== String(attachmentUrl || "");
+      })
+      .map(attachmentKeepPayload)
+      .filter(Boolean);
+
+    setMediaUploading((prev) => ({ ...prev, [key]: true }));
+    setRowMessages((prev) => ({ ...prev, [messageKey]: "" }));
+    try {
+      const res = await fetch(`${API}/api/backoffice/landing-secciones/${row.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ [field]: remaining }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const detail = data?.detail?.message || data?.detail || `HTTP ${res.status}`;
+        throw new Error(typeof detail === "string" ? detail : "No se pudo eliminar el archivo.");
+      }
+      setState((prev) => ({
+        ...prev,
+        landing: prev.landing.map((item) => (item.id === row.id ? { ...item, ...data } : item)),
+      }));
+      setLandingDrafts((prev) => ({ ...prev, [row.id]: buildLandingDraft(data) }));
+      setRowMessages((prev) => ({ ...prev, [messageKey]: "Archivo eliminado" }));
+    } catch (error) {
+      setRowMessages((prev) => ({ ...prev, [messageKey]: `Error: ${error.message}` }));
+    } finally {
+      setMediaUploading((prev) => ({ ...prev, [key]: false }));
     }
   }
 
@@ -563,40 +893,6 @@ export default function Configuracion() {
                 <ColorField label="Primario" value={form.colores.primario} disabled={!canEdit} placeholder="#006686" onChange={(value) => updateNested("colores", "primario", value)} />
                 <ColorField label="Secundario" value={form.colores.secundario} disabled={!canEdit} placeholder="#7DD3FC" onChange={(value) => updateNested("colores", "secundario", value)} />
                 <ColorField label="Acento" value={form.colores.acento} disabled={!canEdit} placeholder="#38BDF8" onChange={(value) => updateNested("colores", "acento", value)} />
-                <ColorField label="Fondo sólido" value={form.colores.fondo} disabled={!canEdit} placeholder="#F8F9FF" onChange={(value) => updateNested("colores", "fondo", value)} />
-              </div>
-              <div className="rounded-2xl border border-slate-200 bg-white/70 p-3">
-                <p className="text-sm font-semibold" style={{ color: "var(--brand-text)" }}>Fondo de landing</p>
-                <div className="mt-2 grid grid-cols-2 gap-2">
-                  {[
-                    ["SOLIDO", "Color sólido"],
-                    ["IMAGEN", "Imagen"],
-                  ].map(([value, label]) => {
-                    const active = value === "IMAGEN" ? !!form.textos_publicos.hero_imagen_url : !form.textos_publicos.hero_imagen_url;
-                    return (
-                      <button
-                        key={value}
-                        type="button"
-                        disabled={!canEdit}
-                        onClick={() => {
-                          if (value === "SOLIDO") updateNested("textos_publicos", "hero_imagen_url", "");
-                          if (value === "IMAGEN" && !form.textos_publicos.hero_imagen_url) updateNested("textos_publicos", "hero_imagen_url", "https://");
-                        }}
-                        className={`rounded-xl border px-3 py-2 text-xs font-bold disabled:opacity-60 ${active ? "border-sky-400 bg-sky-50 text-sky-700" : "border-slate-200 bg-white text-slate-600"}`}
-                      >
-                        {label}
-                      </button>
-                    );
-                  })}
-                </div>
-                <Field
-                  label="URL imagen de fondo"
-                  value={form.textos_publicos.hero_imagen_url}
-                  disabled={!canEdit || !form.textos_publicos.hero_imagen_url}
-                  placeholder="https://..."
-                  onChange={(value) => updateNested("textos_publicos", "hero_imagen_url", value)}
-                />
-                <p className="mt-2 text-[11px] text-slate-500">Si dejás la URL vacía, la landing usa el color sólido de fondo.</p>
               </div>
             </div>
 
@@ -611,6 +907,8 @@ export default function Configuracion() {
               <Toggle label="Banner activo" checked={form.textos_publicos.banner_activo} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "banner_activo", value)} />
             </div>
           </div>
+
+          <BackgroundLandingPanel form={form} canEdit={canEdit} updateNested={updateNested} />
 
           <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-2">
             <div className="space-y-3">
@@ -759,20 +1057,29 @@ export default function Configuracion() {
                         onChange={(value) => updateLandingDraft(row.id, "URL_BOTON_CTA", value)}
                       />
                     </div>
-                    <Field
-                      label="Imagen principal URL"
-                      value={draft.IMAGEN_PRINCIPAL_URL}
-                      placeholder="https://..."
+                    <MediaAttachmentManager
+                      row={row}
+                      field="IMAGEN_PRINCIPAL"
+                      label="Imagen/video principal"
+                      draftValue={draft.IMAGEN_PRINCIPAL_URL}
                       disabled={disabled || !fieldEditable("LANDING_SECCIONES", "IMAGEN_PRINCIPAL")}
-                      onChange={(value) => updateLandingDraft(row.id, "IMAGEN_PRINCIPAL_URL", value)}
+                      uploading={mediaUploading[`media:${row.id}:IMAGEN_PRINCIPAL`]}
+                      onDraftChange={(value) => updateLandingDraft(row.id, "IMAGEN_PRINCIPAL_URL", value)}
+                      onUpload={uploadLandingAttachment}
+                      onDelete={deleteLandingAttachment}
                     />
-                    <TextAreaField
-                      label="Carrusel imagen/video URLs"
-                      value={draft.IMAGENES_CARRUSEL_URLS}
-                      placeholder={"https://imagen.jpg\nhttps://video.mp4"}
+                    <MediaAttachmentManager
+                      row={row}
+                      field="IMAGENES_CARRUSEL"
+                      label="Carrusel imagen/video"
+                      draftValue={draft.IMAGENES_CARRUSEL_URLS}
                       disabled={disabled || !fieldEditable("LANDING_SECCIONES", "IMAGENES_CARRUSEL")}
-                      rows={3}
-                      onChange={(value) => updateLandingDraft(row.id, "IMAGENES_CARRUSEL_URLS", value)}
+                      uploading={mediaUploading[`media:${row.id}:IMAGENES_CARRUSEL`]}
+                      onDraftChange={(value) => updateLandingDraft(row.id, "IMAGENES_CARRUSEL_URLS", value)}
+                      onUpload={uploadLandingAttachment}
+                      onDelete={deleteLandingAttachment}
+                      multiple
+                      textarea
                     />
                     <ColorField
                       label="Color fondo"

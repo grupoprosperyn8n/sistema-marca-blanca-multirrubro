@@ -5,7 +5,12 @@ La tabla controla contenido/orden/visibilidad de la landing pública sin crear
 schema nuevo. Lectura pública; edición protegida para backoffice.
 """
 import sys
+import base64
+import json
 from pathlib import Path
+from urllib.parse import quote
+from urllib.request import Request, urlopen
+from urllib.error import HTTPError
 
 from fastapi import APIRouter, Depends, HTTPException, Response
 
@@ -97,14 +102,20 @@ def _normalize_value(field, value):
         attachments = []
         for item in raw_items:
             if isinstance(item, dict):
+                attachment_id = str(item.get("id") or "").strip()
                 url = str(item.get("url") or "").strip()
                 filename = str(item.get("filename") or "").strip()
             else:
+                attachment_id = ""
                 url = str(item or "").strip()
                 filename = ""
-            if not url:
+            if not url and not attachment_id:
                 continue
-            attachment = {"url": url}
+            attachment = {}
+            if attachment_id:
+                attachment["id"] = attachment_id
+            if url:
+                attachment["url"] = url
             if filename:
                 attachment["filename"] = filename
             attachments.append(attachment)
@@ -138,6 +149,76 @@ async def listar_landing_secciones(response: Response):
         return {"total": len(items), "landing_secciones": items}
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+
+
+@router.post("/backoffice/landing-secciones/{record_id}/attachments/{field_name}/upload")
+async def subir_attachment_landing(record_id: str, field_name: str, payload: dict, user: dict = Depends(get_current_user)):
+    """Sube un archivo chico a un attachment field de LANDING_SECCIONES usando Airtable uploadAttachment."""
+    _require_config_editor(user)
+    field_name = str(field_name or "").strip().upper()
+    if field_name not in ATTACHMENT_FIELDS:
+        raise HTTPException(status_code=400, detail="Campo attachment no permitido.")
+    if not can_edit_field(user.get("rol") or "", "LANDING_SECCIONES", field_name):
+        raise HTTPException(status_code=403, detail="Campo no editable para tu rol.")
+
+    filename = str(payload.get("filename") or "archivo").strip()
+    content_type = str(payload.get("content_type") or payload.get("contentType") or "application/octet-stream").strip()
+    file_base64 = str(payload.get("file_base64") or payload.get("file") or "").strip()
+    if not file_base64:
+        raise HTTPException(status_code=400, detail="Archivo base64 requerido.")
+    if "," in file_base64 and file_base64.lower().startswith("data:"):
+        file_base64 = file_base64.split(",", 1)[1]
+
+    try:
+        raw = base64.b64decode(file_base64, validate=True)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Archivo base64 inválido.")
+    if len(raw) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="El upload directo a Airtable soporta hasta 5 MB. Para videos grandes usá URL pública.")
+    if not (content_type.startswith("image/") or content_type.startswith("video/")):
+        raise HTTPException(status_code=400, detail="Solo se aceptan imágenes o videos para carruseles públicos.")
+
+    try:
+        client = AirtableClient()
+        table = client.get_table("LANDING_SECCIONES")
+        available_fields = set(table.field_names if table else [])
+        if field_name not in available_fields:
+            raise HTTPException(status_code=404, detail=f"Campo {field_name} no existe en LANDING_SECCIONES.")
+
+        upload_url = (
+            f"https://content.airtable.com/v0/{quote(client.config.base_id)}/"
+            f"{quote(record_id)}/{quote(field_name)}/uploadAttachment"
+        )
+        body = json.dumps({
+            "contentType": content_type,
+            "file": file_base64,
+            "filename": filename,
+        }).encode("utf-8")
+        req = Request(
+            upload_url,
+            data=body,
+            headers={
+                "Authorization": f"Bearer {client.config.api_token}",
+                "Content-Type": "application/json",
+            },
+            method="POST",
+        )
+        with urlopen(req, timeout=45) as resp:
+            result = json.loads(resp.read().decode("utf-8"))
+
+        updated = client.get_record("LANDING_SECCIONES", record_id)
+        return {
+            "ok": True,
+            "upload": result,
+            "record": _public_record(updated),
+        }
+    except HTTPException:
+        raise
+    except HTTPError as e:
+        detail = e.read().decode("utf-8", errors="replace")[:500]
+        raise HTTPException(status_code=e.code, detail=f"Airtable uploadAttachment error: {detail}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 

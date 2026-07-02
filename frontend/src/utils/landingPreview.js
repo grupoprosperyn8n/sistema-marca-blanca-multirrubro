@@ -82,11 +82,13 @@ function urlsToAttachments(value) {
 function draftToLandingSection(draft) {
   const next = { ...draft };
   if ("IMAGEN_PRINCIPAL_URL" in next) {
-    next.IMAGEN_PRINCIPAL = urlsToAttachments(next.IMAGEN_PRINCIPAL_URL);
+    const attachments = urlsToAttachments(next.IMAGEN_PRINCIPAL_URL);
+    if (attachments.length) next.IMAGEN_PRINCIPAL = attachments;
     delete next.IMAGEN_PRINCIPAL_URL;
   }
   if ("IMAGENES_CARRUSEL_URLS" in next) {
-    next.IMAGENES_CARRUSEL = urlsToAttachments(next.IMAGENES_CARRUSEL_URLS);
+    const attachments = urlsToAttachments(next.IMAGENES_CARRUSEL_URLS);
+    if (attachments.length) next.IMAGENES_CARRUSEL = attachments;
     delete next.IMAGENES_CARRUSEL_URLS;
   }
   return next;
