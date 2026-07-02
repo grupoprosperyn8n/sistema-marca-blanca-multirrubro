@@ -1,7 +1,7 @@
 {
   "project": "sistema-marca-blanca-multirrubro",
-  "fase_actual": "WHITE_LABEL_MEDIA_PERSONAL_MULTI_SERVICE_P6 — CERRADA_QA_DEPLOY",
-  "fase_siguiente": "RESERVA_MULTI_SERVICIO_UI_P7 o CHECKOUT_PAYMENTS_POS_CONTRACT_P5 (requiere aprobación para pagos reales)",
+  "fase_actual": "RESERVA_MULTI_SERVICIO_UI_P7 — COMPLETADA_QA_LOCAL_PENDIENTE_DEPLOY",
+  "fase_siguiente": "QA_NAVEGADOR_RESERVA_MULTI_SERVICIO o CHECKOUT_PAYMENTS_POS_CONTRACT_P5 (requiere aprobación explícita para pagos reales)",
   "tareas": {
     "FASE_3B_PORTAL_CLIENTE": {
       "status": "completed",
@@ -527,6 +527,34 @@
         "backend_railway": "PASS_SUCCESS_be63d0f_earnest_comfort",
         "frontend_surge": "PASS_https://bellezapro-demo.surge.sh"
       }
+    },
+    "RESERVA_MULTI_SERVICIO_UI_P7": {
+      "status": "completed_local_pending_deploy",
+      "closed_at": "2026-07-01",
+      "commits": [],
+      "deliverables": [
+        "backend/routes/reserva_opciones.py (GET /api/reserva/profesionales y /api/reserva/agenda-opciones)",
+        "backend/main.py (router reserva-opciones + health endpoints)",
+        "frontend/src/pages/Reserva.jsx (flujo Sucursal -> Servicios -> Agenda -> Confirmar, multi-servicio y profesional por servicio)",
+        "Airtable AGENDA_SLOTS demo Lopez&Lopez 60/90 min para probar agenda pública"
+      ],
+      "qa_results": {
+        "backend_py_compile": "PASS",
+        "frontend_build": "PASS",
+        "git_diff_check": "PASS",
+        "local_profesionales": "PASS_200_TOTAL_2_LOPEZ_COLORACION_GLOBAL",
+        "local_agenda_opciones": "PASS_200_TOTAL_6_FECHA_2026_07_03_AUTO",
+        "dry_run_multiple_sin_auth": "401_PASS",
+        "demo_slots_created": "36_TOTAL_18_60_MIN_18_90_MIN_SKIP_SAFE_BY_NOMBRE_SLOT"
+      },
+      "algorithm": "AUTO profesional: filtra por sucursal + servicio, prioriza menor carga diaria de CITAS activas y desempata con rotación determinística por fecha/sucursal/servicio/empleado.",
+      "secrets_free": true,
+      "env_files_touched": false,
+      "payments_checkout_pos": false,
+      "reservas_table_used": false,
+      "schema_changes": false,
+      "delete_fisico": false,
+      "notes": "La página pública /reserva ahora permite armar un turno compuesto con varios servicios y elegir profesional por servicio o AUTO. La confirmación usa /api/clientes/citas/confirmar-multiple, que sigue protegida por rol CLIENTE. Completar agenda requirió slots demo porque no había slots futuros disponibles compatibles con el servicio de 90 minutos."
     }
   },
   "deploys_activos": {

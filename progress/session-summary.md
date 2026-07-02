@@ -1,4 +1,4 @@
-# progress/session-summary.md — WHITE_LABEL_MEDIA_PERSONAL_MULTI_SERVICE_P6
+# progress/session-summary.md — RESERVA_MULTI_SERVICIO_UI_P7
 
 Fecha: 2026-07-01
 Dominio comercial: https://bellezapro-demo.surge.sh
@@ -6,48 +6,35 @@ Backend: Railway `earnest-comfort`
 
 ## Estado
 
-- Fase: WHITE_LABEL_MEDIA_PERSONAL_MULTI_SERVICE_P6
-- Estado: completado, commiteado, pusheado y desplegado.
+- Fase: RESERVA_MULTI_SERVICIO_UI_P7
+- Estado: QA local completo, pendiente de commit/push/deploy.
 
 ## Implementado
 
-- Schema Airtable autorizado:
-  - `CITA_ITEMS`: servicios individuales dentro de una cita, con `SERVICIO`, `SERVICIO_WEB`, `PROFESIONAL` y `AGENDA_SLOT` por ítem.
-  - `MEDIA_PUBLICA`: medios públicos genéricos para imagen/video/embed/url por producto, servicio, empleado, promoción, pack y cupón.
 - Backend:
-  - `GET /api/media-publica`.
-  - `GET /api/personal-web` desde `EMPLEADOS`, sin datos sensibles y filtrando sucursales ficticias/no públicas.
-  - `/api/clientes/citas/dry-run-multiple` y `/api/clientes/citas/confirmar-multiple` para turno compuesto.
-  - Productos, servicios, packs, promociones y cupones ahora pueden exponer `media`/`MEDIA_PUBLICA`.
+  - `GET /api/reserva/profesionales`: devuelve profesionales elegibles por sucursal + servicio.
+  - `GET /api/reserva/agenda-opciones`: devuelve slots reales de `AGENDA_SLOTS` con nombres humanos.
+  - Algoritmo `AUTO`: profesional elegible con menor carga diaria y rotación determinística por empate.
 - Frontend:
-  - `MediaCarousel` reusable para imagen/video/embed con tamaño consistente.
-  - Página pública `/personal` y link “Equipo”.
-  - Cards/detalles de productos y servicios usan media pública si existe y fallback de imagen actual.
-  - Reserva muestra profesional del slot y ya no mezcla slots de distintos profesionales en el mismo horario.
+  - `/reserva` rediseñado mobile-first.
+  - Flujo: Sucursal → Servicios → Agenda → Confirmar.
+  - Permite agregar varios servicios al mismo turno.
+  - Permite elegir profesional por servicio o dejar selección automática.
+  - El stepper permite volver atrás para modificar sucursal, servicios o agenda.
+  - Agenda se carga desde slots reales publicados.
+- Datos demo:
+  - Se crearon slots demo web para `Lopez&Lopez` en `AGENDA_SLOTS`.
+  - Fechas usadas: 2026-07-02, 2026-07-03, 2026-07-04 y 2026-07-05.
+  - Se agregaron slots de 90 minutos porque `COLORACION GLOBAL` dura 90 min y los slots de 60 min no alcanzaban para ese servicio.
 
 ## Validación local
 
 - `python3 -m py_compile`: PASS.
 - `npm run build`: PASS.
 - `git diff --check`: PASS.
-- `/api/media-publica`: 200, empty safe.
-- `/api/personal-web`: 200, 7 perfiles, sin sucursales ficticias.
-- `/api/servicios-web`: 9 servicios, `MEDIA_PUBLICA` presente.
-- `/api/productos-web`: 4 productos, `media` presente.
-- `/api/clientes/citas/dry-run-multiple` sin auth: 401.
-
-## Deploy final
-
-- Commit: `be63d0f`
-- Push origin/main: PASS.
-- Railway `earnest-comfort`: SUCCESS/RUNNING para `be63d0f`.
-- Surge: PASS `https://bellezapro-demo.surge.sh`.
-- Smoke live:
-  - `/health`: 200.
-  - `/api/media-publica`: 200, empty safe.
-  - `/api/personal-web`: 200, 7 perfiles, sin sucursales ficticias.
-  - `/api/clientes/citas/dry-run-multiple` sin auth: 401.
-  - `/personal` en Surge: 200.
+- `/api/reserva/profesionales`: PASS, 2 profesionales elegibles para `Lopez&Lopez` + `COLORACION GLOBAL`.
+- `/api/reserva/agenda-opciones`: PASS, 6 slots para 2026-07-03 con `AUTO`.
+- `/api/clientes/citas/dry-run-multiple` sin auth: 401 PASS.
 
 ## Límites respetados
 
@@ -56,10 +43,11 @@ Backend: Railway `earnest-comfort`
 - Sin caja/POS.
 - Sin `RESERVAS`.
 - Sin DELETE físico.
+- Sin cambios de schema Airtable.
 - Sin tocar `.env`, `backend/.env`, `frontend/.env` ni `CREDENCIALES.md`.
 - Sin secretos impresos/commiteados.
 
 ## Próximo paso recomendado
 
-- `RESERVA_MULTI_SERVICIO_UI_P7`: conectar UI completa para seleccionar varios servicios, elegir profesional/slot por servicio y confirmar turno compuesto.
-- Después: recién abrir contrato de pagos/caja/POS si el usuario lo aprueba explícitamente.
+- Deploy y smoke live en `https://bellezapro-demo.surge.sh/reserva`.
+- Después: QA navegador del flujo completo con usuario cliente demo, usando datos QA.

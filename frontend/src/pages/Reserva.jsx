@@ -1,12 +1,13 @@
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { isPublicBranch, formatPublicName } from "../utils/publicDataFilters";
+import { ROLES, useAuth } from "../context/AuthContext";
 import { useBrandConfig } from "../context/BrandConfigContext";
 import GlassCard from "../components/ui/GlassCard";
-import PrimaryButton from "../components/ui/PrimaryButton";
 import SectionHeader from "../components/ui/SectionHeader";
 
 const API = import.meta.env.VITE_API_BASE_URL || "";
+const AUTO_PROFESSIONAL = "AUTO";
 
 function todayISO() {
   const now = new Date();
@@ -14,523 +15,577 @@ function todayISO() {
   return new Date(now.getTime() - offset * 60000).toISOString().slice(0, 10);
 }
 
-function formatDateLabel(iso) {
+function addDaysISO(days) {
+  const date = new Date(`${todayISO()}T00:00:00`);
+  date.setDate(date.getDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+function money(value) {
+  if (value == null || value === "") return "Consultar";
+  const number = Number(value);
+  if (Number.isNaN(number)) return "Consultar";
+  return new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(number);
+}
+
+function serviceName(service) {
+  return formatPublicName(service?.NOMBRE_PUBLICO_SERVICIO || service?.NOMBRE_SERVICIO || service?.SERVICIO_NOMBRE || "Servicio");
+}
+
+function servicePrice(service) {
+  return service?.PRECIO_WEB ?? service?.PRECIO_PUBLICITADO_WEB ?? null;
+}
+
+function serviceDuration(service) {
+  return service?.DURACION_MINUTOS_WEB ?? service?.DURACION_MINUTOS ?? null;
+}
+
+function branchName(branch) {
+  return formatPublicName(branch?.NOMBRE_SUCURSAL || branch?.NOMBRE_CORTO_SUCURSAL || "Sucursal");
+}
+
+function formatDate(iso) {
   if (!iso) return "";
-  const [year, month, day] = String(iso).split("-").map(Number);
-  const date = new Date(year, month - 1, day);
-  return date.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" });
+  const [year, month, day] = iso.split("-").map(Number);
+  return new Intl.DateTimeFormat("es-AR", { weekday: "short", day: "numeric", month: "short" }).format(new Date(year, month - 1, day));
 }
 
-function formatShortDate(iso) {
-  if (!iso) return "";
-  const [year, month, day] = String(iso).split("-").map(Number);
-  const date = new Date(year, month - 1, day);
-  return date.toLocaleDateString("es-AR", { weekday: "short", day: "numeric", month: "short" });
-}
-
-function getLinkedIds(value) {
-  return Array.isArray(value) ? value : [];
-}
-
-function normalizeTime(raw) {
+function formatTime(raw) {
   return String(raw || "").slice(0, 5);
 }
 
-function getServiceDuration(servicio) {
-  const raw = servicio?.DURACION_MINUTOS_WEB ?? servicio?.DURACION_MINUTOS ?? servicio?.duracion_minutos;
-  const value = Number(raw);
-  return Number.isFinite(value) && value > 0 ? value : null;
+function uid() {
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
-function normalizeAvailableSlots(slotsRaw, sucursal, servicio) {
-  const selectedSucursalId = sucursal?.id;
-  const minDuration = getServiceDuration(servicio);
-  const today = todayISO();
-  const byVisibleSlot = new Map();
-
-  slotsRaw
-    .filter((slot) => {
-      const estado = String(slot.ESTADO_SLOT || "").toUpperCase();
-      const capacidad = Number(slot.CAPACIDAD_DISPONIBLE || 0);
-      const fecha = String(slot.FECHA_SLOT || "");
-      const sucursales = getLinkedIds(slot.SUCURSAL);
-      const duracion = Number(slot.DURACION_MINUTOS || 0);
-
-      if (estado !== "DISPONIBLE") return false;
-      if (capacidad <= 0) return false;
-      if (slot.PERMITE_RESERVA_WEB === false || slot.ACTIVO === false) return false;
-      if (!fecha || fecha < today) return false;
-      if (selectedSucursalId && !sucursales.includes(selectedSucursalId)) return false;
-      if (minDuration && duracion && duracion < minDuration) return false;
-      return true;
-    })
-    .forEach((slot) => {
-      const fecha = String(slot.FECHA_SLOT || "");
-      const horaInicio = normalizeTime(slot.HORA_INICIO);
-      const horaFin = normalizeTime(slot.HORA_FIN);
-      const profesionalId = slot.PROFESIONAL_ID || getLinkedIds(slot.PROFESIONAL).join(",");
-      const key = `${fecha}|${horaInicio}|${horaFin}|${selectedSucursalId || getLinkedIds(slot.SUCURSAL).join(",")}|${profesionalId}`;
-      const capacidad = Number(slot.CAPACIDAD_DISPONIBLE || 0);
-      const existing = byVisibleSlot.get(key);
-      if (existing) {
-        existing.capacidad += capacidad;
-        existing.slotIds.push(slot.id);
-        return;
-      }
-      byVisibleSlot.set(key, {
-        id: slot.id,
-        slotIds: [slot.id],
-        fecha,
-        fechaLabel: formatDateLabel(fecha),
-        fechaCorta: formatShortDate(fecha),
-        horaInicio,
-        horaFin,
-        capacidad,
-        duracion: slot.DURACION_MINUTOS,
-        profesionalId,
-        profesionalNombre: slot.NOMBRE_PROFESIONAL || "",
-        label: `${horaInicio} — ${horaFin}`,
-      });
-    });
-
-  return Array.from(byVisibleSlot.values()).sort((a, b) => `${a.fecha}${a.horaInicio}`.localeCompare(`${b.fecha}${b.horaInicio}`));
-}
+const steps = [
+  { id: 1, label: "Sucursal" },
+  { id: 2, label: "Servicios" },
+  { id: 3, label: "Agenda" },
+  { id: 4, label: "Confirmar" },
+];
 
 export default function Reserva() {
   const { config } = useBrandConfig();
+  const { usuario, role } = useAuth();
   const [step, setStep] = useState(1);
   const [servicios, setServicios] = useState([]);
   const [sucursales, setSucursales] = useState([]);
-  const [horarios, setHorarios] = useState([]);
-  const [servicioSel, setServicioSel] = useState(null);
-  const [sucursalSel, setSucursalSel] = useState(null);
-  const [horarioSel, setHorarioSel] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState("");
 
-  const [nombre, setNombre] = useState("");
-  const [telefono, setTelefono] = useState("");
-  const [notas, setNotas] = useState("");
+  const [sucursalId, setSucursalId] = useState("");
+  const [serviceId, setServiceId] = useState("");
+  const [professionalId, setProfessionalId] = useState(AUTO_PROFESSIONAL);
+  const [professionals, setProfessionals] = useState([]);
+  const [professionalsLoading, setProfessionalsLoading] = useState(false);
+  const [items, setItems] = useState([]);
+  const [fecha, setFecha] = useState(addDaysISO(1));
+  const [slotOptions, setSlotOptions] = useState({});
+  const [agendaLoading, setAgendaLoading] = useState(false);
+  const [message, setMessage] = useState("");
+  const [confirming, setConfirming] = useState(false);
+
+  const selectedSucursal = useMemo(() => sucursales.find((branch) => branch.id === sucursalId), [sucursales, sucursalId]);
+  const selectedService = useMemo(() => servicios.find((service) => service.id === serviceId), [servicios, serviceId]);
+  const allItemsHaveSlot = items.length > 0 && items.every((item) => item.slot?.id);
+  const selectedSlotIds = new Set(items.map((item) => item.slot?.id).filter(Boolean));
+  const total = items.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
+  const canConfirmOnline = usuario && role === ROLES.CLIENTE;
 
   useEffect(() => {
-    async function cargar() {
+    let cancelled = false;
+    async function load() {
       try {
-        const [srvRes, sucRes] = await Promise.all([
+        const [servicesRes, branchesRes] = await Promise.all([
           fetch(`${API}/api/servicios-web`, { cache: "no-store" }),
-          fetch(`${API}/api/sucursales`),
+          fetch(`${API}/api/sucursales`, { cache: "no-store" }),
         ]);
-        const srvData = await srvRes.json();
-        const sucData = await sucRes.json();
-
-        const srvRaw = Array.isArray(srvData) ? srvData : srvData.servicios_web || [];
-        setServicios(srvRaw.filter(s => {
-          const nombre = (s.NOMBRE_PUBLICO_SERVICIO || s.NOMBRE_SERVICIO || "").trim();
-          return nombre && nombre.toUpperCase() !== "SERVICIO" && s.RESERVA_ONLINE_HABILITADA !== false;
+        if (!servicesRes.ok) throw new Error(`Servicios HTTP ${servicesRes.status}`);
+        if (!branchesRes.ok) throw new Error(`Sucursales HTTP ${branchesRes.status}`);
+        const servicesData = await servicesRes.json();
+        const branchesData = await branchesRes.json();
+        const rawServices = Array.isArray(servicesData) ? servicesData : servicesData.servicios_web || [];
+        const rawBranches = Array.isArray(branchesData) ? branchesData : branchesData.sucursales || [];
+        if (cancelled) return;
+        setServicios(rawServices.filter((service) => {
+          const name = serviceName(service);
+          return name && name.toUpperCase() !== "SERVICIO" && service.RESERVA_ONLINE_HABILITADA !== false;
         }));
-
-        const sucRaw = Array.isArray(sucData) ? sucData : sucData.sucursales || [];
-        setSucursales(sucRaw.filter(isPublicBranch));
-      } catch (e) {
-        setError(e.message);
+        setSucursales(rawBranches.filter((branch) => isPublicBranch(branch) && branch.PERMITE_RESERVAS_WEB !== false));
+      } catch (err) {
+        if (!cancelled) setError(err.message || "No se pudo cargar la reserva.");
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
-    cargar();
+    load();
+    return () => { cancelled = true; };
   }, []);
 
-  const cargarHorarios = async (sucursal, servicio = servicioSel) => {
-    try {
-      const params = new URLSearchParams({
-        disponible: "true",
-        future_only: "true",
-      });
-      if (sucursal?.id) params.set("sucursal_id", sucursal.id);
-      const duracion = getServiceDuration(servicio);
-      if (duracion) params.set("min_duration", String(duracion));
-
-      const res = await fetch(`${API}/api/agenda-slots?${params.toString()}`);
-      const data = await res.json();
-      const slotsRaw = Array.isArray(data) ? data : data.agenda_slots || [];
-      const slots = normalizeAvailableSlots(slotsRaw, sucursal, servicio);
-      setHorarios(slots);
-    } catch {
-      setHorarios([]);
+  useEffect(() => {
+    setProfessionals([]);
+    setProfessionalId(AUTO_PROFESSIONAL);
+    if (!sucursalId || !serviceId) return;
+    let cancelled = false;
+    async function loadProfessionals() {
+      setProfessionalsLoading(true);
+      try {
+        const params = new URLSearchParams({ sucursal_id: sucursalId, servicio_web_id: serviceId });
+        const res = await fetch(`${API}/api/reserva/profesionales?${params.toString()}`, { cache: "no-store" });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        if (!cancelled) setProfessionals(data.profesionales || []);
+      } catch {
+        if (!cancelled) setProfessionals([]);
+      } finally {
+        if (!cancelled) setProfessionalsLoading(false);
+      }
     }
-  };
+    loadProfessionals();
+    return () => { cancelled = true; };
+  }, [sucursalId, serviceId]);
 
-  const handleSucursalSelect = (suc) => {
-    setSucursalSel(suc);
-    setHorarioSel(null);
-    cargarHorarios(suc, servicioSel);
-  };
+  useEffect(() => {
+    if (step !== 3 || !sucursalId || items.length === 0 || !fecha) return;
+    let cancelled = false;
+    async function loadAgenda() {
+      setAgendaLoading(true);
+      const next = {};
+      await Promise.all(items.map(async (item) => {
+        const params = new URLSearchParams({
+          sucursal_id: sucursalId,
+          servicio_web_id: item.serviceId,
+          fecha,
+          profesional_id: item.professionalId || AUTO_PROFESSIONAL,
+        });
+        try {
+          const res = await fetch(`${API}/api/reserva/agenda-opciones?${params.toString()}`, { cache: "no-store" });
+          next[item.uid] = res.ok ? await res.json() : { slots: [], total: 0 };
+        } catch {
+          next[item.uid] = { slots: [], total: 0 };
+        }
+      }));
+      if (!cancelled) {
+        setSlotOptions(next);
+        setAgendaLoading(false);
+      }
+    }
+    loadAgenda();
+    return () => { cancelled = true; };
+  }, [step, sucursalId, items, fecha]);
 
-  const formatearMoneda = (v) => {
-    if (v == null) return "";
-    const n = Number(v);
-    if (isNaN(n)) return "";
-    return "$" + n.toLocaleString("es-AR", { minimumFractionDigits: 2 });
-  };
+  function goToStep(target) {
+    if (target > 1 && !sucursalId) return;
+    if (target > 2 && items.length === 0) return;
+    if (target > 3 && !allItemsHaveSlot) return;
+    setMessage("");
+    setStep(target);
+  }
 
-  const horariosPorFecha = horarios.reduce((acc, horario) => {
-    const key = horario.fecha || "sin_fecha";
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(horario);
-    return acc;
-  }, {});
-  const whatsappUrl = config.whatsapp
-    ? `https://wa.me/${String(config.whatsapp).replace(/\D/g, "")}`
-    : null;
+  function handleBranchChange(value) {
+    setSucursalId(value);
+    setServiceId("");
+    setItems([]);
+    setSlotOptions({});
+    setMessage("");
+  }
 
-  if (loading) return (
-    <div className="max-w-5xl mx-auto px-4 py-20 text-center">
-      <div className="animate-spin w-8 h-8 border-4 border-t-transparent rounded-full mx-auto" style={{ borderColor: 'var(--brand-secondary)', borderTopColor: 'transparent' }} />
-      <p className="mt-4" style={{ color: 'var(--brand-text)' }}>Cargando reserva…</p>
-    </div>
-  );
+  function addServiceItem() {
+    if (!selectedService) {
+      setMessage("Elegí un servicio para agregarlo al turno.");
+      return;
+    }
+    const selectedProfessional = professionals.find((prof) => prof.id === professionalId);
+    const item = {
+      uid: uid(),
+      serviceId: selectedService.id,
+      serviceName: serviceName(selectedService),
+      price: servicePrice(selectedService),
+      duration: serviceDuration(selectedService),
+      professionalId: professionalId || AUTO_PROFESSIONAL,
+      professionalName: selectedProfessional?.nombre || "Automático",
+      slot: null,
+    };
+    setItems((prev) => [...prev, item]);
+    setServiceId("");
+    setProfessionalId(AUTO_PROFESSIONAL);
+    setProfessionals([]);
+    setMessage("");
+  }
 
-  if (error) return (
-    <div className="max-w-5xl mx-auto px-4 py-20 text-center">
-      <GlassCard className="inline-block px-8 py-6">
-        <p className="text-rose-500">Error al cargar: {error}</p>
-      </GlassCard>
-    </div>
-  );
+  function removeItem(targetUid) {
+    setItems((prev) => prev.filter((item) => item.uid !== targetUid));
+    setSlotOptions((prev) => {
+      const next = { ...prev };
+      delete next[targetUid];
+      return next;
+    });
+  }
+
+  function selectSlot(targetUid, slot) {
+    setItems((prev) => prev.map((item) => item.uid === targetUid ? {
+      ...item,
+      slot,
+      professionalId: slot.profesionalId,
+      professionalName: slot.profesionalNombre,
+    } : item));
+  }
+
+  async function confirmBooking() {
+    if (!allItemsHaveSlot) return;
+    setConfirming(true);
+    setMessage("");
+    try {
+      const res = await fetch(`${API}/api/clientes/citas/confirmar-multiple`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sucursal_id: sucursalId,
+          items: items.map((item, index) => ({
+            orden: index + 1,
+            servicio_web_id: item.serviceId,
+            slot_id: item.slot.id,
+            profesional_id: item.professionalId,
+          })),
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.confirmado === false) throw new Error(data?.detail || data?.mensaje || `HTTP ${res.status}`);
+      setMessage("Turno compuesto confirmado. Podés verlo desde tu portal.");
+      setItems([]);
+      setStep(1);
+    } catch (err) {
+      setMessage(err.message || "No se pudo confirmar el turno.");
+    } finally {
+      setConfirming(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <main className="mx-auto max-w-5xl px-4 py-20 text-center">
+        <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-t-transparent" style={{ borderColor: "var(--brand-secondary)", borderTopColor: "transparent" }} />
+        <p className="mt-4 text-sm" style={{ color: "var(--brand-text-secondary)" }}>Cargando reserva…</p>
+      </main>
+    );
+  }
+
+  if (error) {
+    return (
+      <main className="mx-auto max-w-4xl px-4 py-20 text-center">
+        <GlassCard className="inline-block px-8 py-6">
+          <p className="text-rose-600">No pudimos cargar reservas: {error}</p>
+        </GlassCard>
+      </main>
+    );
+  }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-8 py-12">
-      <SectionHeader title={config.reservaTitle || "Reservá tu Turno"} subtitle={config.reservaSubtitle || "Seleccioná servicio, sucursal y horario"} />
+    <main className="mx-auto max-w-6xl overflow-x-hidden px-3 py-6 sm:px-6 sm:py-10">
+      <SectionHeader
+        title={config.reservaTitle || "Reservá tu Turno"}
+        subtitle="Elegí sucursal, agregá uno o varios servicios y seleccioná agenda por profesional."
+      />
 
-      <div className="grid lg:grid-cols-3 gap-8 mt-8">
-        {/* Stepper principal */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Steps indicator */}
-          <div className="flex items-center gap-2 sm:gap-3 mb-8 overflow-x-auto pb-2">
-            {["Servicio", "Sucursal", "Horario", "Datos"].map((label, i) => (
-              <div key={label} className="flex items-center gap-2 shrink-0">
-                <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-[background-color,color,box-shadow] ${
-                    step > i + 1 ? 'text-white' : step === i + 1 ? 'text-white shadow-lg' : 'text-gray-400 bg-gray-100'
-                  }`}
-                  style={step >= i + 1 ? { background: step === i + 1 ? 'linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))' : 'var(--brand-primary)' } : {}}
-                >
-                  {step > i + 1 ? '✓' : i + 1}
-                </div>
-                <span className={`text-sm font-medium hidden sm:inline ${step >= i + 1 ? '' : 'text-gray-400'}`} style={step >= i + 1 ? { color: 'var(--brand-text)' } : {}}>
-                  {label}
-                </span>
-                {i < 3 && <div className={`w-4 sm:w-8 h-px ${step > i + 1 ? '' : 'bg-gray-200'}`} style={step > i + 1 ? { background: 'var(--brand-secondary)' } : {}} />}
-              </div>
-            ))}
-          </div>
+      <div className="mx-auto mt-5 flex max-w-3xl items-center justify-center gap-2 overflow-x-auto pb-2">
+        {steps.map((item, index) => {
+          const active = step === item.id;
+          const done = step > item.id;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => goToStep(item.id)}
+              className="flex shrink-0 items-center gap-2 rounded-full px-2 py-1.5 text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 sm:px-3 sm:text-sm"
+              style={{
+                color: active || done ? "#fff" : "var(--brand-text-secondary)",
+                background: active || done ? "linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))" : "rgba(255,255,255,0.7)",
+              }}
+              aria-current={active ? "step" : undefined}
+            >
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/20 text-xs">{done ? "✓" : item.id}</span>
+              {item.label}
+              {index < steps.length - 1 && <span className="hidden text-white/60 sm:inline">→</span>}
+            </button>
+          );
+        })}
+      </div>
 
-          {/* Step 1 — Servicio */}
+      {message && (
+        <div className="mx-auto mt-4 max-w-3xl rounded-2xl bg-white/80 px-4 py-3 text-sm font-semibold" role="status" aria-live="polite" style={{ color: message.includes("confirmado") ? "#047857" : "#be123c" }}>
+          {message}
+        </div>
+      )}
+
+      <div className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <section className="space-y-5">
           {step === 1 && (
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--brand-text)' }}>1. ¿Qué servicio querés reservar?</h3>
-              {servicios.length === 0 ? (
-                <GlassCard className="p-8 text-center">
-                  <p className="opacity-50">No hay servicios disponibles para reserva online en este momento.</p>
-                </GlassCard>
-              ) : (
-                <div className="grid gap-3">
-                  {servicios.map((s, i) => {
-                    const nombre = formatPublicName(s.NOMBRE_PUBLICO_SERVICIO || s.NOMBRE_SERVICIO || "");
-                    const precio = s.PRECIO_WEB ?? s.PRECIO_PUBLICITADO_WEB;
-                    const duracion = s.DURACION_MINUTOS_WEB ?? s.DURACION_MINUTOS;
-                    return (
-                      <button
-                        type="button"
-                        key={i}
-                        onClick={() => {
-                          setServicioSel(s);
-                          setSucursalSel(null);
-                          setHorarioSel(null);
-                          setHorarios([]);
-                          setStep(2);
-                        }}
-                        className={`w-full text-left p-4 rounded-xl transition-[background-color,border-color,box-shadow,transform] duration-300 border ${
-                          servicioSel === s ? 'border-primary shadow-md' : 'border-white/40 hover:shadow-md hover:-translate-y-0.5'
-                        }`}
-                        style={{
-                          background: servicioSel === s ? 'rgba(125,211,252,0.15)' : 'rgba(255,255,255,0.5)',
-                          backdropFilter: 'blur(12px)',
-                          borderColor: servicioSel === s ? 'var(--brand-primary)' : 'rgba(255,255,255,0.3)',
-                        }}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="font-semibold text-base" style={{ color: 'var(--brand-text)' }}>{nombre}</p>
-                            {duracion && <p className="text-sm opacity-50" style={{ color: 'var(--brand-text-secondary)' }}>{duracion} min</p>}
-                          </div>
-                          <div className="text-right">
-                            {precio && <p className="font-bold text-lg" style={{ color: 'var(--brand-primary)' }}>{formatearMoneda(precio)}</p>}
-                          </div>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
+            <GlassCard className="p-4 sm:p-6">
+              <div className="mb-4">
+                <h2 className="text-xl font-extrabold" style={{ color: "var(--brand-text)" }}>1. Elegí la sucursal</h2>
+                <p className="mt-1 text-sm" style={{ color: "var(--brand-text-secondary)" }}>Primero definimos dónde se va a atender el turno.</p>
+              </div>
+              <label htmlFor="reserva-sucursal" className="mb-2 block text-sm font-bold" style={{ color: "var(--brand-text)" }}>Sucursal</label>
+              <select
+                id="reserva-sucursal"
+                name="sucursal_id"
+                value={sucursalId}
+                onChange={(event) => handleBranchChange(event.target.value)}
+                className="w-full rounded-2xl border border-white/70 bg-white/80 px-4 py-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
+                style={{ color: "var(--brand-text)" }}
+              >
+                <option value="">Seleccionar sucursal…</option>
+                {sucursales.map((branch) => (
+                  <option key={branch.id} value={branch.id}>{branchName(branch)}</option>
+                ))}
+              </select>
+              {sucursales.length === 0 && (
+                <p className="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-800">No hay sucursales públicas con reserva web habilitada.</p>
               )}
-            </div>
+              <div className="mt-5 flex justify-end">
+                <button
+                  type="button"
+                  disabled={!sucursalId}
+                  onClick={() => goToStep(2)}
+                  className="rounded-2xl px-5 py-3 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                  style={{ background: "linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))" }}
+                >
+                  Continuar a Servicios
+                </button>
+              </div>
+            </GlassCard>
           )}
 
-          {/* Step 2 — Sucursal */}
           {step === 2 && (
-            <div className="space-y-4">
-              <button type="button" onClick={() => setStep(1)} className="text-sm opacity-60 hover:opacity-100 mb-2 inline-flex items-center gap-1" style={{ color: 'var(--brand-primary)' }}>
-                ← Volver
-              </button>
-              <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--brand-text)' }}>2. ¿Dónde querés el turno?</h3>
-              {sucursales.length === 0 ? (
-                <GlassCard className="p-8 text-center space-y-4">
-                  <span className="text-4xl block mb-3">📍</span>
-                  <div>
-                    <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--brand-text)' }}>
-                      No hay sucursales publicadas para reserva online
-                    </h3>
-                    <p className="text-sm opacity-60" style={{ color: 'var(--brand-text-secondary)' }}>
-                      No mostramos sedes ficticias ni no publicadas. Configurá una sucursal real como visible
-                      para habilitar este paso.
-                    </p>
+            <GlassCard className="p-4 sm:p-6">
+              <button type="button" onClick={() => goToStep(1)} className="mb-4 text-sm font-semibold" style={{ color: "var(--brand-primary)" }}>← Cambiar sucursal</button>
+              <div className="mb-4">
+                <h2 className="text-xl font-extrabold" style={{ color: "var(--brand-text)" }}>2. Agregá servicios y profesional</h2>
+                <p className="mt-1 text-sm" style={{ color: "var(--brand-text-secondary)" }}>Podés sumar varios servicios. Si no sabés con quién atenderte, dejá “Automático”.</p>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
+                <div>
+                  <label htmlFor="reserva-servicio" className="mb-1 block text-xs font-bold uppercase tracking-wide" style={{ color: "var(--brand-primary)" }}>Servicio</label>
+                  <select
+                    id="reserva-servicio"
+                    name="servicio_web_id"
+                    value={serviceId}
+                    onChange={(event) => setServiceId(event.target.value)}
+                    className="w-full rounded-2xl border border-white/70 bg-white/80 px-3 py-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
+                    style={{ color: "var(--brand-text)" }}
+                  >
+                    <option value="">Seleccionar servicio…</option>
+                    {servicios.map((service) => (
+                      <option key={service.id} value={service.id}>{serviceName(service)} · {money(servicePrice(service))}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="reserva-profesional" className="mb-1 block text-xs font-bold uppercase tracking-wide" style={{ color: "var(--brand-primary)" }}>Profesional</label>
+                  <select
+                    id="reserva-profesional"
+                    name="profesional_id"
+                    value={professionalId}
+                    onChange={(event) => setProfessionalId(event.target.value)}
+                    disabled={!serviceId || professionalsLoading}
+                    className="w-full rounded-2xl border border-white/70 bg-white/80 px-3 py-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 disabled:opacity-60"
+                    style={{ color: "var(--brand-text)" }}
+                  >
+                    <option value={AUTO_PROFESSIONAL}>{professionalsLoading ? "Buscando…" : "Automático: menor carga del día"}</option>
+                    {professionals.map((professional) => (
+                      <option key={professional.id} value={professional.id}>{professional.nombre}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex items-end">
+                  <button type="button" onClick={addServiceItem} className="w-full rounded-2xl px-4 py-3 text-sm font-bold text-white transition-opacity hover:opacity-90" style={{ background: "linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))" }}>
+                    Agregar
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-5 space-y-2">
+                {items.length === 0 ? (
+                  <div className="rounded-2xl bg-white/65 px-4 py-5 text-center text-sm" style={{ color: "var(--brand-text-secondary)" }}>Todavía no agregaste servicios al turno.</div>
+                ) : items.map((item, index) => (
+                  <div key={item.uid} className="flex items-start justify-between gap-3 rounded-2xl bg-white/75 px-3 py-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-extrabold" style={{ color: "var(--brand-text)" }}>{index + 1}. {item.serviceName}</p>
+                      <p className="text-xs" style={{ color: "var(--brand-text-secondary)" }}>{item.professionalName} · {item.duration ? `${item.duration} min · ` : ""}{money(item.price)}</p>
+                    </div>
+                    <button type="button" onClick={() => removeItem(item.uid)} className="rounded-full bg-rose-50 px-3 py-1 text-xs font-bold text-rose-700">Quitar</button>
                   </div>
-                  <div className="flex flex-col justify-center gap-3 sm:flex-row">
-                    <Link
-                      to="/catalogo"
-                      className="inline-flex items-center justify-center rounded-xl px-5 py-3 text-sm font-semibold transition-opacity hover:opacity-90"
-                      style={{ background: "linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))", color: "#fff" }}
-                    >
-                      Ver Catálogo
-                    </Link>
-                    {whatsappUrl && (
-                      <a
-                        href={whatsappUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center justify-center rounded-xl border px-5 py-3 text-sm font-semibold transition-colors hover:bg-white/70"
-                        style={{ borderColor: "rgba(0,0,0,0.12)", color: "var(--brand-text)" }}
-                      >
-                        Consultar por WhatsApp
-                      </a>
-                    )}
-                  </div>
-                </GlassCard>
+                ))}
+              </div>
+
+              <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
+                <button type="button" onClick={() => goToStep(1)} className="rounded-2xl border border-white/70 bg-white/70 px-5 py-3 text-sm font-bold" style={{ color: "var(--brand-text)" }}>Volver</button>
+                <button type="button" disabled={items.length === 0} onClick={() => goToStep(3)} className="rounded-2xl px-5 py-3 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-50" style={{ background: "linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))" }}>Elegir Agenda</button>
+              </div>
+            </GlassCard>
+          )}
+
+          {step === 3 && (
+            <GlassCard className="p-4 sm:p-6">
+              <button type="button" onClick={() => goToStep(2)} className="mb-4 text-sm font-semibold" style={{ color: "var(--brand-primary)" }}>← Modificar servicios</button>
+              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <h2 className="text-xl font-extrabold" style={{ color: "var(--brand-text)" }}>3. Elegí agenda por servicio</h2>
+                  <p className="mt-1 text-sm" style={{ color: "var(--brand-text-secondary)" }}>Cada servicio puede tener un profesional y horario propio.</p>
+                </div>
+                <div>
+                  <label htmlFor="reserva-fecha" className="mb-1 block text-xs font-bold uppercase tracking-wide" style={{ color: "var(--brand-primary)" }}>Fecha</label>
+                  <input
+                    id="reserva-fecha"
+                    name="fecha"
+                    type="date"
+                    value={fecha}
+                    min={todayISO()}
+                    onChange={(event) => setFecha(event.target.value)}
+                    className="rounded-2xl border border-white/70 bg-white/80 px-3 py-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
+                    style={{ color: "var(--brand-text)" }}
+                  />
+                </div>
+              </div>
+
+              {agendaLoading ? (
+                <div className="rounded-2xl bg-white/70 p-8 text-center text-sm" style={{ color: "var(--brand-text-secondary)" }}>Buscando agenda…</div>
               ) : (
-                <div className="grid gap-3">
-                  {sucursales.map((suc, i) => {
-                    const nombre = formatPublicName(suc.NOMBRE_SUCURSAL || suc.NOMBRE_CORTO_SUCURSAL || "");
-                    const dir = suc.DIRECCION_SUCURSAL || suc["CALLE Y N°"] || "";
-                    const ciudad = suc.CIUDAD_SUCURSAL || suc.LOCALIDAD || "";
+                <div className="space-y-4">
+                  {items.map((item) => {
+                    const options = slotOptions[item.uid]?.slots || [];
                     return (
-                      <button
-                        type="button"
-                        key={i}
-                        onClick={() => { handleSucursalSelect(suc); setStep(3); }}
-                        className={`w-full text-left p-4 rounded-xl transition-[background-color,border-color,box-shadow,transform] duration-300 border ${
-                          sucursalSel === suc ? 'border-primary shadow-md' : 'border-white/40 hover:shadow-md hover:-translate-y-0.5'
-                        }`}
-                        style={{
-                          background: sucursalSel === suc ? 'rgba(125,211,252,0.15)' : 'rgba(255,255,255,0.5)',
-                          backdropFilter: 'blur(12px)',
-                          borderColor: sucursalSel === suc ? 'var(--brand-primary)' : 'rgba(255,255,255,0.3)',
-                        }}
-                      >
-                        <p className="font-semibold" style={{ color: 'var(--brand-text)' }}>{nombre}</p>
-                        {(dir || ciudad) && <p className="text-sm opacity-50 mt-1" style={{ color: 'var(--brand-text-secondary)' }}>{[dir, ciudad].filter(Boolean).join(' — ')}</p>}
-                      </button>
+                      <article key={item.uid} className="rounded-3xl border border-white/60 bg-white/70 p-3 sm:p-4">
+                        <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="min-w-0">
+                            <h3 className="truncate text-sm font-extrabold" style={{ color: "var(--brand-text)" }}>{item.serviceName}</h3>
+                            <p className="text-xs" style={{ color: "var(--brand-text-secondary)" }}>Profesional: {item.professionalName}</p>
+                          </div>
+                          {slotOptions[item.uid]?.recommended_professional && (
+                            <span className="rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-bold text-emerald-700">
+                              Sugerido: {slotOptions[item.uid].recommended_professional.nombre}
+                            </span>
+                          )}
+                        </div>
+                        {options.length === 0 ? (
+                          <div className="rounded-2xl bg-amber-50 px-4 py-4 text-sm text-amber-800">
+                            Sin horarios publicados para {formatDate(fecha)}. La agenda necesita slots activos para esta sucursal/profesional.
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+                            {options.map((slot) => {
+                              const usedByOther = selectedSlotIds.has(slot.id) && item.slot?.id !== slot.id;
+                              const active = item.slot?.id === slot.id;
+                              return (
+                                <button
+                                  key={`${item.uid}-${slot.id}`}
+                                  type="button"
+                                  disabled={usedByOther}
+                                  onClick={() => selectSlot(item.uid, slot)}
+                                  className="min-h-[76px] rounded-2xl border px-2 py-2 text-left text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 disabled:cursor-not-allowed disabled:opacity-40"
+                                  style={{
+                                    borderColor: active ? "var(--brand-primary)" : "rgba(255,255,255,0.8)",
+                                    background: active ? "linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))" : "rgba(255,255,255,0.8)",
+                                    color: active ? "#fff" : "var(--brand-text)",
+                                  }}
+                                >
+                                  <span className="block text-sm font-extrabold">{formatTime(slot.horaInicio)}–{formatTime(slot.horaFin)}</span>
+                                  <span className="mt-1 block truncate opacity-90">{slot.profesionalNombre}</span>
+                                  <span className="mt-1 block opacity-70">Carga día: {slot.cargaDiaProfesional}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </article>
                     );
                   })}
                 </div>
               )}
-            </div>
+
+              <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
+                <button type="button" onClick={() => goToStep(2)} className="rounded-2xl border border-white/70 bg-white/70 px-5 py-3 text-sm font-bold" style={{ color: "var(--brand-text)" }}>Volver</button>
+                <button type="button" disabled={!allItemsHaveSlot} onClick={() => goToStep(4)} className="rounded-2xl px-5 py-3 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-50" style={{ background: "linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))" }}>Revisar Turno</button>
+              </div>
+            </GlassCard>
           )}
 
-          {/* Step 3 — Horario */}
-          {step === 3 && (
-            <div className="space-y-4">
-              <button type="button" onClick={() => setStep(2)} className="text-sm opacity-60 hover:opacity-100 mb-2 inline-flex items-center gap-1" style={{ color: 'var(--brand-primary)' }}>
-                ← Volver
-              </button>
-              <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--brand-text)' }}>3. Elegí el horario</h3>
-              {horarios.length === 0 ? (
-                <GlassCard className="p-8 text-center space-y-4">
-                  <span className="text-5xl block">📅</span>
-                  <div>
-                    <h4 className="text-lg font-semibold mb-2" style={{ color: 'var(--brand-text)' }}>
-                      Sin horarios confirmados para esta sucursal
-                    </h4>
-                    <p className="text-sm opacity-50 mb-3" style={{ color: 'var(--brand-text-secondary)' }}>
-                      Próximamente publicaremos nuevos horarios. Mientras tanto, consultá disponibilidad
-                      por WhatsApp o acercate a la sucursal.
-                    </p>
-                    {whatsappUrl ? (
-                      <a
-                        href={whatsappUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-1 text-sm font-medium underline"
-                        style={{ color: 'var(--brand-primary)' }}
-                      >
-                        <span className="material-symbols-outlined text-sm" aria-hidden="true">support_agent</span>
-                        Consultar disponibilidad
-                      </a>
-                    ) : (
-                      <Link
-                        to="/catalogo"
-                        className="inline-flex items-center gap-1 text-sm font-medium underline"
-                        style={{ color: 'var(--brand-primary)' }}
-                      >
-                        <span className="material-symbols-outlined text-sm" aria-hidden="true">category</span>
-                        Volver al catálogo
-                      </Link>
-                    )}
+          {step === 4 && (
+            <GlassCard className="p-4 sm:p-6">
+              <button type="button" onClick={() => goToStep(3)} className="mb-4 text-sm font-semibold" style={{ color: "var(--brand-primary)" }}>← Modificar agenda</button>
+              <h2 className="text-xl font-extrabold" style={{ color: "var(--brand-text)" }}>4. Confirmá el turno</h2>
+              <p className="mt-1 text-sm" style={{ color: "var(--brand-text-secondary)" }}>Revisá servicios, profesionales y horarios antes de confirmar.</p>
+              <div className="mt-5 space-y-2">
+                {items.map((item, index) => (
+                  <div key={item.uid} className="rounded-2xl bg-white/75 px-4 py-3">
+                    <p className="text-sm font-extrabold" style={{ color: "var(--brand-text)" }}>{index + 1}. {item.serviceName}</p>
+                    <p className="text-xs" style={{ color: "var(--brand-text-secondary)" }}>{formatDate(fecha)} · {formatTime(item.slot?.horaInicio)}–{formatTime(item.slot?.horaFin)} · {item.professionalName}</p>
                   </div>
-                </GlassCard>
-              ) : (
-                <div className="space-y-5">
-                  {Object.entries(horariosPorFecha).map(([fecha, items]) => (
-                    <div key={fecha} className="rounded-2xl border border-white/40 bg-white/40 p-4">
-                      <h4 className="mb-3 text-sm font-semibold capitalize" style={{ color: 'var(--brand-text)' }}>
-                        {items[0]?.fechaLabel || fecha}
-                      </h4>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                        {items.map((h) => (
-                          <button
-                            type="button"
-                            key={`${h.fecha}-${h.horaInicio}-${h.horaFin}-${h.id}`}
-                            onClick={() => { setHorarioSel(h); setStep(4); }}
-                            className={`py-3 px-2 rounded-lg text-sm font-medium transition-[background-color,color,box-shadow] ${
-                              horarioSel?.id === h.id ? 'text-white shadow-md' : 'hover:bg-white/80 border border-gray-200'
-                            }`}
-                            style={horarioSel?.id === h.id ? { background: 'linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))' } : { background: 'rgba(255,255,255,0.5)' }}
-                          >
-                            <span className="block">{h.label}</span>
-                            {h.profesionalNombre && <span className="block truncate text-[11px] opacity-80">{h.profesionalNombre}</span>}
-                            <span className="block text-[11px] opacity-70">{h.capacidad} cupo{h.capacidad === 1 ? "" : "s"}</span>
-                          </button>
-                        ))}
-                      </div>
+                ))}
+              </div>
+              <div className="mt-5">
+                {canConfirmOnline ? (
+                  <button
+                    type="button"
+                    disabled={confirming || !allItemsHaveSlot}
+                    onClick={confirmBooking}
+                    className="w-full rounded-2xl px-6 py-3 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                    style={{ background: "linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))" }}
+                  >
+                    {confirming ? "Confirmando…" : "Confirmar turno"}
+                  </button>
+                ) : (
+                  <Link to="/login" className="block w-full rounded-2xl px-6 py-3 text-center text-sm font-bold text-white" style={{ background: "linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))" }}>
+                    Ingresar para confirmar
+                  </Link>
+                )}
+                <p className="mt-2 text-center text-xs" style={{ color: "var(--brand-text-secondary)" }}>
+                  No se procesan pagos ni checkout en esta etapa.
+                </p>
+              </div>
+            </GlassCard>
+          )}
+        </section>
+
+        <aside className="lg:sticky lg:top-20 lg:self-start">
+          <GlassCard className="p-4 sm:p-5">
+            <h2 className="mb-4 flex items-center gap-2 text-lg font-extrabold" style={{ color: "var(--brand-text)" }}>
+              <span className="material-symbols-outlined" aria-hidden="true">receipt_long</span>
+              Resumen
+            </h2>
+            <div className="space-y-3 text-sm">
+              <div>
+                <span className="text-xs font-bold uppercase tracking-wide" style={{ color: "var(--brand-primary)" }}>Sucursal</span>
+                <p className="font-semibold" style={{ color: "var(--brand-text)" }}>{selectedSucursal ? branchName(selectedSucursal) : "—"}</p>
+              </div>
+              <div>
+                <span className="text-xs font-bold uppercase tracking-wide" style={{ color: "var(--brand-primary)" }}>Servicios</span>
+                <p className="font-semibold" style={{ color: "var(--brand-text)" }}>{items.length || "—"}</p>
+              </div>
+              {items.length > 0 && (
+                <div className="space-y-2">
+                  {items.map((item) => (
+                    <div key={item.uid} className="rounded-2xl bg-white/60 px-3 py-2">
+                      <p className="truncate text-xs font-bold" style={{ color: "var(--brand-text)" }}>{item.serviceName}</p>
+                      <p className="text-[11px]" style={{ color: "var(--brand-text-secondary)" }}>{item.professionalName}{item.slot ? ` · ${formatTime(item.slot.horaInicio)}` : ""}</p>
                     </div>
                   ))}
                 </div>
               )}
-            </div>
-          )}
-
-          {/* Step 4 — Datos */}
-          {step === 4 && (
-            <div className="space-y-4">
-              <button type="button" onClick={() => setStep(3)} className="text-sm opacity-60 hover:opacity-100 mb-2 inline-flex items-center gap-1" style={{ color: 'var(--brand-primary)' }}>
-                ← Volver
-              </button>
-              <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--brand-text)' }}>4. Tus datos</h3>
-              <GlassCard className="p-6 space-y-4">
-                <div>
-                  <label htmlFor="reserva-nombre" className="block text-sm font-medium mb-1" style={{ color: 'var(--brand-text)' }}>Nombre</label>
-                  <input
-                    id="reserva-nombre"
-                    name="nombre"
-                    type="text"
-                    autoComplete="name"
-                    value={nombre}
-                    onChange={e => setNombre(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-lg border border-gray-200 bg-white/70 backdrop-blur focus-visible:ring-2 focus-visible:ring-sky-500"
-                    placeholder="Ej. Ana Pérez…"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="reserva-telefono" className="block text-sm font-medium mb-1" style={{ color: 'var(--brand-text)' }}>Teléfono</label>
-                  <input
-                    id="reserva-telefono"
-                    name="telefono"
-                    type="tel"
-                    autoComplete="tel"
-                    inputMode="tel"
-                    value={telefono}
-                    onChange={e => setTelefono(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-lg border border-gray-200 bg-white/70 backdrop-blur focus-visible:ring-2 focus-visible:ring-sky-500"
-                    placeholder="Ej. +54 11 1234-5678…"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="reserva-notas" className="block text-sm font-medium mb-1" style={{ color: 'var(--brand-text)' }}>Notas (opcional)</label>
-                  <textarea
-                    id="reserva-notas"
-                    name="notas"
-                    autoComplete="off"
-                    value={notas}
-                    onChange={e => setNotas(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-lg border border-gray-200 bg-white/70 backdrop-blur resize-none focus-visible:ring-2 focus-visible:ring-sky-500"
-                    placeholder="Ej. Preferencia de horario…"
-                    rows={2}
-                  />
-                </div>
-              </GlassCard>
-            </div>
-          )}
-        </div>
-
-        {/* Resumen lateral */}
-        <div className="space-y-4">
-          <GlassCard className="p-5 sticky top-8">
-            <h3 className="font-semibold text-base mb-4 flex items-center gap-2" style={{ color: 'var(--brand-text)' }}>
-                <span className="material-symbols-outlined text-lg" aria-hidden="true">receipt_long</span>
-              Resumen
-            </h3>
-            <div className="space-y-3 text-sm">
-              <div>
-                <span className="opacity-50" style={{ color: 'var(--brand-text-secondary)' }}>Servicio</span>
-                <p className="font-medium" style={{ color: 'var(--brand-text)' }}>
-                  {servicioSel ? formatPublicName(servicioSel.NOMBRE_PUBLICO_SERVICIO || servicioSel.NOMBRE_SERVICIO || "") : '—'}
-                </p>
-              </div>
-              <div>
-                <span className="opacity-50" style={{ color: 'var(--brand-text-secondary)' }}>Sucursal</span>
-                <p className="font-medium" style={{ color: 'var(--brand-text)' }}>
-                  {sucursalSel ? formatPublicName(sucursalSel.NOMBRE_SUCURSAL || sucursalSel.NOMBRE_CORTO_SUCURSAL || "") : '—'}
-                </p>
-              </div>
-              <div>
-                <span className="opacity-50" style={{ color: 'var(--brand-text-secondary)' }}>Horario</span>
-                <p className="font-medium" style={{ color: 'var(--brand-text)' }}>
-                  {horarioSel ? `${horarioSel.fechaCorta || ""} · ${horarioSel.label || horarioSel.horaInicio}` : '—'}
-                </p>
-                {horarioSel?.profesionalNombre && (
-                  <p className="mt-1 text-xs font-semibold" style={{ color: 'var(--brand-primary)' }}>
-                    Profesional: {horarioSel.profesionalNombre}
-                  </p>
-                )}
-              </div>
-              <div className="border-t border-gray-200 pt-3 mt-3">
-                <span className="opacity-50 text-xs" style={{ color: 'var(--brand-text-secondary)' }}>Total estimado</span>
-                <p className="font-bold text-xl" style={{ color: 'var(--brand-primary)' }}>
-                  {servicioSel ? formatearMoneda(servicioSel.PRECIO_WEB ?? servicioSel.PRECIO_PUBLICITADO_WEB) || 'Consultar' : '—'}
-                </p>
+              <div className="border-t border-white/60 pt-3">
+                <span className="text-xs font-bold uppercase tracking-wide" style={{ color: "var(--brand-primary)" }}>Total estimado</span>
+                <p className="text-2xl font-extrabold tabular-nums" style={{ color: "var(--brand-primary)" }}>{total ? money(total) : "—"}</p>
               </div>
             </div>
-
-            {step === 4 && nombre && telefono && (
-              <div className="mt-6">
-                <Link
-                  to="/login"
-                  className="block w-full text-center px-6 py-3 rounded-xl font-semibold text-sm text-white transition-opacity hover:opacity-90"
-                  style={{ background: "linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))" }}
-                >
-                  Ingresá para confirmar tu turno
-                </Link>
-                <p className="text-xs text-center mt-2 opacity-50" style={{ color: "var(--brand-text)" }}>
-                  Necesitás crear una cuenta para confirmar la reserva
-                </p>
-              </div>
-            )}
+            <p className="mt-4 rounded-2xl bg-white/55 px-3 py-3 text-xs leading-relaxed" style={{ color: "var(--brand-text-secondary)" }}>
+              Automático asigna profesional elegible por sucursal/servicio, priorizando menor cantidad de turnos del día y rotación por empate.
+            </p>
           </GlassCard>
-
-          {/* Demo banner sutil */}
-          <div className="text-center text-xs opacity-30" style={{ color: 'var(--brand-text)' }}>
-            Para confirmar tu turno necesitás ingresar o registrarte
-          </div>
-        </div>
+        </aside>
       </div>
-    </div>
+    </main>
   );
 }
