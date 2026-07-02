@@ -173,6 +173,12 @@ function attachmentPreviewItems(existing = [], draftUrlValue = "") {
   return [...liveItems, ...draftItems];
 }
 
+function lastAttachmentUrl(value) {
+  if (!Array.isArray(value) || !value.length) return "";
+  const item = value[value.length - 1];
+  return String(item?.url || item?.download_url || "").trim();
+}
+
 function isVideoAttachment(item = {}) {
   const type = String(item.type || "").toLowerCase();
   const url = String(item.url || "").toLowerCase();
@@ -395,9 +401,10 @@ function MediaAttachmentManager({
   );
 }
 
-function BackgroundLandingPanel({ form, canEdit, updateNested }) {
+function BackgroundLandingPanel({ form, canEdit, updateNested, uploading, onUploadFile }) {
   const imageUrl = form?.textos_publicos?.hero_imagen_url || "";
   const isImageMode = !!imageUrl;
+  const backgroundMedia = { url: imageUrl, type: "" };
   return (
     <div className="mt-5 rounded-3xl border border-slate-200 bg-white/80 p-4 shadow-sm">
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.1fr_1.5fr]">
@@ -414,7 +421,7 @@ function BackgroundLandingPanel({ form, canEdit, updateNested }) {
           <div className="mt-3 grid grid-cols-2 gap-2">
             {[
               ["SOLIDO", "Color sólido"],
-              ["IMAGEN", "Imagen URL"],
+              ["IMAGEN", "Imagen/video"],
             ].map(([value, label]) => {
               const active = value === "IMAGEN" ? isImageMode : !isImageMode;
               return (
@@ -445,20 +452,39 @@ function BackgroundLandingPanel({ form, canEdit, updateNested }) {
               onChange={(value) => updateNested("colores", "fondo", value)}
             />
             <Field
-              label="URL imagen de fondo"
+              label="URL imagen/video de fondo"
               value={imageUrl}
               disabled={!canEdit || !isImageMode}
               placeholder="https://..."
               onChange={(value) => updateNested("textos_publicos", "hero_imagen_url", value)}
             />
+            <label className={`inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-bold text-sky-700 ${!canEdit || uploading ? "pointer-events-none opacity-50" : ""}`}>
+              <span className="material-symbols-outlined text-base" aria-hidden="true">upload</span>
+              {uploading ? "Subiendo fondo..." : "Subir archivo de fondo"}
+              <input
+                type="file"
+                accept="image/*,video/*"
+                disabled={!canEdit || uploading}
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  event.target.value = "";
+                  if (file) onUploadFile?.(file);
+                }}
+                className="hidden"
+              />
+            </label>
             <p className="text-[11px] text-slate-500">
-              Hoy este campo vive en MARCAS como URL. Para attachment directo en fondo hace falta agregar un campo attachment en schema.
+              El archivo se guarda como attachment en el módulo Hero y se usa su URL como fondo público. Después guardá la configuración.
             </p>
           </div>
           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
             <div className="relative aspect-[4/3]">
               {imageUrl && imageUrl !== "https://" ? (
-                <img src={imageUrl} alt="Vista previa fondo landing" className="h-full w-full object-cover" />
+                isVideoAttachment(backgroundMedia) ? (
+                  <video src={imageUrl} controls muted preload="metadata" className="h-full w-full object-cover" />
+                ) : (
+                  <img src={imageUrl} alt="Vista previa fondo landing" className="h-full w-full object-cover" />
+                )
               ) : (
                 <div className="flex h-full w-full items-center justify-center text-xs font-semibold text-slate-500" style={{ background: form.colores.fondo || "#F8F9FF" }}>
                   Color sólido
@@ -764,11 +790,26 @@ export default function Configuracion() {
       }));
       setLandingDrafts((prev) => ({ ...prev, [row.id]: buildLandingDraft(updated) }));
       setRowMessages((prev) => ({ ...prev, [messageKey]: "Archivo cargado" }));
+      return updated;
     } catch (error) {
       setRowMessages((prev) => ({ ...prev, [messageKey]: `Error: ${error.message}` }));
+      return null;
     } finally {
       setMediaUploading((prev) => ({ ...prev, [key]: false }));
     }
+  }
+
+  async function uploadBackgroundAttachment(file) {
+    const heroRow = landingRows.find((row) => row.CLAVE_SECCION === "HOME_HERO_PRINCIPAL") || landingRows[0];
+    if (!heroRow) {
+      setSaveMessage("Error: no hay módulo Hero disponible para guardar el archivo de fondo.");
+      return;
+    }
+    const updated = await uploadLandingAttachment(heroRow, "IMAGEN_PRINCIPAL", file);
+    const nextUrl = lastAttachmentUrl(updated?.IMAGEN_PRINCIPAL);
+    if (!nextUrl) return;
+    updateNested("textos_publicos", "hero_imagen_url", nextUrl);
+    setSaveMessage("Archivo de fondo cargado como attachment. Guardá configuración para publicarlo como fondo.");
   }
 
   async function deleteLandingAttachment(row, field, attachmentId, attachmentUrl) {
@@ -815,6 +856,8 @@ export default function Configuracion() {
   const landingRows = [...state.landing]
     .filter((row) => landingKeys.includes(row.CLAVE_SECCION))
     .sort(sortByOrder);
+  const backgroundMediaRow = landingRows.find((row) => row.CLAVE_SECCION === "HOME_HERO_PRINCIPAL") || landingRows[0];
+  const backgroundMediaKey = backgroundMediaRow ? `media:${backgroundMediaRow.id}:IMAGEN_PRINCIPAL` : "media:background:hero";
   const configRows = [...state.configuracion]
     .filter((row) => {
       const category = String(row.CATEGORIA_CONFIGURACION || "").trim().toUpperCase();
@@ -908,7 +951,13 @@ export default function Configuracion() {
             </div>
           </div>
 
-          <BackgroundLandingPanel form={form} canEdit={canEdit} updateNested={updateNested} />
+          <BackgroundLandingPanel
+            form={form}
+            canEdit={canEdit}
+            updateNested={updateNested}
+            uploading={mediaUploading[backgroundMediaKey]}
+            onUploadFile={uploadBackgroundAttachment}
+          />
 
           <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-2">
             <div className="space-y-3">
@@ -993,6 +1042,14 @@ export default function Configuracion() {
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge active={draft.VISIBLE_EN_FRONTEND_PUBLICO}>Pública</Badge>
+                      <button
+                        type="button"
+                        onClick={() => setPreviewOpen(true)}
+                        className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                      >
+                        <span className="material-symbols-outlined text-base" aria-hidden="true">visibility</span>
+                        Previsualizar
+                      </button>
                       <button
                         type="button"
                         disabled={disabled}

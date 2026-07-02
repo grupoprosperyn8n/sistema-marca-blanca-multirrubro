@@ -179,6 +179,10 @@ function cssUrl(raw) {
   return String(raw || "").replace(/["\\\n\r]/g, "").trim();
 }
 
+function isVideoUrl(raw) {
+  return /\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(String(raw || ""));
+}
+
 function getDomainVariant() {
   if (typeof window === "undefined") return null;
   const hostname = window.location.hostname.replace(/^www\./, "");
@@ -220,7 +224,7 @@ function applyCssVariables(config) {
   if (config.fontHeading) root.style.setProperty("--font-heading", config.fontHeading);
   if (config.fontBody) root.style.setProperty("--font-body", config.fontBody);
   const backgroundUrl = cssUrl(config.business?.backgroundUrl || config.heroImageUrl);
-  if (backgroundUrl && config.business?.backgroundType === "IMAGEN") {
+  if (backgroundUrl && config.business?.backgroundType === "IMAGEN" && !isVideoUrl(backgroundUrl)) {
     root.style.setProperty(
       "--brand-page-background",
       `linear-gradient(135deg, rgba(248,249,255,0.84) 0%, rgba(255,255,255,0.72) 100%), url("${backgroundUrl}")`

@@ -49,6 +49,10 @@ function sectionMedia(section) {
   return [...carousel, ...principal].map(attachmentToMedia).filter(Boolean);
 }
 
+function isVideoUrl(url = "") {
+  return /\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(String(url || ""));
+}
+
 export default function Home() {
   const { config } = useBrandConfig();
   const rawLandingSectionsRef = useRef([]);
@@ -154,6 +158,7 @@ export default function Home() {
   const showSecondaryAction = Boolean(config.heroCtaSecondary) &&
     (business.usesAppointments !== false || !heroSecondaryUrl.startsWith("/reserva"));
   const heroMedia = sectionMedia(heroSection);
+  const backgroundVideoUrl = isVideoUrl(config.heroImageUrl) ? config.heroImageUrl : "";
   const howItWorks = business.usesAppointments ? [
     { num: "1", icon: "search", title: "Explorá", desc: "Navegá las opciones disponibles y elegí la que más te sirve." },
     { num: "2", icon: "event_available", title: "Reservá", desc: "Seleccioná sucursal, día y horario si el negocio trabaja con turnos." },
@@ -165,6 +170,17 @@ export default function Home() {
   ];
   return (
     <div className="page-bg">
+      {backgroundVideoUrl && (
+        <video
+          aria-hidden="true"
+          src={backgroundVideoUrl}
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="pointer-events-none fixed inset-0 z-0 h-full w-full object-cover opacity-25"
+        />
+      )}
       {/* Hero Section */}
       <section className="relative z-10 max-w-7xl mx-auto px-4 sm:px-8 pt-12 sm:pt-20 pb-16 lg:pt-28 lg:pb-24">
         <div className="grid lg:grid-cols-5 gap-12 items-center">
