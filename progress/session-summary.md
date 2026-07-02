@@ -1,52 +1,33 @@
-# progress/session-summary.md — RESERVA_MULTI_SERVICIO_UI_P7
+# progress/session-summary.md — PORTAL_BOOKING_HISTORY_UX_P8
 
-Fecha: 2026-07-01
+Fecha: 2026-07-02
 Dominio comercial: https://bellezapro-demo.surge.sh
 Backend: Railway `earnest-comfort`
 
 ## Estado
 
-- Fase: RESERVA_MULTI_SERVICIO_UI_P7
-- Estado: completado, commiteado, pusheado y desplegado.
+- Fase: PORTAL_BOOKING_HISTORY_UX_P8
+- Estado: QA local completo, pendiente de commit/push/deploy.
 
 ## Implementado
 
+- Portal cliente:
+  - El modal “Reservar turno” ahora usa la misma estructura visual que la landing: Sucursal → Servicios → Agenda → Confirmar.
+  - Permite múltiples servicios y profesional por servicio desde el portal.
+  - El historial de turnos se compactó para que los turnos cancelados/completados no ocupen tarjetas gigantes.
+  - Próximos turnos muestran acciones más claras: cancelar y cambiar horario cuando corresponde.
 - Backend:
-  - `GET /api/reserva/profesionales`: devuelve profesionales elegibles por sucursal + servicio.
-  - `GET /api/reserva/agenda-opciones`: devuelve slots reales de `AGENDA_SLOTS` con nombres humanos.
-  - Algoritmo `AUTO`: profesional elegible con menor carga diaria y rotación determinística por empate.
-- Frontend:
-  - `/reserva` rediseñado mobile-first.
-  - Flujo: Sucursal → Servicios → Agenda → Confirmar.
-  - Permite agregar varios servicios al mismo turno.
-  - Permite elegir profesional por servicio o dejar selección automática.
-  - El stepper permite volver atrás para modificar sucursal, servicios o agenda.
-  - Agenda se carga desde slots reales publicados.
-- Datos demo:
-  - Se crearon slots demo web para `Lopez&Lopez` en `AGENDA_SLOTS`.
-  - Fechas usadas: 2026-07-02, 2026-07-03, 2026-07-04 y 2026-07-05.
-  - Se agregaron slots de 90 minutos porque `COLORACION GLOBAL` dura 90 min y los slots de 60 min no alcanzaban para ese servicio.
+  - `/api/clientes/me/citas` ahora expone `ITEMS_CITA`, `CANTIDAD_SERVICIOS`, `NOMBRE_SERVICIOS`, `SERVICIO_WEB_ID` y `ES_MULTISERVICIO`.
+  - Esto mejora cómo aparecen en portal los turnos creados desde landing con `/confirmar-multiple`.
+  - Cancelar una cita compuesta ahora libera todos los `AGENDA_SLOT` vinculados, no solo el primero.
+  - Reprogramar una cita multi-servicio devuelve 409 seguro para evitar inconsistencias; por ahora se debe cancelar y crear de nuevo.
 
 ## Validación local
 
-- `python3 -m py_compile`: PASS.
+- `python3 -m py_compile backend/routes/clientes.py backend/main.py`: PASS.
 - `npm run build`: PASS.
 - `git diff --check`: PASS.
-- `/api/reserva/profesionales`: PASS, 2 profesionales elegibles para `Lopez&Lopez` + `COLORACION GLOBAL`.
-- `/api/reserva/agenda-opciones`: PASS, 6 slots para 2026-07-03 con `AUTO`.
-- `/api/clientes/citas/dry-run-multiple` sin auth: 401 PASS.
-
-## Deploy final
-
-- Commit feature: `aefe97a`.
-- Push origin/main: PASS.
-- Railway `earnest-comfort`: SUCCESS/RUNNING para `aefe97a`.
-- Surge: PASS `https://bellezapro-demo.surge.sh`.
-- Smoke live:
-  - `/health`: 200, endpoints de reserva presentes.
-  - `/api/reserva/profesionales`: 200, total 2.
-  - `/api/reserva/agenda-opciones`: 200, total 6 para 2026-07-03 con `AUTO`.
-  - `/reserva` en Surge: 200.
+- Secret scan sobre diff: PASS.
 
 ## Límites respetados
 
@@ -61,5 +42,5 @@ Backend: Railway `earnest-comfort`
 
 ## Próximo paso recomendado
 
-- QA navegador del flujo completo con usuario cliente demo, usando datos QA.
-- Después: contrato de pagos/caja/POS solo si el usuario lo aprueba explícitamente.
+- Deploy y smoke live del portal cliente.
+- QA navegador con cliente demo: crear turno desde landing y verificar que aparezca en portal.

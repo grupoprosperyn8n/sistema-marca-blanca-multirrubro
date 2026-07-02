@@ -182,6 +182,8 @@ def _format_linked_name(table_name: str, fields: dict, fallback: str = "") -> st
         return _text(fields.get("NOMBRE_CLIENTE") or fields.get("EMAIL") or fallback)
     if table_name == "SERVICIOS":
         return _text(fields.get("NOMBRE_PUBLICO_SERVICIO") or fields.get("NOMBRE_SERVICIO") or fallback)
+    if table_name == "SERVICIOS_WEB":
+        return _text(fields.get("NOMBRE_PUBLICO_SERVICIO") or fields.get("NOMBRE_SERVICIO") or fallback)
     if table_name == "EMPLEADOS":
         return _text(
             fields.get("NOMBRE_EMPLEADO")
@@ -221,6 +223,43 @@ def _linked_name(at: AirtableClient, table_name: str, value, cache: dict) -> str
     return _format_linked_name(table_name, fields, record_id)
 
 
+def _format_cita_items_cliente(at: AirtableClient, item_ids: list[str], cache: dict) -> list[dict]:
+    """DTO seguro de items de una cita compuesta para el portal cliente."""
+    items = []
+    for item_id in item_ids:
+        item_fields = _linked_fields(at, "CITA_ITEMS", item_id, cache)
+        if not item_fields:
+            continue
+        servicio_id = _first_link_id(item_fields.get("SERVICIO"))
+        servicio_web_id = _first_link_id(item_fields.get("SERVICIO_WEB"))
+        profesional_id = _first_link_id(item_fields.get("PROFESIONAL"))
+        slot_id = _first_link_id(item_fields.get("AGENDA_SLOT"))
+        slot_fields = _linked_fields(at, "AGENDA_SLOTS", slot_id, cache) if slot_id else {}
+        service_name = (
+            _linked_name(at, "SERVICIOS_WEB", item_fields.get("SERVICIO_WEB"), cache)
+            or _linked_name(at, "SERVICIOS", item_fields.get("SERVICIO"), cache)
+            or _text(item_fields.get("NOMBRE_ITEM_CITA"))
+            or "Servicio"
+        )
+        items.append({
+            "id": item_id,
+            "orden": int(_number(item_fields.get("ORDEN_ITEM"), len(items) + 1)),
+            "SERVICIO_ID": servicio_id,
+            "SERVICIO_WEB_ID": servicio_web_id,
+            "NOMBRE_SERVICIO": service_name,
+            "PROFESIONAL_ID": profesional_id,
+            "NOMBRE_PROFESIONAL": _linked_name(at, "EMPLEADOS", item_fields.get("PROFESIONAL"), cache),
+            "AGENDA_SLOT_ID": slot_id,
+            "FECHA": slot_fields.get("FECHA_SLOT") or "",
+            "HORA_INICIO": slot_fields.get("HORA_INICIO") or "",
+            "HORA_FIN": slot_fields.get("HORA_FIN") or "",
+            "DURACION_MINUTOS": item_fields.get("DURACION_MINUTOS") or slot_fields.get("DURACION_MINUTOS") or "",
+            "ESTADO_ITEM_CITA": item_fields.get("ESTADO_ITEM_CITA") or "",
+            "PRECIO_REFERENCIA": item_fields.get("PRECIO_REFERENCIA") or 0,
+        })
+    return sorted(items, key=lambda item: item.get("orden") or 0)
+
+
 def _format_cita_cliente(at: AirtableClient, record: dict, cache: dict) -> dict:
     fields = record.get("fields", {})
     campos_internos = {
@@ -239,10 +278,18 @@ def _format_cita_cliente(at: AirtableClient, record: dict, cache: dict) -> dict:
     profesional_nombre = _linked_name(at, "EMPLEADOS", fields.get("PROFESIONAL"), cache)
     sucursal_nombre = _linked_name(at, "SUCURSALES", fields.get("SUCURSAL_ATENCION"), cache)
     slot_fields = _linked_fields(at, "AGENDA_SLOTS", slot_id, cache) if slot_id else {}
+    cita_items = _format_cita_items_cliente(at, _as_id_list(fields.get("CITA_ITEMS")), cache)
+    service_names = [item["NOMBRE_SERVICIO"] for item in cita_items if item.get("NOMBRE_SERVICIO")]
 
     raw_title = _text(fields.get("NOMBRE_CITA"))
     visible_title = servicio_nombre or raw_title or "Turno"
-    if raw_title.upper().startswith("CITA_") and servicio_nombre:
+    if len(service_names) > 1:
+        visible_title = f"Turno con {len(service_names)} servicios"
+        servicio_nombre = ", ".join(service_names)
+    elif service_names:
+        visible_title = f"Turno de {service_names[0]}"
+        servicio_nombre = service_names[0]
+    elif raw_title.upper().startswith("CITA_") and servicio_nombre:
         visible_title = f"Turno de {servicio_nombre}"
 
     return {
@@ -258,6 +305,11 @@ def _format_cita_cliente(at: AirtableClient, record: dict, cache: dict) -> dict:
         "NOMBRE_PROFESIONAL": profesional_nombre,
         "NOMBRE_SUCURSAL": sucursal_nombre,
         "ESTADO_SLOT": slot_fields.get("ESTADO_SLOT") or "",
+        "ITEMS_CITA": cita_items,
+        "CANTIDAD_SERVICIOS": len(cita_items) or (1 if servicio_nombre else 0),
+        "NOMBRE_SERVICIOS": service_names,
+        "SERVICIO_WEB_ID": cita_items[0]["SERVICIO_WEB_ID"] if cita_items else "",
+        "ES_MULTISERVICIO": len(cita_items) > 1,
     }
 
 
@@ -1114,21 +1166,19 @@ async def cancelar_cita(cita_id: str, payload: dict | None = None, user: dict = 
     if estado_actual in ("CANCELADA", "COMPLETADA", "NO_ASISTIO"):
         raise HTTPException(status_code=409, detail=f"La cita ya esta en estado {estado_actual}, no se puede cancelar.")
 
-    # 5. Obtener AGENDA_SLOT vinculado
-    slot_link = _as_id_list(cita_fields.get("AGENDA_SLOT"))
-    slot_id = slot_link[0] if slot_link else None
-
-    slot_update = None
-    if slot_id:
+    # 5. Obtener AGENDA_SLOT(s) vinculados. Una cita compuesta puede tener varios.
+    slot_ids = _as_id_list(cita_fields.get("AGENDA_SLOT"))
+    slot_updates = []
+    for slot_id in slot_ids:
         try:
             slot_record = at.get_record("AGENDA_SLOTS", slot_id)
             sfields = slot_record.get("fields", {})
             cap_ocupada = sfields.get("CAPACIDAD_OCUPADA", 0) or 0
             nueva_cap = max(0, cap_ocupada - 1)
-            slot_update = {
+            slot_updates.append((slot_id, {
                 "ESTADO_SLOT": "DISPONIBLE",
                 "CAPACIDAD_OCUPADA": nueva_cap,
-            }
+            }))
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"No se pudo validar el slot de la cita: {str(e)}")
 
@@ -1150,7 +1200,7 @@ async def cancelar_cita(cita_id: str, payload: dict | None = None, user: dict = 
     try:
         at.patch_record("CITAS", cita_id, cita_update)
         cita_actualizada = True
-        if slot_id and slot_update:
+        for slot_id, slot_update in slot_updates:
             at.patch_record("AGENDA_SLOTS", slot_id, slot_update)
     except Exception as e:
         if cita_actualizada:
@@ -1170,9 +1220,10 @@ async def cancelar_cita(cita_id: str, payload: dict | None = None, user: dict = 
             "fecha_cancelacion": hoy,
         },
         "slot": {
-            "id": slot_id,
-            "liberado": bool(slot_id),
-        } if slot_id else None,
+            "ids": slot_ids,
+            "liberado": bool(slot_ids),
+            "cantidad": len(slot_ids),
+        } if slot_ids else None,
     }
 
 
@@ -1218,6 +1269,11 @@ async def reprogramar_cita(cita_id: str, payload: dict, user: dict = Depends(get
 
     # 5. Obtener slot actual
     slot_actual_link = _as_id_list(cita_fields.get("AGENDA_SLOT"))
+    if len(slot_actual_link) > 1:
+        raise HTTPException(
+            status_code=409,
+            detail="La reprogramacion automatica de turnos con varios servicios todavia no esta habilitada. Cancelá y creá un nuevo turno compuesto.",
+        )
     slot_viejo_id = slot_actual_link[0] if slot_actual_link else None
     slot_viejo_update = None
     slot_viejo_rollback = None

@@ -1,690 +1,410 @@
-import { useState, useEffect, useCallback } from "react";
-import { useAuth } from "../context/AuthContext";
-import { isPublicBranch, isPublicService } from "../utils/publicDataFilters";
+import { useEffect, useMemo, useState } from "react";
+import { ROLES, useAuth } from "../context/AuthContext";
+import { isPublicBranch, formatPublicName } from "../utils/publicDataFilters";
 
 const API = import.meta.env.VITE_API_BASE_URL || "";
+const AUTO_PROFESSIONAL = "AUTO";
 
-const STEPS = [
-  { key: "servicio", label: "Servicio", icon: "💇" },
-  { key: "sucursal", label: "Sucursal", icon: "📍" },
-  { key: "slot", label: "Horario", icon: "🕐" },
-  { key: "confirmar", label: "Confirmar", icon: "✅" },
+function todayISO() {
+  const now = new Date();
+  const offset = now.getTimezoneOffset();
+  return new Date(now.getTime() - offset * 60000).toISOString().slice(0, 10);
+}
+
+function addDaysISO(days) {
+  const date = new Date(`${todayISO()}T00:00:00`);
+  date.setDate(date.getDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+function money(value) {
+  if (value == null || value === "") return "Consultar";
+  const number = Number(value);
+  if (Number.isNaN(number)) return "Consultar";
+  return new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(number);
+}
+
+function serviceName(service) {
+  return formatPublicName(service?.NOMBRE_PUBLICO_SERVICIO || service?.NOMBRE_SERVICIO || service?.SERVICIO_NOMBRE || "Servicio");
+}
+
+function servicePrice(service) {
+  return service?.PRECIO_WEB ?? service?.PRECIO_PUBLICITADO_WEB ?? null;
+}
+
+function serviceDuration(service) {
+  return service?.DURACION_MINUTOS_WEB ?? service?.DURACION_MINUTOS ?? null;
+}
+
+function branchName(branch) {
+  return formatPublicName(branch?.NOMBRE_SUCURSAL || branch?.NOMBRE_CORTO_SUCURSAL || "Sucursal");
+}
+
+function formatDate(iso) {
+  if (!iso) return "";
+  const [year, month, day] = iso.split("-").map(Number);
+  return new Intl.DateTimeFormat("es-AR", { weekday: "short", day: "numeric", month: "short" }).format(new Date(year, month - 1, day));
+}
+
+function formatTime(raw) {
+  return String(raw || "").slice(0, 5);
+}
+
+function uid() {
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+const steps = [
+  { id: 1, label: "Sucursal" },
+  { id: 2, label: "Servicios" },
+  { id: 3, label: "Agenda" },
+  { id: 4, label: "Confirmar" },
 ];
 
-function getServiceDuration(servicio) {
-  const raw = servicio?.DURACION_MINUTOS_WEB ?? servicio?.DURACION_MINUTOS;
-  const value = Number(raw);
-  return Number.isFinite(value) && value > 0 ? value : null;
-}
-
-function dedupeSlots(slots) {
-  const map = new Map();
-  slots.forEach((slot) => {
-    const profesionalKey = slot.PROFESIONAL_ID || (slot.PROFESIONAL || []).join(",");
-    const key = `${slot.FECHA_SLOT || ""}|${slot.HORA_INICIO || ""}|${slot.HORA_FIN || ""}|${(slot.SUCURSAL || []).join(",")}|${profesionalKey}`;
-    const existing = map.get(key);
-    if (existing) {
-      existing.CAPACIDAD_DISPONIBLE = Number(existing.CAPACIDAD_DISPONIBLE || 0) + Number(slot.CAPACIDAD_DISPONIBLE || 0);
-      return;
-    }
-    map.set(key, { ...slot });
-  });
-  return Array.from(map.values());
-}
-
 export default function ReservaTurnoModal({ onClose }) {
-  const { logout } = useAuth();
-
-  const [step, setStep] = useState(0);
+  const { usuario, role, logout } = useAuth();
+  const [step, setStep] = useState(1);
   const [servicios, setServicios] = useState([]);
   const [sucursales, setSucursales] = useState([]);
-  const [slots, setSlots] = useState([]);
-  const [loadingOptions, setLoadingOptions] = useState(false);
-  const [errorFetch, setErrorFetch] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [sucursalId, setSucursalId] = useState("");
+  const [serviceId, setServiceId] = useState("");
+  const [professionalId, setProfessionalId] = useState(AUTO_PROFESSIONAL);
+  const [professionals, setProfessionals] = useState([]);
+  const [professionalsLoading, setProfessionalsLoading] = useState(false);
+  const [items, setItems] = useState([]);
+  const [fecha, setFecha] = useState(addDaysISO(1));
+  const [slotOptions, setSlotOptions] = useState({});
+  const [agendaLoading, setAgendaLoading] = useState(false);
+  const [message, setMessage] = useState("");
+  const [confirming, setConfirming] = useState(false);
+  const [confirmed, setConfirmed] = useState(null);
 
-  // selected
-  const [selectedServicio, setSelectedServicio] = useState(null);
-  const [selectedSucursal, setSelectedSucursal] = useState(null);
-  const [selectedSlot, setSelectedSlot] = useState(null);
+  const selectedSucursal = useMemo(() => sucursales.find((branch) => branch.id === sucursalId), [sucursales, sucursalId]);
+  const selectedService = useMemo(() => servicios.find((service) => service.id === serviceId), [servicios, serviceId]);
+  const allItemsHaveSlot = items.length > 0 && items.every((item) => item.slot?.id);
+  const selectedSlotIds = new Set(items.map((item) => item.slot?.id).filter(Boolean));
+  const total = items.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
+  const canConfirmOnline = usuario && role === ROLES.CLIENTE;
 
-  // dry-run result
-  const [dryRunResult, setDryRunResult] = useState(null);
-  const [dryRunLoading, setDryRunLoading] = useState(false);
-  const [dryRunError, setDryRunError] = useState(null);
-  const [confirmLoading, setConfirmLoading] = useState(false);
-  const [confirmResult, setConfirmResult] = useState(null);
-  const [confirmError, setConfirmError] = useState(null);
-
-  const fetchWithCookie = useCallback(async (url, options = {}) => {
+  async function fetchWithCookie(url, options = {}) {
     const resp = await fetch(`${API}${url}`, {
       ...options,
       credentials: "include",
       headers: { "Content-Type": "application/json", ...(options.headers || {}) },
     });
-    if (resp.status === 401) { logout(); throw new Error("Sesión expirada"); }
-    if (!resp.ok) throw new Error((await resp.json().catch(() => ({}))).detail || `Error ${resp.status}`);
-    return resp.json();
-  }, [logout]);
+    if (resp.status === 401) {
+      await logout();
+      throw new Error("Sesión expirada");
+    }
+    const body = await resp.json().catch(() => ({}));
+    if (!resp.ok) throw new Error(body.detail || `Error ${resp.status}`);
+    return body;
+  }
 
-  // Load servicios on mount
   useEffect(() => {
-    (async () => {
-      setLoadingOptions(true);
+    let cancelled = false;
+    async function load() {
       try {
-        const data = await fetchWithCookie("/api/servicios-web", { cache: "no-store" });
-        const active = (data.servicios_web || data.servicios || []).filter(
-          (s) => isPublicService(s) && s.ACTIVO_EN_WEB && s.RESERVA_ONLINE_HABILITADA
-        );
-        setServicios(active);
-      } catch (e) {
-        setErrorFetch("No se pudieron cargar los servicios");
+        const [servicesRes, branchesRes] = await Promise.all([
+          fetch(`${API}/api/servicios-web`, { cache: "no-store" }),
+          fetch(`${API}/api/sucursales`, { cache: "no-store" }),
+        ]);
+        if (!servicesRes.ok) throw new Error(`Servicios HTTP ${servicesRes.status}`);
+        if (!branchesRes.ok) throw new Error(`Sucursales HTTP ${branchesRes.status}`);
+        const servicesData = await servicesRes.json();
+        const branchesData = await branchesRes.json();
+        const rawServices = Array.isArray(servicesData) ? servicesData : servicesData.servicios_web || [];
+        const rawBranches = Array.isArray(branchesData) ? branchesData : branchesData.sucursales || [];
+        if (cancelled) return;
+        setServicios(rawServices.filter((service) => {
+          const name = serviceName(service);
+          return name && name.toUpperCase() !== "SERVICIO" && service.RESERVA_ONLINE_HABILITADA !== false;
+        }));
+        setSucursales(rawBranches.filter((branch) => isPublicBranch(branch) && branch.PERMITE_RESERVAS_WEB !== false));
+      } catch (err) {
+        if (!cancelled) setError(err.message || "No se pudo cargar la reserva.");
       } finally {
-        setLoadingOptions(false);
+        if (!cancelled) setLoading(false);
       }
-    })();
-  }, [fetchWithCookie]);
+    }
+    load();
+    return () => { cancelled = true; };
+  }, []);
 
-  // Load sucursales when step changes
   useEffect(() => {
-    if (step !== 1 || sucursales.length > 0) return;
-    (async () => {
-      setLoadingOptions(true);
+    setProfessionals([]);
+    setProfessionalId(AUTO_PROFESSIONAL);
+    if (!sucursalId || !serviceId) return;
+    let cancelled = false;
+    async function loadProfessionals() {
+      setProfessionalsLoading(true);
       try {
-        const data = await fetchWithCookie("/api/sucursales");
-        const active = (data.sucursales || []).filter(
-          (s) => isPublicBranch(s) && s.PERMITE_RESERVAS_WEB !== false
-        );
-        setSucursales(active);
-      } catch (e) {
-        setErrorFetch("No se pudieron cargar las sucursales");
+        const params = new URLSearchParams({ sucursal_id: sucursalId, servicio_web_id: serviceId });
+        const res = await fetch(`${API}/api/reserva/profesionales?${params.toString()}`, { cache: "no-store" });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        if (!cancelled) setProfessionals(data.profesionales || []);
+      } catch {
+        if (!cancelled) setProfessionals([]);
       } finally {
-        setLoadingOptions(false);
+        if (!cancelled) setProfessionalsLoading(false);
       }
-    })();
-  }, [step, sucursales.length, fetchWithCookie]);
+    }
+    loadProfessionals();
+    return () => { cancelled = true; };
+  }, [sucursalId, serviceId]);
 
-  // Load slots when step changes
   useEffect(() => {
-    if (step !== 2 || !selectedSucursal) return;
-    (async () => {
-      setLoadingOptions(true);
-      try {
+    if (step !== 3 || !sucursalId || items.length === 0 || !fecha) return;
+    let cancelled = false;
+    async function loadAgenda() {
+      setAgendaLoading(true);
+      const next = {};
+      await Promise.all(items.map(async (item) => {
         const params = new URLSearchParams({
-          disponible: "true",
-          future_only: "true",
-          sucursal_id: selectedSucursal.id,
+          sucursal_id: sucursalId,
+          servicio_web_id: item.serviceId,
+          fecha,
+          profesional_id: item.professionalId || AUTO_PROFESSIONAL,
         });
-        const duration = getServiceDuration(selectedServicio);
-        if (duration) params.set("min_duration", String(duration));
-        const data = await fetchWithCookie(`/api/agenda-slots?${params.toString()}`);
-        const available = dedupeSlots(data.agenda_slots || data.slots || []);
-        // Sort by date then time
-        available.sort((a, b) => {
-          const da = `${a.FECHA_SLOT || ""}${a.HORA_INICIO || ""}`;
-          const db = `${b.FECHA_SLOT || ""}${b.HORA_INICIO || ""}`;
-          return da.localeCompare(db);
-        });
-        setSlots(available);
-      } catch (e) {
-        setErrorFetch("No se pudieron cargar los horarios");
-      } finally {
-        setLoadingOptions(false);
+        try {
+          const res = await fetch(`${API}/api/reserva/agenda-opciones?${params.toString()}`, { cache: "no-store" });
+          next[item.uid] = res.ok ? await res.json() : { slots: [], total: 0 };
+        } catch {
+          next[item.uid] = { slots: [], total: 0 };
+        }
+      }));
+      if (!cancelled) {
+        setSlotOptions(next);
+        setAgendaLoading(false);
       }
-    })();
-  }, [step, selectedSucursal, selectedServicio, fetchWithCookie]);
-
-  const handleNext = () => {
-    if (step === 0 && !selectedServicio) return;
-    if (step === 1 && !selectedSucursal) return;
-    if (step === 2 && !selectedSlot) return;
-    if (step < STEPS.length - 1) {
-      setStep(step + 1);
-      setErrorFetch(null);
     }
-  };
+    loadAgenda();
+    return () => { cancelled = true; };
+  }, [step, sucursalId, items, fecha]);
 
-  const handleBack = () => {
-    if (step === 0) return;
-    setStep(step - 1);
-    setErrorFetch(null);
-    setDryRunResult(null);
-    setDryRunError(null);
-  };
+  function goToStep(target) {
+    if (target > 1 && !sucursalId) return;
+    if (target > 2 && items.length === 0) return;
+    if (target > 3 && !allItemsHaveSlot) return;
+    setMessage("");
+    setStep(target);
+  }
 
-  const runDryRun = async () => {
-    setDryRunLoading(true);
-    setDryRunError(null);
-    setDryRunResult(null);
+  function handleBranchChange(value) {
+    setSucursalId(value);
+    setServiceId("");
+    setItems([]);
+    setSlotOptions({});
+    setMessage("");
+  }
+
+  function addServiceItem() {
+    if (!selectedService) {
+      setMessage("Elegí un servicio para agregarlo al turno.");
+      return;
+    }
+    const selectedProfessional = professionals.find((prof) => prof.id === professionalId);
+    const item = {
+      uid: uid(),
+      serviceId: selectedService.id,
+      serviceName: serviceName(selectedService),
+      price: servicePrice(selectedService),
+      duration: serviceDuration(selectedService),
+      professionalId: professionalId || AUTO_PROFESSIONAL,
+      professionalName: selectedProfessional?.nombre || "Automático",
+      slot: null,
+    };
+    setItems((prev) => [...prev, item]);
+    setServiceId("");
+    setProfessionalId(AUTO_PROFESSIONAL);
+    setProfessionals([]);
+    setMessage("");
+  }
+
+  function removeItem(targetUid) {
+    setItems((prev) => prev.filter((item) => item.uid !== targetUid));
+    setSlotOptions((prev) => {
+      const next = { ...prev };
+      delete next[targetUid];
+      return next;
+    });
+  }
+
+  function selectSlot(targetUid, slot) {
+    setItems((prev) => prev.map((item) => item.uid === targetUid ? {
+      ...item,
+      slot,
+      professionalId: slot.profesionalId,
+      professionalName: slot.profesionalNombre,
+    } : item));
+  }
+
+  async function confirmBooking() {
+    if (!allItemsHaveSlot || !canConfirmOnline) return;
+    setConfirming(true);
+    setMessage("");
     try {
-      const result = await fetchWithCookie("/api/clientes/citas/dry-run", {
+      const data = await fetchWithCookie("/api/clientes/citas/confirmar-multiple", {
         method: "POST",
         body: JSON.stringify({
-          slot_id: selectedSlot.id,
-          servicio_web_id: selectedServicio.id,
-          sucursal_id: selectedSucursal.id,
+          sucursal_id: sucursalId,
+          items: items.map((item, index) => ({
+            orden: index + 1,
+            servicio_web_id: item.serviceId,
+            slot_id: item.slot.id,
+            profesional_id: item.professionalId,
+          })),
         }),
       });
-      setDryRunResult(result);
-    } catch (e) {
-      setDryRunError(e.message);
+      if (data.confirmado === false) throw new Error(data?.mensaje || "No se pudo confirmar el turno.");
+      setConfirmed(data);
+      setMessage("Turno confirmado. Ya aparece en tu portal.");
+    } catch (err) {
+      setMessage(err.message || "No se pudo confirmar el turno.");
     } finally {
-      setDryRunLoading(false);
+      setConfirming(false);
     }
-  };
-
-  const runConfirm = async () => {
-    setConfirmLoading(true);
-    setConfirmError(null);
-    setConfirmResult(null);
-    try {
-      const result = await fetchWithCookie("/api/clientes/citas/confirmar", {
-        method: "POST",
-        body: JSON.stringify({
-          slot_id: selectedSlot.id,
-          servicio_web_id: selectedServicio.id,
-          sucursal_id: selectedSucursal.id,
-        }),
-      });
-      setConfirmResult(result);
-      if (result.confirmado) {
-        setDryRunResult({ ...dryRunResult, _confirmed: true });
-      }
-    } catch (e) {
-      setConfirmError(e.message);
-    } finally {
-      setConfirmLoading(false);
-    }
-  };
-
-  const canNext = () => {
-    if (step === 0) return !!selectedServicio;
-    if (step === 1) return !!selectedSucursal;
-    if (step === 2) return !!selectedSlot;
-    return true;
-  };
-
-  const fmtDate = (iso) => {
-    if (!iso) return "—";
-    try {
-      return new Date(iso).toLocaleDateString("es-AR", {
-        day: "2-digit", month: "short", year: "numeric",
-      });
-    } catch { return iso; }
-  };
-
-  const fmtTime = (t) => {
-    if (!t) return "";
-    try {
-      const d = new Date(`1970-01-01T${t}`);
-      return d.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
-    } catch { return t; }
-  };
+  }
 
   return (
-    <div style={overlayStyle}>
-      <div style={modalStyle}>
-        {/* Header */}
-        <div style={modalHeader}>
-          <h2 style={{ margin: 0, fontSize: "1.25rem" }}>📞 Reservar turno</h2>
-          <button onClick={onClose} style={closeBtn}>✕</button>
-        </div>
-
-        {/* Stepper */}
-        <div style={stepperStyle}>
-          {STEPS.map((s, i) => (
-            <div key={s.key} style={stepperItemStyle}>
-              <div style={stepperCircleStyle(i, step)}>{s.icon}</div>
-              <span style={stepperLabelStyle(i, step)}>{s.label}</span>
-              {i < STEPS.length - 1 && <div style={stepperLineStyle(i, step)} />}
-            </div>
-          ))}
-        </div>
-
-        {/* Content */}
-        <div style={contentStyle}>
-          {loadingOptions && (
-            <div style={centerMsgStyle}>
-              Cargando opciones…
-            </div>
-          )}
-          {errorFetch && !loadingOptions && (
-            <div style={{ ...centerMsgStyle, color: "#ef4444" }}>
-              ⚠️ {errorFetch}
-            </div>
-          )}
-
-          {/* Step 0: Servicio */}
-          {step === 0 && !loadingOptions && !errorFetch && (
-            <div>
-              <p style={{ color: "#6b7280", marginBottom: "1rem" }}>
-              Elegí el servicio que querés reservar:
-              </p>
-              {servicios.length === 0 ? (
-                <p style={{ color: "#9ca3af", textAlign: "center", padding: "2rem" }}>
-                  No hay servicios públicos con reserva online disponibles.
-                </p>
-              ) : (
-                <div style={{ maxHeight: 250, overflowY: "auto" }}>
-                  {servicios.map((svc) => (
-                    <div
-                      key={svc.id}
-                      onClick={() => {
-                        setSelectedServicio(svc);
-                        setSelectedSucursal(null);
-                        setSelectedSlot(null);
-                        setSlots([]);
-                      }}
-                      style={optionStyle(svc.id === selectedServicio?.id)}
-                    >
-                      <div style={{ fontWeight: 600 }}>
-                        {svc.NOMBRE_PUBLICO_SERVICIO || svc.NOMBRE}
-                      </div>
-                      {svc.DESCRIPCION_BREVE && (
-                        <div style={{ fontSize: ".85rem", color: "#6b7280", marginTop: ".2rem" }}>
-                          {svc.DESCRIPCION_BREVE}
-                        </div>
-                      )}
-                      {svc.PRECIO_WEB && (
-                        <div style={{ fontWeight: 600, color: "#10b981", marginTop: ".3rem" }}>
-                          ${Number(svc.PRECIO_WEB).toLocaleString("es-AR")}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Step 1: Sucursal */}
-          {step === 1 && !loadingOptions && !errorFetch && (
-            <div>
-              <p style={{ color: "#6b7280", marginBottom: "1rem" }}>
-                Elegí dónde querés el turno:
-              </p>
-              {sucursales.length === 0 ? (
-                <p style={{ color: "#9ca3af", textAlign: "center", padding: "2rem" }}>
-                  No hay sucursales disponibles.
-                </p>
-              ) : (
-                <div style={{ maxHeight: 250, overflowY: "auto" }}>
-                  {sucursales.map((suc) => (
-                    <div
-                      key={suc.id}
-                      onClick={() => {
-                        setSelectedSucursal(suc);
-                        setSelectedSlot(null);
-                        setSlots([]);
-                      }}
-                      style={optionStyle(suc.id === selectedSucursal?.id)}
-                    >
-                      <div style={{ fontWeight: 600 }}>
-                        📍 {suc.NOMBRE_SUCURSAL || suc.NOMBRE}
-                      </div>
-                      {(suc.DIRECCION || suc["CALLE Y N°"] || suc.LOCALIDAD) && (
-                        <div style={{ fontSize: ".85rem", color: "#6b7280", marginTop: ".2rem" }}>
-                          {[suc.DIRECCION || suc["CALLE Y N°"], suc.LOCALIDAD].filter(Boolean).join(", ")}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Step 2: Slot */}
-          {step === 2 && !loadingOptions && !errorFetch && (
-            <div>
-              <p style={{ color: "#6b7280", marginBottom: "1rem" }}>
-                Elegí el día y horario:
-              </p>
-              {slots.length === 0 ? (
-                <p style={{ color: "#9ca3af", textAlign: "center", padding: "2rem" }}>
-                  No hay horarios disponibles por el momento.
-                </p>
-              ) : (
-                <div style={{ maxHeight: 250, overflowY: "auto" }}>
-                  {slots.map((slot) => (
-                    <div
-                      key={slot.id}
-                      onClick={() => setSelectedSlot(slot)}
-                      style={optionStyle(slot.id === selectedSlot?.id)}
-                    >
-                      <div style={{ fontWeight: 600 }}>
-                        🗓️ {fmtDate(slot.FECHA_SLOT)}
-                        {" · "}
-                        🕐 {fmtTime(slot.HORA_INICIO)} – {fmtTime(slot.HORA_FIN)}
-                      </div>
-                      <div style={{ fontSize: ".8rem", color: "#6b7280", marginTop: ".2rem" }}>
-                        {slot.DURACION_MINUTOS && `${slot.DURACION_MINUTOS} min`}
-                        {slot.NOMBRE_PROFESIONAL && ` · Profesional: ${slot.NOMBRE_PROFESIONAL}`}
-                        {slot.CAPACIDAD_DISPONIBLE > 0 &&
-                          ` · ${slot.CAPACIDAD_DISPONIBLE} turno(s) disponible(s)`}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Step 3: Confirmar */}
-          {step === 3 && (
-            <div>
-              <p style={{ color: "#6b7280", marginBottom: "1rem" }}>
-                Revisá los datos de tu turno:
-              </p>
-
-              {/* Summary */}
-              <div style={summaryStyle}>
-                <div style={summaryRow}>
-                  <span style={{ color: "#6b7280" }}>Servicio</span>
-                  <strong>{selectedServicio?.NOMBRE_PUBLICO_SERVICIO || selectedServicio?.NOMBRE}</strong>
-                </div>
-                <div style={summaryRow}>
-                  <span style={{ color: "#6b7280" }}>Sucursal</span>
-                  <strong>{selectedSucursal?.NOMBRE_SUCURSAL || selectedSucursal?.NOMBRE}</strong>
-                </div>
-                <div style={summaryRow}>
-                  <span style={{ color: "#6b7280" }}>Fecha</span>
-                  <strong>{fmtDate(selectedSlot?.FECHA_SLOT)}</strong>
-                </div>
-                <div style={summaryRow}>
-                  <span style={{ color: "#6b7280" }}>Horario</span>
-                  <strong>
-                    {fmtTime(selectedSlot?.HORA_INICIO)} – {fmtTime(selectedSlot?.HORA_FIN)}
-                    {selectedSlot?.DURACION_MINUTOS && ` (${selectedSlot.DURACION_MINUTOS} min)`}
-                  </strong>
-                </div>
-                {selectedSlot?.NOMBRE_PROFESIONAL && (
-                  <div style={summaryRow}>
-                    <span style={{ color: "#6b7280" }}>Profesional</span>
-                    <strong>{selectedSlot.NOMBRE_PROFESIONAL}</strong>
-                  </div>
-                )}
-                {selectedServicio?.PRECIO_WEB && (
-                  <div style={summaryRow}>
-                    <span style={{ color: "#6b7280" }}>Precio</span>
-                    <strong style={{ color: "#10b981" }}>
-                      ${Number(selectedServicio.PRECIO_WEB).toLocaleString("es-AR")}
-                    </strong>
-                  </div>
-                )}
-              </div>
-
-              {/* Dry-run button */}
-              {!dryRunResult && !dryRunLoading && (
-                <button onClick={runDryRun} style={validateBtn}>
-                  🔍 Verificar disponibilidad
-                </button>
-              )}
-
-              {dryRunLoading && (
-                <div style={centerMsgStyle}>
-                  Verificando disponibilidad…
-                </div>
-              )}
-
-              {dryRunError && (
-                <div style={resultBox("#fef2f2", "#ef4444")}>
-                  ⚠️ Error: {dryRunError}
-                </div>
-              )}
-
-              {dryRunResult?.disponible && (
-                <div style={resultBox("#ecfdf5", "#10b981")}>
-                  <div style={{ fontSize: "1.5rem", marginBottom: ".5rem" }}>✅</div>
-                  <div style={{ fontWeight: 700, fontSize: "1.1rem" }}>
-                    Turno disponible. Listo para confirmar.
-                  </div>
-                  <div style={{ fontSize: ".85rem", color: "#6b7280", marginTop: ".5rem" }}>
-                    {dryRunResult.nota || dryRunResult.mensaje}
-                  </div>
-                </div>
-              )}
-
-              {/* Boton Confirmar — solo si dry-run fue exitoso y no se confirmo aun */}
-              {dryRunResult?.disponible && !confirmResult?.confirmado && !confirmLoading && (
-                <button onClick={runConfirm} style={{
-                  width: "100%", background: "linear-gradient(135deg, #10b981, #059669)",
-                  color: "#fff", border: "none", borderRadius: 10,
-                  padding: ".85rem", fontWeight: 700, cursor: "pointer",
-                  fontSize: "1rem", marginTop: ".75rem",
-                }}>
-                  ✅ Confirmar Turno
-                </button>
-              )}
-
-              {confirmLoading && (
-                <div style={centerMsgStyle}>
-                  Confirmando turno…
-                </div>
-              )}
-
-              {confirmError && (
-                <div style={resultBox("#fef2f2", "#ef4444")}>
-                  ⚠️ Error: {confirmError}
-                </div>
-              )}
-
-              {confirmResult?.confirmado && (
-                <div style={resultBox("#ecfdf5", "#10b981")}>
-                  <div style={{ fontSize: "2rem", marginBottom: ".5rem" }}>🎉</div>
-                  <div style={{ fontWeight: 700, fontSize: "1.1rem" }}>
-                    ¡Turno confirmado!
-                  </div>
-                  <div style={{ fontSize: ".85rem", color: "#6b7280", marginTop: ".5rem" }}>
-                    {confirmResult.mensaje}
-                  </div>
-                  {confirmResult.cita && (
-                    <div style={{
-                      marginTop: ".75rem", padding: ".75rem",
-                      backgroundColor: "#d1fae5", borderRadius: 8,
-                      fontSize: ".85rem", textAlign: "left",
-                    }}>
-                      <div>📋 <strong>{confirmResult.cita.nombre_cita}</strong></div>
-                      <div>📅 {confirmResult.cita.fecha_cita} · 🕐 {confirmResult.cita.hora_inicio} – {confirmResult.cita.hora_fin}</div>
-                      <div>📍 {confirmResult.sucursal.nombre}</div>
-                      <div>💇 {confirmResult.servicio.nombre}</div>
-                      {confirmResult.servicio.precio_web && (
-                        <div style={{ fontWeight: 600, color: "#10b981", marginTop: ".25rem" }}>
-                          ${Number(confirmResult.servicio.precio_web).toLocaleString("es-AR")}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {confirmResult && !confirmResult.confirmado && !confirmError && (
-                <div style={resultBox("#fef2f2", "#ef4444")}>
-                  <div style={{ fontSize: "1.5rem", marginBottom: ".5rem" }}>❌</div>
-                  <div style={{ fontWeight: 700 }}>{confirmResult.mensaje}</div>
-                  {confirmResult.errores && (
-                    <ul style={{ marginTop: ".5rem", paddingLeft: "1.25rem", fontSize: ".85rem", textAlign: "left" }}>
-                      {confirmResult.errores.map((err, i) => (
-                        <li key={i}>{err}</li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              )}
-
-              {dryRunResult && !dryRunResult.disponible && (
-                <div style={resultBox("#fef2f2", "#ef4444")}>
-                  <div style={{ fontSize: "1.5rem", marginBottom: ".5rem" }}>❌</div>
-                  <div style={{ fontWeight: 700 }}>{dryRunResult.mensaje}</div>
-                  {dryRunResult.errores && (
-                    <ul style={{ marginTop: ".5rem", paddingLeft: "1.25rem", fontSize: ".85rem", textAlign: "left" }}>
-                      {dryRunResult.errores.map((err, i) => (
-                        <li key={i}>{err}</li>
-                      ))}
-                    </ul>
-                  )}
-                  <div style={{ fontSize: ".8rem", color: "#6b7280", marginTop: ".75rem" }}>
-                    Probá con otra combinación de servicio, sucursal u horario.
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div style={footerStyle}>
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/50 p-2 sm:p-4" onClick={onClose}>
+      <section className="flex max-h-[94vh] w-full max-w-5xl flex-col overflow-hidden rounded-[2rem] bg-white shadow-2xl" onClick={(event) => event.stopPropagation()}>
+        <header className="flex items-start justify-between gap-4 border-b border-slate-100 px-4 py-4 sm:px-6">
           <div>
-            {step > 0 && (
-              <button onClick={handleBack} style={secondaryBtn}>
-                ← Atrás
-              </button>
-            )}
+            <p className="text-xs font-bold uppercase tracking-wide" style={{ color: "var(--brand-primary)" }}>Portal cliente</p>
+            <h2 className="text-xl font-extrabold sm:text-2xl" style={{ color: "var(--brand-text)" }}>Reservar turno</h2>
+            <p className="mt-1 text-sm" style={{ color: "var(--brand-text-secondary)" }}>Mismo flujo que la web: sucursal, servicios, agenda y confirmación.</p>
           </div>
-          <div style={{ display: "flex", gap: ".5rem" }}>
-            {step < STEPS.length - 1 ? (
-              <button
-                onClick={handleNext}
-                disabled={!canNext() || loadingOptions}
-                style={canNext() && !loadingOptions ? primaryBtn : disabledBtn}
-              >
-                Siguiente →
-              </button>
-            ) : (
-              !dryRunResult?.disponible && (
-                <button onClick={onClose} style={secondaryBtn}>
-                  Cerrar
+          <button type="button" onClick={onClose} className="rounded-full bg-slate-100 px-3 py-2 text-xl leading-none text-slate-500 hover:bg-slate-200" aria-label="Cerrar">×</button>
+        </header>
+
+        <div className="overflow-y-auto px-4 py-4 sm:px-6">
+          <div className="mx-auto flex max-w-3xl items-center justify-center gap-2 overflow-x-auto pb-2">
+            {steps.map((item) => {
+              const active = step === item.id;
+              const done = step > item.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => goToStep(item.id)}
+                  className="flex shrink-0 items-center gap-2 rounded-full px-2 py-1.5 text-xs font-bold transition-colors sm:px-3 sm:text-sm"
+                  style={{
+                    color: active || done ? "#fff" : "var(--brand-text-secondary)",
+                    background: active || done ? "linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))" : "#f8fafc",
+                  }}
+                >
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/20 text-xs">{done ? "✓" : item.id}</span>
+                  {item.label}
                 </button>
-              )
-            )}
+              );
+            })}
           </div>
+
+          {loading ? (
+            <div className="py-16 text-center text-sm" style={{ color: "var(--brand-text-secondary)" }}>Cargando reserva…</div>
+          ) : error ? (
+            <div className="my-8 rounded-2xl bg-rose-50 px-4 py-4 text-sm text-rose-700">{error}</div>
+          ) : confirmed ? (
+            <div className="mx-auto my-8 max-w-xl rounded-3xl bg-emerald-50 px-5 py-6 text-center text-emerald-800">
+              <div className="text-4xl">✅</div>
+              <h3 className="mt-3 text-xl font-extrabold">Turno confirmado</h3>
+              <p className="mt-2 text-sm">Ya quedó guardado en tu portal. Podés verlo en “Mis turnos”.</p>
+              <button type="button" onClick={onClose} className="mt-5 rounded-2xl px-5 py-3 text-sm font-bold text-white" style={{ background: "linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))" }}>
+                Ver mis turnos
+              </button>
+            </div>
+          ) : (
+            <div className="mt-4 grid gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
+              <section className="space-y-4">
+                {message && (
+                  <div className="rounded-2xl bg-white px-4 py-3 text-sm font-semibold shadow-sm" role="status" style={{ color: message.includes("confirmado") ? "#047857" : "#be123c" }}>{message}</div>
+                )}
+
+                {step === 1 && (
+                  <Panel title="1. Elegí la sucursal" subtitle="Primero definimos dónde se va a atender el turno.">
+                    <Select label="Sucursal" value={sucursalId} onChange={handleBranchChange} placeholder="Seleccionar sucursal…" options={sucursales.map((branch) => ({ value: branch.id, label: branchName(branch) }))} />
+                    {sucursales.length === 0 && <EmptyText>No hay sucursales públicas con reserva web habilitada.</EmptyText>}
+                    <FooterActions nextLabel="Continuar a Servicios" nextDisabled={!sucursalId} onNext={() => goToStep(2)} />
+                  </Panel>
+                )}
+
+                {step === 2 && (
+                  <Panel title="2. Agregá servicios y profesional" subtitle="Podés sumar varios servicios. Si no sabés con quién atenderte, dejá Automático.">
+                    <button type="button" onClick={() => goToStep(1)} className="mb-3 text-sm font-bold" style={{ color: "var(--brand-primary)" }}>← Cambiar sucursal</button>
+                    <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
+                      <Select label="Servicio" value={serviceId} onChange={setServiceId} placeholder="Seleccionar servicio…" options={servicios.map((service) => ({ value: service.id, label: `${serviceName(service)} · ${money(servicePrice(service))}` }))} />
+                      <Select label="Profesional" value={professionalId} onChange={setProfessionalId} disabled={!serviceId || professionalsLoading} options={[{ value: AUTO_PROFESSIONAL, label: professionalsLoading ? "Buscando…" : "Automático: menor carga" }, ...professionals.map((prof) => ({ value: prof.id, label: prof.nombre }))]} />
+                      <div className="flex items-end"><button type="button" onClick={addServiceItem} className="w-full rounded-2xl px-4 py-3 text-sm font-bold text-white" style={{ background: "linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))" }}>Agregar</button></div>
+                    </div>
+                    <div className="mt-4 space-y-2">
+                      {items.length === 0 ? <EmptyText>Todavía no agregaste servicios al turno.</EmptyText> : items.map((item, index) => (
+                        <div key={item.uid} className="flex items-start justify-between gap-3 rounded-2xl bg-slate-50 px-3 py-3">
+                          <div className="min-w-0"><p className="text-sm font-extrabold" style={{ color: "var(--brand-text)" }}>{index + 1}. {item.serviceName}</p><p className="text-xs" style={{ color: "var(--brand-text-secondary)" }}>{item.professionalName} · {item.duration ? `${item.duration} min · ` : ""}{money(item.price)}</p></div>
+                          <button type="button" onClick={() => removeItem(item.uid)} className="rounded-full bg-rose-50 px-3 py-1 text-xs font-bold text-rose-700">Quitar</button>
+                        </div>
+                      ))}
+                    </div>
+                    <FooterActions backLabel="Volver" onBack={() => goToStep(1)} nextLabel="Elegir Agenda" nextDisabled={items.length === 0} onNext={() => goToStep(3)} />
+                  </Panel>
+                )}
+
+                {step === 3 && (
+                  <Panel title="3. Elegí agenda por servicio" subtitle="Cada servicio puede tener un profesional y horario propio.">
+                    <button type="button" onClick={() => goToStep(2)} className="mb-3 text-sm font-bold" style={{ color: "var(--brand-primary)" }}>← Modificar servicios</button>
+                    <label className="mb-4 block max-w-xs"><span className="mb-1 block text-xs font-bold uppercase tracking-wide" style={{ color: "var(--brand-primary)" }}>Fecha</span><input type="date" value={fecha} min={todayISO()} onChange={(e) => setFecha(e.target.value)} className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm" /></label>
+                    {agendaLoading ? <EmptyText>Buscando agenda…</EmptyText> : <div className="space-y-4">{items.map((item) => {
+                      const options = slotOptions[item.uid]?.slots || [];
+                      return <article key={item.uid} className="rounded-3xl border border-slate-100 bg-slate-50 p-3"><div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between"><div><h3 className="text-sm font-extrabold" style={{ color: "var(--brand-text)" }}>{item.serviceName}</h3><p className="text-xs" style={{ color: "var(--brand-text-secondary)" }}>Profesional: {item.professionalName}</p></div>{slotOptions[item.uid]?.recommended_professional && <span className="rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-bold text-emerald-700">Sugerido: {slotOptions[item.uid].recommended_professional.nombre}</span>}</div>{options.length === 0 ? <div className="rounded-2xl bg-amber-50 px-4 py-4 text-sm text-amber-800">Sin horarios publicados para {formatDate(fecha)}.</div> : <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">{options.map((slot) => { const usedByOther = selectedSlotIds.has(slot.id) && item.slot?.id !== slot.id; const active = item.slot?.id === slot.id; return <button key={`${item.uid}-${slot.id}`} type="button" disabled={usedByOther} onClick={() => selectSlot(item.uid, slot)} className="min-h-[72px] rounded-2xl border px-2 py-2 text-left text-xs font-semibold disabled:opacity-40" style={{ borderColor: active ? "var(--brand-primary)" : "#e5e7eb", background: active ? "linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))" : "#fff", color: active ? "#fff" : "var(--brand-text)" }}><span className="block text-sm font-extrabold">{formatTime(slot.horaInicio)}–{formatTime(slot.horaFin)}</span><span className="mt-1 block truncate opacity-90">{slot.profesionalNombre}</span><span className="mt-1 block opacity-70">{slot.duracion} min</span></button>; })}</div>}</article>;
+                    })}</div>}
+                    <FooterActions backLabel="Volver" onBack={() => goToStep(2)} nextLabel="Revisar Turno" nextDisabled={!allItemsHaveSlot} onNext={() => goToStep(4)} />
+                  </Panel>
+                )}
+
+                {step === 4 && (
+                  <Panel title="4. Confirmá el turno" subtitle="Revisá servicios, profesionales y horarios antes de confirmar.">
+                    <button type="button" onClick={() => goToStep(3)} className="mb-3 text-sm font-bold" style={{ color: "var(--brand-primary)" }}>← Modificar agenda</button>
+                    <div className="space-y-2">{items.map((item, index) => <div key={item.uid} className="rounded-2xl bg-slate-50 px-4 py-3"><p className="text-sm font-extrabold" style={{ color: "var(--brand-text)" }}>{index + 1}. {item.serviceName}</p><p className="text-xs" style={{ color: "var(--brand-text-secondary)" }}>{formatDate(fecha)} · {formatTime(item.slot?.horaInicio)}–{formatTime(item.slot?.horaFin)} · {item.professionalName}</p></div>)}</div>
+                    <button type="button" disabled={confirming || !allItemsHaveSlot || !canConfirmOnline} onClick={confirmBooking} className="mt-5 w-full rounded-2xl px-6 py-3 text-sm font-bold text-white disabled:opacity-50" style={{ background: "linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))" }}>{confirming ? "Confirmando…" : "Confirmar turno"}</button>
+                    <p className="mt-2 text-center text-xs" style={{ color: "var(--brand-text-secondary)" }}>No se procesan pagos ni checkout en esta etapa.</p>
+                  </Panel>
+                )}
+              </section>
+
+              <aside className="lg:sticky lg:top-4 lg:self-start">
+                <div className="rounded-3xl border border-slate-100 bg-slate-50 p-4">
+                  <h3 className="text-lg font-extrabold" style={{ color: "var(--brand-text)" }}>Resumen</h3>
+                  <div className="mt-3 space-y-3 text-sm"><Summary label="Sucursal" value={selectedSucursal ? branchName(selectedSucursal) : "—"} /><Summary label="Servicios" value={items.length || "—"} />{items.map((item) => <div key={item.uid} className="rounded-2xl bg-white px-3 py-2"><p className="truncate text-xs font-bold" style={{ color: "var(--brand-text)" }}>{item.serviceName}</p><p className="text-[11px]" style={{ color: "var(--brand-text-secondary)" }}>{item.professionalName}{item.slot ? ` · ${formatTime(item.slot.horaInicio)}` : ""}</p></div>)}<Summary label="Total estimado" value={total ? money(total) : "—"} strong /></div>
+                  <p className="mt-4 rounded-2xl bg-white px-3 py-3 text-xs" style={{ color: "var(--brand-text-secondary)" }}>Automático asigna profesional elegible priorizando menor carga del día y rotación por empate.</p>
+                </div>
+              </aside>
+            </div>
+          )}
         </div>
-      </div>
+      </section>
     </div>
   );
 }
 
-/* ===========================================================
-   Inline styles — mobile-first
-   =========================================================== */
+function Panel({ title, subtitle, children }) {
+  return <div className="rounded-3xl border border-slate-100 bg-white p-4 shadow-sm sm:p-5"><h3 className="text-xl font-extrabold" style={{ color: "var(--brand-text)" }}>{title}</h3><p className="mt-1 text-sm" style={{ color: "var(--brand-text-secondary)" }}>{subtitle}</p><div className="mt-4">{children}</div></div>;
+}
 
-const overlayStyle = {
-  position: "fixed", inset: 0, zIndex: 9999,
-  backgroundColor: "rgba(0,0,0,.5)",
-  display: "flex", alignItems: "center", justifyContent: "center",
-  padding: "1rem",
-};
+function Select({ label, value, onChange, options, placeholder, disabled }) {
+  return <label className="block"><span className="mb-1 block text-xs font-bold uppercase tracking-wide" style={{ color: "var(--brand-primary)" }}>{label}</span><select value={value} disabled={disabled} onChange={(event) => onChange(event.target.value)} className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm disabled:opacity-60" style={{ color: "var(--brand-text)" }}>{placeholder && <option value="">{placeholder}</option>}{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>;
+}
 
-const modalStyle = {
-  backgroundColor: "#fff", borderRadius: 16,
-  boxShadow: "0 20px 60px rgba(0,0,0,.2)",
-  width: "100%", maxWidth: 520, maxHeight: "90vh",
-  display: "flex", flexDirection: "column",
-  overflow: "hidden",
-};
+function FooterActions({ backLabel, nextLabel, nextDisabled, onBack, onNext }) {
+  return <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">{onBack ? <button type="button" onClick={onBack} className="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold" style={{ color: "var(--brand-text)" }}>{backLabel}</button> : <span />}{onNext && <button type="button" disabled={nextDisabled} onClick={onNext} className="rounded-2xl px-5 py-3 text-sm font-bold text-white disabled:opacity-50" style={{ background: "linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))" }}>{nextLabel}</button>}</div>;
+}
 
-const modalHeader = {
-  display: "flex", justifyContent: "space-between", alignItems: "center",
-  padding: "1.25rem 1.5rem", borderBottom: "1px solid #e5e7eb",
-};
+function EmptyText({ children }) {
+  return <div className="rounded-2xl bg-slate-50 px-4 py-5 text-center text-sm" style={{ color: "var(--brand-text-secondary)" }}>{children}</div>;
+}
 
-const closeBtn = {
-  background: "none", border: "none", fontSize: "1.5rem",
-  cursor: "pointer", color: "#9ca3af", padding: 0, lineHeight: 1,
-};
-
-const stepperStyle = {
-  display: "flex", justifyContent: "center", padding: "1rem 0.5rem",
-  borderBottom: "1px solid #f3f4f6", gap: 0,
-};
-
-const stepperItemStyle = {
-  display: "flex", flexDirection: "column", alignItems: "center",
-  position: "relative", flex: 1, maxWidth: 75,
-};
-
-const stepperCircleStyle = (i, step) => ({
-  width: 32, height: 32, borderRadius: "50%",
-  display: "flex", alignItems: "center", justifyContent: "center",
-  fontSize: "0.85rem",
-  backgroundColor: i <= step ? "#10b981" : "#e5e7eb",
-  color: i <= step ? "#fff" : "#9ca3af",
-  fontWeight: 600, zIndex: 1,
-});
-
-const stepperLabelStyle = (i, step) => ({
-  fontSize: ".6rem", fontWeight: i === step ? 700 : 400,
-  color: i <= step ? "#10b981" : "#9ca3af",
-  marginTop: ".25rem", textAlign: "center",
-});
-
-const stepperLineStyle = (i, step) => ({
-  position: "absolute", top: 16, left: "55%", width: "90%", height: 2,
-  backgroundColor: i < step ? "#10b981" : "#e5e7eb",
-  zIndex: 0,
-});
-
-const contentStyle = {
-  flex: 1, overflowY: "auto",
-  padding: "1.25rem 1.5rem",
-  minHeight: 200,
-};
-
-const centerMsgStyle = {
-  textAlign: "center", padding: "2rem", color: "#6b7280",
-};
-
-const optionStyle = (selected) => ({
-  padding: ".75rem 1rem", borderRadius: 10, marginBottom: ".4rem",
-  cursor: "pointer", border: selected ? "2px solid #10b981" : "1px solid #e5e7eb",
-  backgroundColor: selected ? "#ecfdf5" : "#f9fafb",
-  transition: "all .15s",
-});
-
-const summaryStyle = {
-  backgroundColor: "#f9fafb", borderRadius: 10,
-  padding: "1rem", marginBottom: "1rem",
-  border: "1px solid #e5e7eb",
-};
-
-const summaryRow = {
-  display: "flex", justifyContent: "space-between", alignItems: "center",
-  padding: ".35rem 0",
-  borderBottom: "1px solid #f3f4f6",
-  fontSize: ".9rem", gap: "1rem",
-};
-
-const primaryBtn = {
-  background: "linear-gradient(135deg, #10b981, #059669)",
-  color: "#fff", border: "none", borderRadius: 8,
-  padding: ".6rem 1.25rem", fontWeight: 600, cursor: "pointer",
-  fontSize: ".9rem",
-};
-
-const secondaryBtn = {
-  background: "#f3f4f6", color: "#374151", border: "none",
-  borderRadius: 8, padding: ".6rem 1rem",
-  fontWeight: 600, cursor: "pointer", fontSize: ".9rem",
-};
-
-const disabledBtn = {
-  ...secondaryBtn, opacity: 0.5, cursor: "not-allowed",
-};
-
-const validateBtn = {
-  width: "100%", background: "linear-gradient(135deg, #6366f1, #4f46e5)",
-  color: "#fff", border: "none", borderRadius: 10,
-  padding: ".85rem", fontWeight: 700, cursor: "pointer",
-  fontSize: "1rem", marginTop: ".5rem",
-};
-
-const resultBox = (bg, color) => ({
-  backgroundColor: bg, borderRadius: 10,
-  padding: "1.25rem", marginTop: ".75rem",
-  border: `1px solid ${color}`, color,
-  textAlign: "center",
-});
-
-const footerStyle = {
-  display: "flex", justifyContent: "space-between", alignItems: "center",
-  padding: "1rem 1.5rem", borderTop: "1px solid #e5e7eb",
-};
+function Summary({ label, value, strong = false }) {
+  return <div><span className="text-xs font-bold uppercase tracking-wide" style={{ color: "var(--brand-primary)" }}>{label}</span><p className={strong ? "text-2xl font-extrabold" : "font-semibold"} style={{ color: strong ? "var(--brand-primary)" : "var(--brand-text)" }}>{value}</p></div>;
+}

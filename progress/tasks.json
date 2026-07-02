@@ -1,7 +1,7 @@
 {
   "project": "sistema-marca-blanca-multirrubro",
-  "fase_actual": "RESERVA_MULTI_SERVICIO_UI_P7 — CERRADA_QA_DEPLOY",
-  "fase_siguiente": "QA_NAVEGADOR_RESERVA_MULTI_SERVICIO_CLIENTE o CHECKOUT_PAYMENTS_POS_CONTRACT_P5 (requiere aprobación explícita para pagos reales)",
+  "fase_actual": "PORTAL_BOOKING_HISTORY_UX_P8 — QA_LOCAL_PENDIENTE_DEPLOY",
+  "fase_siguiente": "QA_NAVEGADOR_PORTAL_CLIENTE_RESERVA o CHECKOUT_PAYMENTS_POS_CONTRACT_P5 (requiere aprobación explícita para pagos reales)",
   "tareas": {
     "FASE_3B_PORTAL_CLIENTE": {
       "status": "completed",
@@ -567,6 +567,29 @@
         "backend_railway": "PASS_SUCCESS_aefe97a_earnest_comfort",
         "frontend_surge": "PASS_https://bellezapro-demo.surge.sh"
       }
+    },
+    "PORTAL_BOOKING_HISTORY_UX_P8": {
+      "status": "completed_local_pending_deploy",
+      "closed_at": "2026-07-02",
+      "commits": [],
+      "deliverables": [
+        "frontend/src/components/ReservaTurnoModal.jsx (modal portal alineado visualmente con flujo de landing)",
+        "frontend/src/pages/PortalCliente.jsx (historial compacto, acciones cancelar/cambiar más claras)",
+        "backend/routes/clientes.py (/api/clientes/me/citas incluye ITEMS_CITA y cancela todos los slots de citas compuestas)"
+      ],
+      "qa_results": {
+        "backend_py_compile": "PASS",
+        "frontend_build": "PASS",
+        "git_diff_check": "PASS",
+        "strict_secret_scan": "PASS"
+      },
+      "secrets_free": true,
+      "env_files_touched": false,
+      "payments_checkout_pos": false,
+      "reservas_table_used": false,
+      "schema_changes": false,
+      "delete_fisico": false,
+      "notes": "El portal ahora usa el mismo orden visual que /reserva: sucursal, servicios, agenda, confirmar. /api/clientes/me/citas devuelve items de CITA_ITEMS para que turnos creados desde landing se vean mejor en portal. Reprogramar citas multi-servicio se bloquea con 409 seguro; cancelar sí libera todos los slots vinculados."
     }
   },
   "deploys_activos": {

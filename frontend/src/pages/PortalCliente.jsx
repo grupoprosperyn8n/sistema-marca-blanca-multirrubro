@@ -156,12 +156,27 @@ export default function PortalCliente() {
   };
 
   const handleReprogramarCita = async (cita) => {
+    if (cita.ES_MULTISERVICIO) {
+      showToast("Para cambiar un turno con varios servicios, cancelalo y creá uno nuevo.", "error");
+      return;
+    }
     setReprogTarget(cita);
     setReprogSlotsLoading(true);
     try {
-      const data = await fetchWithCookie("/api/agenda-slots?disponible=true&future_only=true");
+      const params = new URLSearchParams({
+        disponible: "true",
+        future_only: "true",
+      });
+      if (cita.SUCURSAL_ID) params.set("sucursal_id", cita.SUCURSAL_ID);
+      if (cita.DURACION_MINUTOS) params.set("min_duration", String(cita.DURACION_MINUTOS));
+      const data = await fetchWithCookie(`/api/agenda-slots?${params.toString()}`);
       const slots = data.agenda_slots || [];
-      setReprogSlots(slots.filter(s => s.ESTADO_SLOT === "DISPONIBLE" && s.PERMITE_RESERVA_WEB));
+      setReprogSlots(slots.filter(s => (
+        s.id !== cita.AGENDA_SLOT_ID
+        && s.ESTADO_SLOT === "DISPONIBLE"
+        && s.PERMITE_RESERVA_WEB
+        && (!cita.PROFESIONAL_ID || s.PROFESIONAL_ID === cita.PROFESIONAL_ID)
+      )));
     } catch {
       showToast("No se pudieron cargar los horarios", "error");
       setReprogTarget(null);
@@ -401,20 +416,50 @@ function EditProfileModal({ perfil, saving, onSave, onClose }) {
 
 function CitaCard({ cita, showActions = false, onCancel, onReprogramar }) {
   const estado = ESTADO_MAP[cita.ESTADO_CITA] || { label: cita.ESTADO_CITA || "—", color: "#6b7280", bg: "#f9fafb" };
-  const cancelable = showActions && cita.ESTADO_CITA === "CONFIRMADA";
-  const reprogramable = showActions && ["CONFIRMADA", "PENDIENTE_CONFIRMACION", "REPROGRAMADA"].includes(cita.ESTADO_CITA);
+  const activeState = ["CONFIRMADA", "PENDIENTE_CONFIRMACION", "REPROGRAMADA"].includes(cita.ESTADO_CITA);
+  const cancelable = showActions && activeState;
+  const reprogramable = showActions && activeState && !cita.ES_MULTISERVICIO;
   const title = safeName(cita.TITULO_CITA || cita.NOMBRE_SERVICIO || cita.NOMBRE_CITA, "Turno");
+  const itemServices = Array.isArray(cita.ITEMS_CITA) ? cita.ITEMS_CITA : [];
+  const servicesText = itemServices.length
+    ? itemServices.map(item => safeName(item.NOMBRE_SERVICIO, "Servicio")).join(" + ")
+    : safeName(cita.NOMBRE_SERVICIO, "A confirmar");
+
+  if (!showActions) {
+    return (
+      <article className="rounded-2xl border border-white/60 bg-white/65 px-3 py-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h4 className="truncate text-sm font-extrabold" style={{ color: "var(--brand-text)" }}>{title}</h4>
+              <span className="rounded-full px-2 py-0.5 text-[11px] font-bold" style={{ backgroundColor: estado.bg, color: estado.color }}>
+                {estado.label}
+              </span>
+            </div>
+            <p className="mt-1 text-xs" style={{ color: "var(--brand-text-secondary)" }}>
+              {fmtDate(cita.FECHA_CITA)} {cita.HORA_INICIO ? `· ${fmtTime(cita.HORA_INICIO)}` : ""} · {servicesText}
+            </p>
+          </div>
+          {cita.CANTIDAD_SERVICIOS > 1 && (
+            <span className="shrink-0 rounded-full bg-violet-50 px-2 py-1 text-[11px] font-bold text-violet-700">
+              {cita.CANTIDAD_SERVICIOS} servicios
+            </span>
+          )}
+        </div>
+      </article>
+    );
+  }
 
   return (
-    <article className="rounded-2xl border border-white/60 bg-white/70 p-4">
+    <article className="rounded-2xl border border-white/60 bg-white/70 p-3 sm:p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
+        <div className="min-w-0">
           <h4 className="text-base font-bold" style={{ color: "var(--brand-text)" }}>{title}</h4>
           <p className="mt-1 text-sm" style={{ color: "var(--brand-text-secondary)" }}>
             {fmtDate(cita.FECHA_CITA)} {cita.HORA_INICIO ? `· ${fmtTime(cita.HORA_INICIO)}` : ""}
           </p>
-          <div className="mt-2 grid gap-1 text-sm" style={{ color: "var(--brand-text)" }}>
-            <span>Servicio: {safeName(cita.NOMBRE_SERVICIO, "A confirmar")}</span>
+          <div className="mt-2 grid gap-1 text-sm leading-snug" style={{ color: "var(--brand-text)" }}>
+            <span>Servicio: {servicesText}</span>
             <span>Profesional: {safeName(cita.NOMBRE_PROFESIONAL, "A asignar")}</span>
             <span>Sucursal: {safeName(cita.NOMBRE_SUCURSAL, "A confirmar")}</span>
           </div>
@@ -426,8 +471,9 @@ function CitaCard({ cita, showActions = false, onCancel, onReprogramar }) {
       {cita.OBSERVACIONES_CLIENTE && <p className="mt-3 text-sm italic" style={{ color: "var(--brand-text-secondary)" }}>“{cita.OBSERVACIONES_CLIENTE}”</p>}
       {(cancelable || reprogramable) && (
         <div className="mt-4 flex flex-wrap gap-2 border-t border-white/60 pt-3">
-          {reprogramable && <button onClick={() => onReprogramar(cita)} className="rounded-xl border border-violet-200 px-3 py-2 text-sm font-bold text-violet-700">Reprogramar</button>}
+          {reprogramable && <button onClick={() => onReprogramar(cita)} className="rounded-xl border border-violet-200 px-3 py-2 text-sm font-bold text-violet-700">Cambiar horario</button>}
           {cancelable && <button onClick={() => onCancel(cita)} className="rounded-xl border border-rose-200 px-3 py-2 text-sm font-bold text-rose-700">Cancelar</button>}
+          {cita.ES_MULTISERVICIO && <span className="rounded-xl bg-slate-50 px-3 py-2 text-xs font-semibold" style={{ color: "var(--brand-text-secondary)" }}>Para cambiar varios servicios, cancelá y creá uno nuevo.</span>}
         </div>
       )}
     </article>
