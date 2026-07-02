@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import LandingPreviewModal from "../components/backoffice/LandingPreviewModal";
 import { canAccess, canEditField, useAuth } from "../context/AuthContext";
 import { useBrandConfig } from "../context/BrandConfigContext";
 
@@ -205,6 +206,7 @@ export default function Configuracion() {
   const [landingDrafts, setLandingDrafts] = useState({});
   const [rowSaving, setRowSaving] = useState({});
   const [rowMessages, setRowMessages] = useState({});
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -527,7 +529,17 @@ export default function Configuracion() {
               Edita LANDING_SECCIONES sin tocar código. El frontend público lee estas secciones con cache deshabilitado.
             </p>
           </div>
-          <Badge active={landingRows.length > 0}>{landingRows.length} secciones mapeadas</Badge>
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge active={landingRows.length > 0}>{landingRows.length} secciones mapeadas</Badge>
+            <button
+              type="button"
+              onClick={() => setPreviewOpen(true)}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+            >
+              <span className="material-symbols-outlined text-base" aria-hidden="true">preview</span>
+              Previsualizar landing
+            </button>
+          </div>
         </div>
 
         {landingRows.length === 0 ? (
@@ -671,6 +683,15 @@ export default function Configuracion() {
           </div>
         )}
       </div>
+
+      <LandingPreviewModal
+        open={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        form={form}
+        liveConfig={liveConfig}
+        landingRows={landingRows}
+        landingDrafts={landingDrafts}
+      />
 
       <div className="rounded-3xl border border-white/40 bg-white/75 p-5 shadow-sm">
         <div className="mb-5 flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
