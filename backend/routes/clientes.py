@@ -177,6 +177,15 @@ def _number(value, default=0):
         return default
 
 
+def _time_to_minutes(raw) -> int | None:
+    text = _text(raw)
+    try:
+        hour, minute = text.split(":")[:2]
+        return int(hour) * 60 + int(minute)
+    except Exception:
+        return None
+
+
 def _format_linked_name(table_name: str, fields: dict, fallback: str = "") -> str:
     if table_name == "CLIENTES":
         return _text(fields.get("NOMBRE_CLIENTE") or fields.get("EMAIL") or fallback)
@@ -853,16 +862,23 @@ def _normalize_multi_items(payload: dict) -> list[dict]:
     for index, raw in enumerate(raw_items, start=1):
         if not isinstance(raw, dict):
             raise HTTPException(status_code=400, detail=f"Item {index} inválido.")
-        slot_id = _text(raw.get("slot_id"))
+        raw_slot_ids = raw.get("slot_ids")
+        if isinstance(raw_slot_ids, list):
+            slot_ids = [_text(slot_id) for slot_id in raw_slot_ids if _text(slot_id)]
+        else:
+            slot_ids = [_text(raw.get("slot_id"))]
+        slot_ids = [slot_id for slot_id in slot_ids if slot_id]
         servicio_web_id = _text(raw.get("servicio_web_id"))
         profesional_id = _text(raw.get("profesional_id"))
-        if not slot_id or not servicio_web_id:
-            raise HTTPException(status_code=400, detail=f"Item {index}: slot_id y servicio_web_id son requeridos.")
-        if slot_id in seen_slots:
-            raise HTTPException(status_code=409, detail=f"El slot {slot_id} está repetido en el turno.")
-        seen_slots.add(slot_id)
+        if not slot_ids or not servicio_web_id:
+            raise HTTPException(status_code=400, detail=f"Item {index}: slot_id/slot_ids y servicio_web_id son requeridos.")
+        repeated = [slot_id for slot_id in slot_ids if slot_id in seen_slots]
+        if repeated:
+            raise HTTPException(status_code=409, detail=f"El slot {repeated[0]} está repetido en el turno.")
+        seen_slots.update(slot_ids)
         items.append({
-            "slot_id": slot_id,
+            "slot_id": slot_ids[0],
+            "slot_ids": slot_ids,
             "servicio_web_id": servicio_web_id,
             "profesional_id": profesional_id,
             "orden": int(raw.get("orden") or index),
@@ -889,41 +905,79 @@ def _validate_multi_booking(at: AirtableClient, payload: dict, cliente_id: str) 
     validated_items = []
     fecha_turno = ""
     for item in _normalize_multi_items(payload):
-        slot_id = item["slot_id"]
+        slot_ids = item["slot_ids"]
         servicio_web_id = item["servicio_web_id"]
         item_errors = []
+        slot_fields_list = []
+        slot_profesional_ids_base: list[str] | None = None
+        fecha_slot = ""
+        starts = []
+        ends = []
+        reserved_duration = 0
 
-        try:
-            slot = at.get_record("AGENDA_SLOTS", slot_id)
-            sfields = slot.get("fields", {})
-        except Exception:
-            raise HTTPException(status_code=404, detail=f"Slot {slot_id} no encontrado.")
+        for slot_id in slot_ids:
+            try:
+                slot = at.get_record("AGENDA_SLOTS", slot_id)
+                sfields = slot.get("fields", {})
+            except Exception:
+                raise HTTPException(status_code=404, detail=f"Slot {slot_id} no encontrado.")
 
-        estado_slot = (sfields.get("ESTADO_SLOT") or "").upper()
-        disponible_auto = (sfields.get("DISPONIBLE_AUTO") or "").upper()
-        permite_web = sfields.get("PERMITE_RESERVA_WEB", False)
-        activo = sfields.get("ACTIVO", False)
-        capacidad = sfields.get("CAPACIDAD_DISPONIBLE", 0)
-        slot_sucursal_ids = _as_id_list(sfields.get("SUCURSAL"))
-        slot_profesional_ids = _as_id_list(sfields.get("PROFESIONAL"))
-        requested_profesional = item.get("profesional_id")
+            estado_slot = (sfields.get("ESTADO_SLOT") or "").upper()
+            disponible_auto = (sfields.get("DISPONIBLE_AUTO") or "").upper()
+            permite_web = sfields.get("PERMITE_RESERVA_WEB", False)
+            activo = sfields.get("ACTIVO", False)
+            capacidad = sfields.get("CAPACIDAD_DISPONIBLE", 0)
+            slot_sucursal_ids = _as_id_list(sfields.get("SUCURSAL"))
+            slot_profesional_ids = _as_id_list(sfields.get("PROFESIONAL"))
+            requested_profesional = item.get("profesional_id")
 
-        if estado_slot != "DISPONIBLE":
-            item_errors.append(f"Slot no disponible (estado: {estado_slot}).")
-        if disponible_auto != "SI":
-            item_errors.append("Slot marcado como no disponible automaticamente.")
-        if not permite_web:
-            item_errors.append("Slot no permite reserva web.")
-        if not activo:
-            item_errors.append("Slot inactivo.")
-        if capacidad is not None and capacidad <= 0:
-            item_errors.append("Slot sin capacidad disponible.")
-        if sucursal_id not in slot_sucursal_ids:
-            item_errors.append("El slot no pertenece a la sucursal elegida.")
-        if requested_profesional and requested_profesional not in slot_profesional_ids:
-            item_errors.append("El profesional elegido no coincide con el profesional del slot.")
-        if _has_active_cita_for_slot(at, slot_id):
-            item_errors.append("El slot ya tiene una cita activa.")
+            if estado_slot != "DISPONIBLE":
+                item_errors.append(f"Slot {slot_id} no disponible (estado: {estado_slot}).")
+            if disponible_auto != "SI":
+                item_errors.append(f"Slot {slot_id} marcado como no disponible automaticamente.")
+            if not permite_web:
+                item_errors.append(f"Slot {slot_id} no permite reserva web.")
+            if not activo:
+                item_errors.append(f"Slot {slot_id} inactivo.")
+            if capacidad is not None and capacidad <= 0:
+                item_errors.append(f"Slot {slot_id} sin capacidad disponible.")
+            if sucursal_id not in slot_sucursal_ids:
+                item_errors.append(f"El slot {slot_id} no pertenece a la sucursal elegida.")
+            if requested_profesional and requested_profesional not in slot_profesional_ids:
+                item_errors.append(f"El profesional elegido no coincide con el slot {slot_id}.")
+            if _has_active_cita_for_slot(at, slot_id):
+                item_errors.append(f"El slot {slot_id} ya tiene una cita activa.")
+
+            if slot_profesional_ids_base is None:
+                slot_profesional_ids_base = slot_profesional_ids
+            elif set(slot_profesional_ids_base) != set(slot_profesional_ids):
+                item_errors.append("Los slots agrupados deben pertenecer al mismo profesional.")
+
+            current_fecha = sfields.get("FECHA_SLOT", "")
+            if not fecha_slot:
+                fecha_slot = current_fecha
+            elif current_fecha != fecha_slot:
+                item_errors.append("Los slots agrupados deben estar en la misma fecha.")
+
+            start_min = _time_to_minutes(sfields.get("HORA_INICIO"))
+            end_min = _time_to_minutes(sfields.get("HORA_FIN"))
+            duration = int(_number(sfields.get("DURACION_MINUTOS"), 0))
+            if start_min is not None and end_min is None and duration:
+                end_min = start_min + duration
+            if start_min is None or end_min is None or end_min <= start_min:
+                item_errors.append(f"Slot {slot_id} tiene horario invalido.")
+            else:
+                starts.append(start_min)
+                ends.append(end_min)
+                reserved_duration += end_min - start_min
+            slot_fields_list.append(sfields)
+
+        if len(slot_fields_list) > 1:
+            ranges = sorted(zip(starts, ends))
+            for prev, current in zip(ranges, ranges[1:]):
+                if current[0] != prev[1]:
+                    item_errors.append("Los slots agrupados deben ser consecutivos, sin huecos ni superposición.")
+                    break
 
         try:
             sw_record = at.get_record("SERVICIOS_WEB", servicio_web_id)
@@ -938,21 +992,34 @@ def _validate_multi_booking(at: AirtableClient, payload: dict, cliente_id: str) 
 
         svc_linked = sw_fields.get("SERVICIO")
         svc_canonico_id = svc_linked[0] if isinstance(svc_linked, list) and svc_linked else str(svc_linked) if svc_linked else ""
-        fecha_slot = sfields.get("FECHA_SLOT", "")
+        service_duration = int(_number(sw_fields.get("DURACION_MINUTOS_WEB") or sw_fields.get("DURACION_MINUTOS"), 0))
+        if not service_duration and svc_canonico_id:
+            try:
+                svc_fields = at.get_record("SERVICIOS", svc_canonico_id).get("fields", {})
+                service_duration = int(_number(svc_fields.get("DURACION_MINUTOS"), 0))
+            except Exception:
+                service_duration = 0
+        if service_duration and reserved_duration < service_duration:
+            item_errors.append("Los slots seleccionados no cubren la duracion del servicio.")
         if not fecha_turno:
             fecha_turno = fecha_slot
         elif fecha_slot != fecha_turno:
             item_errors.append("Todos los servicios del turno compuesto deben estar en la misma fecha.")
 
         if item_errors:
-            errores.append({"slot_id": slot_id, "servicio_web_id": servicio_web_id, "errores": item_errors})
+            errores.append({"slot_ids": slot_ids, "servicio_web_id": servicio_web_id, "errores": item_errors})
 
         validated_items.append({
             **item,
-            "slot_fields": sfields,
+            "slot_fields": slot_fields_list[0] if slot_fields_list else {},
+            "slot_fields_list": slot_fields_list,
+            "hora_inicio": f"{min(starts) // 60:02d}:{min(starts) % 60:02d}" if starts else "",
+            "hora_fin": f"{max(ends) // 60:02d}:{max(ends) % 60:02d}" if ends else "",
+            "duracion_servicio": service_duration,
+            "duracion_reservada": reserved_duration,
             "service_web_fields": sw_fields,
             "servicio_canonico_id": svc_canonico_id,
-            "profesional_ids": slot_profesional_ids,
+            "profesional_ids": slot_profesional_ids_base or [],
         })
 
     return {
@@ -986,12 +1053,13 @@ async def dry_run_reserva_multiple(payload: dict, user: dict = Depends(get_curre
             {
                 "orden": item["orden"],
                 "slot_id": item["slot_id"],
+                "slot_ids": item["slot_ids"],
                 "servicio_web_id": item["servicio_web_id"],
                 "nombre_servicio": item["service_web_fields"].get("NOMBRE_PUBLICO_SERVICIO") or item["service_web_fields"].get("NOMBRE_SERVICIO"),
                 "profesional_id": (item["profesional_ids"] or [None])[0],
                 "fecha": item["slot_fields"].get("FECHA_SLOT"),
-                "hora_inicio": item["slot_fields"].get("HORA_INICIO"),
-                "hora_fin": item["slot_fields"].get("HORA_FIN"),
+                "hora_inicio": item["hora_inicio"],
+                "hora_fin": item["hora_fin"],
             }
             for item in result["items"]
         ],
@@ -1024,10 +1092,14 @@ async def confirmar_reserva_multiple(payload: dict, user: dict = Depends(get_cur
     first = items[0]
     hoy = date.today().isoformat()
     fecha_cita = first["slot_fields"].get("FECHA_SLOT", "")
-    hora_inicio = min(_text(item["slot_fields"].get("HORA_INICIO")) for item in items)
-    hora_fin = max(_text(item["slot_fields"].get("HORA_FIN")) for item in items)
-    duracion_total = sum(_number(item["slot_fields"].get("DURACION_MINUTOS"), 0) for item in items)
-    slot_ids = [item["slot_id"] for item in items]
+    hora_inicio = min(_text(item["hora_inicio"]) for item in items)
+    hora_fin = max(_text(item["hora_fin"]) for item in items)
+    duracion_total = sum(_number(item.get("duracion_servicio") or item.get("duracion_reservada"), 0) for item in items)
+    slot_ids = []
+    for item in items:
+        for slot_id in item["slot_ids"]:
+            if slot_id not in slot_ids:
+                slot_ids.append(slot_id)
     servicio_ids = [item["servicio_canonico_id"] for item in items if item["servicio_canonico_id"]]
     profesional_ids = []
     for item in items:
@@ -1077,9 +1149,9 @@ async def confirmar_reserva_multiple(payload: dict, user: dict = Depends(get_cur
                 "SERVICIO": [item["servicio_canonico_id"]] if item["servicio_canonico_id"] else [],
                 "SERVICIO_WEB": [item["servicio_web_id"]],
                 "PROFESIONAL": item["profesional_ids"][:1],
-                "AGENDA_SLOT": [item["slot_id"]],
+                "AGENDA_SLOT": item["slot_ids"],
                 "ORDEN_ITEM": item["orden"],
-                "DURACION_MINUTOS": _number(item["slot_fields"].get("DURACION_MINUTOS"), 0),
+                "DURACION_MINUTOS": _number(item.get("duracion_servicio") or item.get("duracion_reservada"), 0),
                 "PRECIO_REFERENCIA": _number(item["service_web_fields"].get("PRECIO_WEB"), 0),
                 "ESTADO_ITEM_CITA": "CONFIRMADO",
                 "OBSERVACIONES_ITEM": item.get("observaciones") or None,
@@ -1088,14 +1160,14 @@ async def confirmar_reserva_multiple(payload: dict, user: dict = Depends(get_cur
             created = at.create_record("CITA_ITEMS", item_fields)
             created_items.append(created.get("id"))
 
-            sfields = item["slot_fields"]
-            at.patch_record("AGENDA_SLOTS", item["slot_id"], {
-                "ESTADO_SLOT": "RESERVADO",
-                "TIPO_SLOT": "RESERVA_WEB_PENDIENTE",
-                "CAPACIDAD_OCUPADA": (sfields.get("CAPACIDAD_OCUPADA", 0) or 0) + 1,
-                "CITAS": [cita_id],
-            })
-            reserved_slots.append(item["slot_id"])
+            for slot_id, sfields in zip(item["slot_ids"], item["slot_fields_list"]):
+                at.patch_record("AGENDA_SLOTS", slot_id, {
+                    "ESTADO_SLOT": "RESERVADO",
+                    "TIPO_SLOT": "RESERVA_WEB_PENDIENTE",
+                    "CAPACIDAD_OCUPADA": (sfields.get("CAPACIDAD_OCUPADA", 0) or 0) + 1,
+                    "CITAS": [cita_id],
+                })
+                reserved_slots.append(slot_id)
     except Exception as e:
         try:
             at.patch_record("CITAS", cita_id, {

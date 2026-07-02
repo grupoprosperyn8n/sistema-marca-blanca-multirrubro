@@ -167,14 +167,112 @@ def _rotation_rank(fecha: str, sucursal_id: str, service_id: str, employee_id: s
     return int(hashlib.sha1(seed).hexdigest()[:8], 16)
 
 
+def _time_to_minutes(raw: Any) -> int | None:
+    text = _text(raw)
+    try:
+        hour, minute = text.split(":")[:2]
+        return int(hour) * 60 + int(minute)
+    except Exception:
+        return None
+
+
+def _minutes_to_time(value: int) -> str:
+    return f"{value // 60:02d}:{value % 60:02d}"
+
+
+def _group_available_slots(
+    raw_slots: list[dict],
+    professional: dict,
+    load_count: int,
+    service: dict,
+    sucursal_id: str,
+) -> list[dict]:
+    """Build non-overlapping logical options from one or more atomic slots.
+
+    AGENDA_SLOTS is the operational source of truth. For long services, the UI
+    needs one option, but the backend must reserve all atomic slots that compose
+    that option to avoid overlapping bookings.
+    """
+    required_duration = max(_number(service.get("duration"), 0), 1)
+    normalized = []
+    for record in raw_slots:
+        fields = record.get("fields", {})
+        start = _time_to_minutes(fields.get("HORA_INICIO"))
+        end = _time_to_minutes(fields.get("HORA_FIN"))
+        duration = _number(fields.get("DURACION_MINUTOS"), 0)
+        if start is None:
+            continue
+        if end is None and duration:
+            end = start + duration
+        if end is None or end <= start:
+            continue
+        normalized.append({
+            "record": record,
+            "fields": fields,
+            "start": start,
+            "end": end,
+            "duration": end - start,
+        })
+
+    normalized.sort(key=lambda item: (item["start"], item["end"]))
+    options = []
+    seen = set()
+    for idx, first in enumerate(normalized):
+        group = [first]
+        total = first["duration"]
+        end = first["end"]
+        if total < required_duration:
+            for candidate in normalized[idx + 1:]:
+                if candidate["start"] != end:
+                    if candidate["start"] > end:
+                        break
+                    continue
+                group.append(candidate)
+                total += candidate["duration"]
+                end = candidate["end"]
+                if total >= required_duration:
+                    break
+        if total < required_duration:
+            continue
+
+        slot_ids = [item["record"].get("id") for item in group if item["record"].get("id")]
+        key = tuple(slot_ids)
+        if not slot_ids or key in seen:
+            continue
+        seen.add(key)
+
+        first_fields = group[0]["fields"]
+        options.append({
+            "id": "+".join(slot_ids),
+            "slotIds": slot_ids,
+            "fecha": first_fields.get("FECHA_SLOT") or "",
+            "horaInicio": _minutes_to_time(group[0]["start"]),
+            "horaFin": _minutes_to_time(group[-1]["end"]),
+            "duracion": required_duration,
+            "duracionReservada": total,
+            "capacidad": min(_number(item["fields"].get("CAPACIDAD_DISPONIBLE"), 0) for item in group),
+            "sucursalId": sucursal_id,
+            "servicioWebId": service["id"],
+            "servicioId": service["canonical_id"],
+            "servicioNombre": service["name"],
+            "profesionalId": professional["id"],
+            "profesionalNombre": professional["nombre"],
+            "cargaDiaProfesional": load_count,
+        })
+    return options
+
+
 def _format_slot(record: dict, professional: dict, load_count: int, service: dict, sucursal_id: str) -> dict:
     fields = record.get("fields", {})
+    slot_id = record.get("id")
     return {
-        "id": record.get("id"),
+        "id": slot_id,
+        "slotIds": [slot_id] if slot_id else [],
         "fecha": fields.get("FECHA_SLOT") or "",
         "horaInicio": fields.get("HORA_INICIO") or "",
         "horaFin": fields.get("HORA_FIN") or "",
         "duracion": fields.get("DURACION_MINUTOS") or service.get("duration") or "",
+        "duracionReservada": fields.get("DURACION_MINUTOS") or service.get("duration") or "",
         "capacidad": fields.get("CAPACIDAD_DISPONIBLE") or 0,
         "sucursalId": sucursal_id,
         "servicioWebId": service["id"],
@@ -236,7 +334,7 @@ async def listar_agenda_opciones(
     except Exception:
         slot_records = []
 
-    slots = []
+    slots_by_professional: dict[str, list[dict]] = {}
     min_duration = service.get("duration") or 0
     allowed_professional_ids = {item["id"] for item in professionals}
     for record in slot_records:
@@ -248,13 +346,23 @@ async def listar_agenda_opciones(
             continue
         if not _slot_available(fields):
             continue
-        if min_duration and _number(fields.get("DURACION_MINUTOS"), 0) and _number(fields.get("DURACION_MINUTOS"), 0) < min_duration:
-            continue
         slot_professionals = [pid for pid in _links(fields.get("PROFESIONAL")) if pid in allowed_professional_ids]
         for employee_id in slot_professionals:
-            professional = professional_by_id.get(employee_id)
-            if professional:
-                slots.append(_format_slot(record, professional, load_counts.get(employee_id, 0), service, sucursal_id))
+            if professional_by_id.get(employee_id):
+                slots_by_professional.setdefault(employee_id, []).append(record)
+
+    slots = []
+    for employee_id, records in slots_by_professional.items():
+        professional = professional_by_id.get(employee_id)
+        if not professional:
+            continue
+        if min_duration:
+            slots.extend(_group_available_slots(records, professional, load_counts.get(employee_id, 0), service, sucursal_id))
+        else:
+            slots.extend([
+                _format_slot(record, professional, load_counts.get(employee_id, 0), service, sucursal_id)
+                for record in records
+            ])
 
     slots.sort(key=lambda item: (
         item["cargaDiaProfesional"],

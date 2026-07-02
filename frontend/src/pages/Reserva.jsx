@@ -58,6 +58,12 @@ function uid() {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
+function getSlotIds(slot) {
+  if (!slot) return [];
+  if (Array.isArray(slot.slotIds) && slot.slotIds.length) return slot.slotIds;
+  return slot.id ? [slot.id] : [];
+}
+
 const steps = [
   { id: 1, label: "Sucursal" },
   { id: 2, label: "Servicios" },
@@ -89,7 +95,7 @@ export default function Reserva() {
   const selectedSucursal = useMemo(() => sucursales.find((branch) => branch.id === sucursalId), [sucursales, sucursalId]);
   const selectedService = useMemo(() => servicios.find((service) => service.id === serviceId), [servicios, serviceId]);
   const allItemsHaveSlot = items.length > 0 && items.every((item) => item.slot?.id);
-  const selectedSlotIds = new Set(items.map((item) => item.slot?.id).filter(Boolean));
+  const selectedSlotIds = new Set(items.flatMap((item) => getSlotIds(item.slot)));
   const total = items.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
   const canConfirmOnline = usuario && role === ROLES.CLIENTE;
 
@@ -247,6 +253,7 @@ export default function Reserva() {
             orden: index + 1,
             servicio_web_id: item.serviceId,
             slot_id: item.slot.id,
+            slot_ids: getSlotIds(item.slot),
             profesional_id: item.professionalId,
           })),
         }),
@@ -477,7 +484,8 @@ export default function Reserva() {
                         ) : (
                           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
                             {options.map((slot) => {
-                              const usedByOther = selectedSlotIds.has(slot.id) && item.slot?.id !== slot.id;
+                              const itemSlotIds = new Set(getSlotIds(item.slot));
+                              const usedByOther = getSlotIds(slot).some((slotId) => selectedSlotIds.has(slotId) && !itemSlotIds.has(slotId));
                               const active = item.slot?.id === slot.id;
                               return (
                                 <button

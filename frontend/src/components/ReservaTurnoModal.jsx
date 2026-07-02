@@ -54,6 +54,12 @@ function uid() {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
+function getSlotIds(slot) {
+  if (!slot) return [];
+  if (Array.isArray(slot.slotIds) && slot.slotIds.length) return slot.slotIds;
+  return slot.id ? [slot.id] : [];
+}
+
 const steps = [
   { id: 1, label: "Sucursal" },
   { id: 2, label: "Servicios" },
@@ -84,7 +90,7 @@ export default function ReservaTurnoModal({ onClose }) {
   const selectedSucursal = useMemo(() => sucursales.find((branch) => branch.id === sucursalId), [sucursales, sucursalId]);
   const selectedService = useMemo(() => servicios.find((service) => service.id === serviceId), [servicios, serviceId]);
   const allItemsHaveSlot = items.length > 0 && items.every((item) => item.slot?.id);
-  const selectedSlotIds = new Set(items.map((item) => item.slot?.id).filter(Boolean));
+  const selectedSlotIds = new Set(items.flatMap((item) => getSlotIds(item.slot)));
   const total = items.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
   const canConfirmOnline = usuario && role === ROLES.CLIENTE;
 
@@ -255,6 +261,7 @@ export default function ReservaTurnoModal({ onClose }) {
             orden: index + 1,
             servicio_web_id: item.serviceId,
             slot_id: item.slot.id,
+            slot_ids: getSlotIds(item.slot),
             profesional_id: item.professionalId,
           })),
         }),
@@ -358,7 +365,7 @@ export default function ReservaTurnoModal({ onClose }) {
                     <label className="mb-4 block max-w-xs"><span className="mb-1 block text-xs font-bold uppercase tracking-wide" style={{ color: "var(--brand-primary)" }}>Fecha</span><input type="date" value={fecha} min={todayISO()} onChange={(e) => setFecha(e.target.value)} className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm" /></label>
                     {agendaLoading ? <EmptyText>Buscando agenda…</EmptyText> : <div className="space-y-4">{items.map((item) => {
                       const options = slotOptions[item.uid]?.slots || [];
-                      return <article key={item.uid} className="rounded-3xl border border-slate-100 bg-slate-50 p-3"><div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between"><div><h3 className="text-sm font-extrabold" style={{ color: "var(--brand-text)" }}>{item.serviceName}</h3><p className="text-xs" style={{ color: "var(--brand-text-secondary)" }}>Profesional: {item.professionalName}</p></div>{slotOptions[item.uid]?.recommended_professional && <span className="rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-bold text-emerald-700">Sugerido: {slotOptions[item.uid].recommended_professional.nombre}</span>}</div>{options.length === 0 ? <div className="rounded-2xl bg-amber-50 px-4 py-4 text-sm text-amber-800">Sin horarios publicados para {formatDate(fecha)}.</div> : <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">{options.map((slot) => { const usedByOther = selectedSlotIds.has(slot.id) && item.slot?.id !== slot.id; const active = item.slot?.id === slot.id; return <button key={`${item.uid}-${slot.id}`} type="button" disabled={usedByOther} onClick={() => selectSlot(item.uid, slot)} className="min-h-[72px] rounded-2xl border px-2 py-2 text-left text-xs font-semibold disabled:opacity-40" style={{ borderColor: active ? "var(--brand-primary)" : "#e5e7eb", background: active ? "linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))" : "#fff", color: active ? "#fff" : "var(--brand-text)" }}><span className="block text-sm font-extrabold">{formatTime(slot.horaInicio)}–{formatTime(slot.horaFin)}</span><span className="mt-1 block truncate opacity-90">{slot.profesionalNombre}</span><span className="mt-1 block opacity-70">{slot.duracion} min</span></button>; })}</div>}</article>;
+                      return <article key={item.uid} className="rounded-3xl border border-slate-100 bg-slate-50 p-3"><div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between"><div><h3 className="text-sm font-extrabold" style={{ color: "var(--brand-text)" }}>{item.serviceName}</h3><p className="text-xs" style={{ color: "var(--brand-text-secondary)" }}>Profesional: {item.professionalName}</p></div>{slotOptions[item.uid]?.recommended_professional && <span className="rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-bold text-emerald-700">Sugerido: {slotOptions[item.uid].recommended_professional.nombre}</span>}</div>{options.length === 0 ? <div className="rounded-2xl bg-amber-50 px-4 py-4 text-sm text-amber-800">Sin horarios publicados para {formatDate(fecha)}.</div> : <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">{options.map((slot) => { const itemSlotIds = new Set(getSlotIds(item.slot)); const usedByOther = getSlotIds(slot).some((slotId) => selectedSlotIds.has(slotId) && !itemSlotIds.has(slotId)); const active = item.slot?.id === slot.id; return <button key={`${item.uid}-${slot.id}`} type="button" disabled={usedByOther} onClick={() => selectSlot(item.uid, slot)} className="min-h-[72px] rounded-2xl border px-2 py-2 text-left text-xs font-semibold disabled:opacity-40" style={{ borderColor: active ? "var(--brand-primary)" : "#e5e7eb", background: active ? "linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))" : "#fff", color: active ? "#fff" : "var(--brand-text)" }}><span className="block text-sm font-extrabold">{formatTime(slot.horaInicio)}–{formatTime(slot.horaFin)}</span><span className="mt-1 block truncate opacity-90">{slot.profesionalNombre}</span><span className="mt-1 block opacity-70">{slot.duracion} min</span></button>; })}</div>}</article>;
                     })}</div>}
                     <FooterActions backLabel="Volver" onBack={() => goToStep(2)} nextLabel="Revisar Turno" nextDisabled={!allItemsHaveSlot} onNext={() => goToStep(4)} />
                   </Panel>
