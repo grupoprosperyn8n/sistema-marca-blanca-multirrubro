@@ -58,6 +58,28 @@ def _number(value: Any, default: int = 0) -> int:
         return default
 
 
+def _airtable_formula_text(value: str) -> str:
+    return value.replace("\\", "\\\\").replace("'", "\\'")
+
+
+def _date_slot_filter(target_date: str) -> str:
+    safe_date = _airtable_formula_text(target_date)
+    return (
+        "AND("
+        f"DATETIME_FORMAT({{FECHA_SLOT}}, 'YYYY-MM-DD')='{safe_date}',"
+        "{ESTADO_SLOT}='DISPONIBLE',"
+        "OR({PERMITE_RESERVA_WEB}=1,{PERMITE_RESERVA_WEB}=BLANK()),"
+        "OR({ACTIVO}=1,{ACTIVO}=BLANK())"
+        ")"
+    )
+
+
+def _date_cita_filter(target_date: str) -> str:
+    safe_date = _airtable_formula_text(target_date)
+    states = ",".join(f"{{ESTADO_CITA}}='{_airtable_formula_text(state)}'" for state in ACTIVE_CITA_STATES)
+    return f"AND(DATETIME_FORMAT({{FECHA_CITA}}, 'YYYY-MM-DD')='{safe_date}',OR({states}))"
+
+
 def _slot_available(fields: dict) -> bool:
     return (
         _text(fields.get("ESTADO_SLOT")).upper() == "DISPONIBLE"
@@ -148,7 +170,12 @@ def _daily_load_counts(client: AirtableClient, fecha: str) -> dict[str, int]:
     if not fecha:
         return counts
     try:
-        records = client.list_records("CITAS", fields=["PROFESIONAL", "FECHA_CITA", "ESTADO_CITA"], by_name=True)
+        records = client.list_records(
+            "CITAS",
+            fields=["PROFESIONAL", "FECHA_CITA", "ESTADO_CITA"],
+            filter_formula=_date_cita_filter(fecha),
+            by_name=True,
+        )
     except Exception:
         return counts
     for record in records:
@@ -330,7 +357,23 @@ async def listar_agenda_opciones(
 
     load_counts = _daily_load_counts(client, target_date)
     try:
-        slot_records = client.list_records("AGENDA_SLOTS", by_name=True)
+        slot_records = client.list_records(
+            "AGENDA_SLOTS",
+            fields=[
+                "PROFESIONAL",
+                "SUCURSAL",
+                "FECHA_SLOT",
+                "HORA_INICIO",
+                "HORA_FIN",
+                "DURACION_MINUTOS",
+                "ESTADO_SLOT",
+                "CAPACIDAD_DISPONIBLE",
+                "PERMITE_RESERVA_WEB",
+                "ACTIVO",
+            ],
+            filter_formula=_date_slot_filter(target_date),
+            by_name=True,
+        )
     except Exception:
         slot_records = []
 
