@@ -32,6 +32,8 @@ function buildLandingDraft(row = {}) {
     CONTENIDO_PUBLICO: row.CONTENIDO_PUBLICO || "",
     TEXTO_BOTON_CTA: row.TEXTO_BOTON_CTA || "",
     URL_BOTON_CTA: row.URL_BOTON_CTA || "",
+    IMAGEN_PRINCIPAL_URL: firstAttachmentUrl(row.IMAGEN_PRINCIPAL),
+    IMAGENES_CARRUSEL_URLS: attachmentUrls(row.IMAGENES_CARRUSEL).join("\n"),
     COLOR_FONDO_HEX: row.COLOR_FONDO_HEX || "",
     COLOR_TEXTO_HEX: row.COLOR_TEXTO_HEX || "",
     VISIBLE_MOBILE: row.VISIBLE_MOBILE !== false,
@@ -71,6 +73,7 @@ function buildForm(marca = {}) {
       hero_cta_primario_url: textos.hero_cta_primario_url || "",
       hero_cta_secundario: textos.hero_cta_secundario || "",
       hero_cta_secundario_url: textos.hero_cta_secundario_url || "",
+      hero_imagen_url: textos.hero_imagen_url || "",
       banner_activo: !!textos.banner_activo,
       banner_titulo: textos.banner_titulo || "",
       banner_mensaje: textos.banner_mensaje || "",
@@ -113,6 +116,55 @@ function sortByOrder(a, b) {
   return (a.ORDEN_VISUAL ?? 999) - (b.ORDEN_VISUAL ?? 999) || String(a.CLAVE_SECCION || a.CLAVE_CONFIGURACION || "").localeCompare(String(b.CLAVE_SECCION || b.CLAVE_CONFIGURACION || ""));
 }
 
+function attachmentUrls(value) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => item?.url || item?.download_url || "")
+    .map((url) => String(url || "").trim())
+    .filter(Boolean);
+}
+
+function firstAttachmentUrl(value) {
+  return attachmentUrls(value)[0] || "";
+}
+
+function urlsToAttachments(value) {
+  const raw = Array.isArray(value) ? value : String(value || "").split(/\n|,/);
+  return raw
+    .map((url) => String(url || "").trim())
+    .filter(Boolean)
+    .map((url) => ({ url }));
+}
+
+function buildLandingPayload(draft = {}) {
+  const {
+    IMAGEN_PRINCIPAL_URL,
+    IMAGENES_CARRUSEL_URLS,
+    ...payload
+  } = draft;
+  payload.IMAGEN_PRINCIPAL = urlsToAttachments(IMAGEN_PRINCIPAL_URL);
+  payload.IMAGENES_CARRUSEL = urlsToAttachments(IMAGENES_CARRUSEL_URLS);
+  return payload;
+}
+
+function normalizeHexInput(value) {
+  const clean = String(value || "").trim().replace("#", "");
+  if (/^[0-9a-fA-F]{3}$/.test(clean) || /^[0-9a-fA-F]{6}$/.test(clean)) {
+    return `#${clean.toUpperCase()}`;
+  }
+  return "";
+}
+
+function toColorInputValue(value) {
+  const normalized = normalizeHexInput(value);
+  if (/^#[0-9A-F]{6}$/.test(normalized)) return normalized;
+  if (/^#[0-9A-F]{3}$/.test(normalized)) {
+    const [, r, g, b] = normalized;
+    return `#${r}${r}${g}${g}${b}${b}`;
+  }
+  return "#000000";
+}
+
 function Field({ label, value, onChange, disabled, type = "text", placeholder = "" }) {
   return (
     <label className="text-sm font-medium" style={{ color: "var(--brand-text)" }}>
@@ -125,6 +177,43 @@ function Field({ label, value, onChange, disabled, type = "text", placeholder = 
         onChange={(event) => onChange(event.target.value)}
         className={`${inputClass} ${disabled ? "opacity-60" : ""}`}
       />
+    </label>
+  );
+}
+
+function ColorField({ label, value, onChange, disabled, placeholder = "#7C3AED" }) {
+  const normalized = normalizeHexInput(value);
+  return (
+    <label className="text-sm font-medium" style={{ color: "var(--brand-text)" }}>
+      {label}
+      <div className={`mt-1 flex items-center gap-2 rounded-xl border border-slate-200 bg-white/80 p-1.5 ${disabled ? "opacity-60" : ""}`}>
+        <input
+          type="color"
+          value={toColorInputValue(value || placeholder)}
+          disabled={disabled}
+          onChange={(event) => onChange(event.target.value.toUpperCase())}
+          className="h-9 w-11 shrink-0 cursor-pointer rounded-lg border border-slate-200 bg-transparent p-0 disabled:cursor-not-allowed"
+          aria-label={`Elegir color para ${label}`}
+        />
+        <input
+          type="text"
+          value={value || ""}
+          placeholder={placeholder}
+          disabled={disabled}
+          onChange={(event) => onChange(event.target.value)}
+          onBlur={(event) => {
+            const next = normalizeHexInput(event.target.value);
+            if (next) onChange(next);
+          }}
+          className="min-w-0 flex-1 bg-transparent px-2 py-1.5 font-mono text-sm outline-none"
+        />
+        <span
+          className="hidden rounded-lg px-2 py-1 text-[11px] font-semibold sm:inline-flex"
+          style={{ background: normalized || toColorInputValue(value || placeholder), color: "#fff" }}
+        >
+          HEX
+        </span>
+      </div>
     </label>
   );
 }
@@ -373,7 +462,7 @@ export default function Configuracion() {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify(landingDrafts[row.id] || buildLandingDraft(row)),
+        body: JSON.stringify(buildLandingPayload(landingDrafts[row.id] || buildLandingDraft(row))),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -471,10 +560,43 @@ export default function Configuracion() {
                 Colores
               </h4>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-1">
-                <Field label="Primario" value={form.colores.primario} disabled={!canEdit} placeholder="006686" onChange={(value) => updateNested("colores", "primario", value)} />
-                <Field label="Secundario" value={form.colores.secundario} disabled={!canEdit} placeholder="7DD3FC" onChange={(value) => updateNested("colores", "secundario", value)} />
-                <Field label="Acento" value={form.colores.acento} disabled={!canEdit} placeholder="38BDF8" onChange={(value) => updateNested("colores", "acento", value)} />
-                <Field label="Fondo" value={form.colores.fondo} disabled={!canEdit} placeholder="F8F9FF" onChange={(value) => updateNested("colores", "fondo", value)} />
+                <ColorField label="Primario" value={form.colores.primario} disabled={!canEdit} placeholder="#006686" onChange={(value) => updateNested("colores", "primario", value)} />
+                <ColorField label="Secundario" value={form.colores.secundario} disabled={!canEdit} placeholder="#7DD3FC" onChange={(value) => updateNested("colores", "secundario", value)} />
+                <ColorField label="Acento" value={form.colores.acento} disabled={!canEdit} placeholder="#38BDF8" onChange={(value) => updateNested("colores", "acento", value)} />
+                <ColorField label="Fondo sólido" value={form.colores.fondo} disabled={!canEdit} placeholder="#F8F9FF" onChange={(value) => updateNested("colores", "fondo", value)} />
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-white/70 p-3">
+                <p className="text-sm font-semibold" style={{ color: "var(--brand-text)" }}>Fondo de landing</p>
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  {[
+                    ["SOLIDO", "Color sólido"],
+                    ["IMAGEN", "Imagen"],
+                  ].map(([value, label]) => {
+                    const active = value === "IMAGEN" ? !!form.textos_publicos.hero_imagen_url : !form.textos_publicos.hero_imagen_url;
+                    return (
+                      <button
+                        key={value}
+                        type="button"
+                        disabled={!canEdit}
+                        onClick={() => {
+                          if (value === "SOLIDO") updateNested("textos_publicos", "hero_imagen_url", "");
+                          if (value === "IMAGEN" && !form.textos_publicos.hero_imagen_url) updateNested("textos_publicos", "hero_imagen_url", "https://");
+                        }}
+                        className={`rounded-xl border px-3 py-2 text-xs font-bold disabled:opacity-60 ${active ? "border-sky-400 bg-sky-50 text-sky-700" : "border-slate-200 bg-white text-slate-600"}`}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <Field
+                  label="URL imagen de fondo"
+                  value={form.textos_publicos.hero_imagen_url}
+                  disabled={!canEdit || !form.textos_publicos.hero_imagen_url}
+                  placeholder="https://..."
+                  onChange={(value) => updateNested("textos_publicos", "hero_imagen_url", value)}
+                />
+                <p className="mt-2 text-[11px] text-slate-500">Si dejás la URL vacía, la landing usa el color sólido de fondo.</p>
               </div>
             </div>
 
@@ -638,13 +760,28 @@ export default function Configuracion() {
                       />
                     </div>
                     <Field
+                      label="Imagen principal URL"
+                      value={draft.IMAGEN_PRINCIPAL_URL}
+                      placeholder="https://..."
+                      disabled={disabled || !fieldEditable("LANDING_SECCIONES", "IMAGEN_PRINCIPAL")}
+                      onChange={(value) => updateLandingDraft(row.id, "IMAGEN_PRINCIPAL_URL", value)}
+                    />
+                    <TextAreaField
+                      label="Carrusel imagen/video URLs"
+                      value={draft.IMAGENES_CARRUSEL_URLS}
+                      placeholder={"https://imagen.jpg\nhttps://video.mp4"}
+                      disabled={disabled || !fieldEditable("LANDING_SECCIONES", "IMAGENES_CARRUSEL")}
+                      rows={3}
+                      onChange={(value) => updateLandingDraft(row.id, "IMAGENES_CARRUSEL_URLS", value)}
+                    />
+                    <ColorField
                       label="Color fondo"
                       value={draft.COLOR_FONDO_HEX}
                       placeholder="#FDF4FF"
                       disabled={disabled || !fieldEditable("LANDING_SECCIONES", "COLOR_FONDO_HEX")}
                       onChange={(value) => updateLandingDraft(row.id, "COLOR_FONDO_HEX", value)}
                     />
-                    <Field
+                    <ColorField
                       label="Color texto"
                       value={draft.COLOR_TEXTO_HEX}
                       placeholder="#1F1235"
@@ -773,7 +910,7 @@ export default function Configuracion() {
                         disabled={disabled || !fieldEditable("CONFIGURACION_PUBLICA", "URL_CONFIGURACION")}
                         onChange={(value) => updateConfigDraft(row.id, "URL_CONFIGURACION", value)}
                       />
-                      <Field
+                      <ColorField
                         label="Color"
                         value={draft.COLOR_HEX_CONFIGURACION}
                         placeholder="#7C3AED"

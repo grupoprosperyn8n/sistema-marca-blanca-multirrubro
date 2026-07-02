@@ -74,7 +74,10 @@
 
   /* Decorative blobs — from Stitch Glacier reference */
   .page-bg {
-    background: linear-gradient(135deg, #eff4ff 0%, #ffffff 100%);
+    background: var(--brand-page-background, linear-gradient(135deg, #eff4ff 0%, #ffffff 100%));
+    background-attachment: fixed;
+    background-position: center;
+    background-size: cover;
     position: relative;
     overflow: hidden;
   }

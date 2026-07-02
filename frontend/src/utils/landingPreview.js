@@ -67,8 +67,29 @@ export function mergePreviewLandingSections(rows = [], payload = readLandingPrev
   const drafts = payload.landingDrafts || {};
   return rows.map((row) => ({
     ...row,
-    ...(drafts[row.id] || {}),
+    ...draftToLandingSection(drafts[row.id] || {}),
   }));
+}
+
+function urlsToAttachments(value) {
+  const raw = Array.isArray(value) ? value : String(value || "").split(/\n|,/);
+  return raw
+    .map((url) => String(url || "").trim())
+    .filter(Boolean)
+    .map((url, index) => ({ id: `preview-${index}-${url}`, url }));
+}
+
+function draftToLandingSection(draft) {
+  const next = { ...draft };
+  if ("IMAGEN_PRINCIPAL_URL" in next) {
+    next.IMAGEN_PRINCIPAL = urlsToAttachments(next.IMAGEN_PRINCIPAL_URL);
+    delete next.IMAGEN_PRINCIPAL_URL;
+  }
+  if ("IMAGENES_CARRUSEL_URLS" in next) {
+    next.IMAGENES_CARRUSEL = urlsToAttachments(next.IMAGENES_CARRUSEL_URLS);
+    delete next.IMAGENES_CARRUSEL_URLS;
+  }
+  return next;
 }
 
 export function subscribeLandingPreviewPayload(callback) {

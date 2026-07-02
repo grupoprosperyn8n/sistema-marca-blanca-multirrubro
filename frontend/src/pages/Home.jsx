@@ -4,6 +4,7 @@ import { formatPublicName, getPublicServiceImage, toPublicSlug } from "../utils/
 import SucursalesPublicas from "./SucursalesPublicas";
 import { formatCategoria } from "../utils/displayFormatters";
 import { useBrandConfig } from "../context/BrandConfigContext";
+import MediaCarousel from "../components/ui/MediaCarousel";
 import {
   isLandingPreviewRuntime,
   mergePreviewLandingSections,
@@ -12,6 +13,41 @@ import {
 } from "../utils/landingPreview";
 
 const API = import.meta.env.VITE_API_BASE_URL || "";
+
+function normalizeHexStyle(value) {
+  const raw = String(value || "").trim().replace("#", "");
+  if (/^[0-9a-fA-F]{3}$/.test(raw) || /^[0-9a-fA-F]{6}$/.test(raw)) return `#${raw}`;
+  return "";
+}
+
+function sectionTextStyle(section, fallback = "var(--brand-text)") {
+  return { color: normalizeHexStyle(section?.COLOR_TEXTO_HEX) || fallback };
+}
+
+function sectionBoxStyle(section) {
+  const background = normalizeHexStyle(section?.COLOR_FONDO_HEX);
+  return background ? { background, borderRadius: "2rem" } : {};
+}
+
+function attachmentToMedia(attachment, index = 0) {
+  if (!attachment?.url) return null;
+  const type = String(attachment.type || "").startsWith("video/") ? "VIDEO" : "IMAGEN";
+  return {
+    id: attachment.id || `${attachment.url}-${index}`,
+    url: attachment.url,
+    title: attachment.filename || "",
+    alt: attachment.filename || "",
+    type,
+    width: attachment.width,
+    height: attachment.height,
+  };
+}
+
+function sectionMedia(section) {
+  const carousel = Array.isArray(section?.IMAGENES_CARRUSEL) ? section.IMAGENES_CARRUSEL : [];
+  const principal = Array.isArray(section?.IMAGEN_PRINCIPAL) ? section.IMAGEN_PRINCIPAL : [];
+  return [...carousel, ...principal].map(attachmentToMedia).filter(Boolean);
+}
 
 export default function Home() {
   const { config } = useBrandConfig();
@@ -117,6 +153,7 @@ export default function Home() {
   const heroSecondaryUrl = config.heroCtaSecondaryUrl || "/catalogo";
   const showSecondaryAction = Boolean(config.heroCtaSecondary) &&
     (business.usesAppointments !== false || !heroSecondaryUrl.startsWith("/reserva"));
+  const heroMedia = sectionMedia(heroSection);
   const howItWorks = business.usesAppointments ? [
     { num: "1", icon: "search", title: "Explorá", desc: "Navegá las opciones disponibles y elegí la que más te sirve." },
     { num: "2", icon: "event_available", title: "Reservá", desc: "Seleccioná sucursal, día y horario si el negocio trabaja con turnos." },
@@ -163,9 +200,18 @@ export default function Home() {
           </div>
 
           {/* Hero visual — bento */}
-          <div className="lg:col-span-2 hidden lg:block">
+          <div className={`lg:col-span-2 ${heroMedia.length ? "" : "hidden lg:block"}`}>
             <div className="relative">
               <div className="glass-panel p-6 rounded-3xl shadow-xl">
+                {heroMedia.length ? (
+                  <MediaCarousel
+                    items={heroMedia}
+                    alt={config.brandName}
+                    mediaClassName="aspect-square"
+                    imageClassName="h-full w-full object-cover"
+                    fallbackIcon="wallpaper"
+                  />
+                ) : (
                 <div className="text-center space-y-4">
                   <span className="material-symbols-outlined text-6xl" style={{ color: 'var(--brand-primary)' }}>spa</span>
                   <div>
@@ -180,6 +226,7 @@ export default function Home() {
                     ))}
                   </div>
                 </div>
+                )}
               </div>
               <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full opacity-20 -z-10" style={{ background: 'var(--brand-secondary)', filter: 'blur(40px)' }} />
             </div>
@@ -189,10 +236,10 @@ export default function Home() {
 
       {/* Servicios destacados */}
       {showServices && (
-        <section className="relative z-10 max-w-7xl mx-auto px-4 sm:px-8 pb-20">
+        <section className="relative z-10 max-w-7xl mx-auto px-4 sm:px-8 pb-20" style={sectionBoxStyle(servicesSection)}>
           <div className="text-center mb-12">
-            <h2 className="headline-lg mb-3" style={{ color: 'var(--brand-text)' }}>{servicesSection?.TITULO_PUBLICO || "Servicios destacados"}</h2>
-            <p className="text-base max-w-lg mx-auto" style={{ color: 'var(--brand-text-secondary)' }}>
+            <h2 className="headline-lg mb-3" style={sectionTextStyle(servicesSection)}>{servicesSection?.TITULO_PUBLICO || "Servicios destacados"}</h2>
+            <p className="text-base max-w-lg mx-auto" style={sectionTextStyle(servicesSection, "var(--brand-text-secondary)")}>
               {servicesSection?.SUBTITULO_PUBLICO || "Opciones destacadas publicadas por el negocio"}
             </p>
           </div>
@@ -275,10 +322,10 @@ export default function Home() {
 
       {/* Productos destacados */}
       {showProducts && (
-        <section className="relative z-10 max-w-7xl mx-auto px-4 sm:px-8 pb-20">
+        <section className="relative z-10 max-w-7xl mx-auto px-4 sm:px-8 pb-20" style={sectionBoxStyle(productsSection)}>
           <div className="text-center mb-12">
-            <h2 className="headline-lg mb-3" style={{ color: "var(--brand-text)" }}>{productsSection?.TITULO_PUBLICO || "Productos destacados"}</h2>
-            <p className="text-base max-w-lg mx-auto" style={{ color: "var(--brand-text-secondary)" }}>
+            <h2 className="headline-lg mb-3" style={sectionTextStyle(productsSection)}>{productsSection?.TITULO_PUBLICO || "Productos destacados"}</h2>
+            <p className="text-base max-w-lg mx-auto" style={sectionTextStyle(productsSection, "var(--brand-text-secondary)")}>
               {productsSection?.SUBTITULO_PUBLICO || "Ítems publicados para venta, consulta o promoción"}
             </p>
           </div>

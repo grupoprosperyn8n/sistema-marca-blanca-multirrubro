@@ -51,6 +51,8 @@ EDITABLE_FIELDS = {
     "CONTENIDO_PUBLICO",
     "TEXTO_BOTON_CTA",
     "URL_BOTON_CTA",
+    "IMAGEN_PRINCIPAL",
+    "IMAGENES_CARRUSEL",
     "COLOR_FONDO_HEX",
     "COLOR_TEXTO_HEX",
     "VISIBLE_MOBILE",
@@ -69,6 +71,7 @@ BOOLEAN_FIELDS = {
     "REGISTRO_ACTIVO",
 }
 NUMBER_FIELDS = {"ORDEN_VISUAL"}
+ATTACHMENT_FIELDS = {"IMAGEN_PRINCIPAL", "IMAGENES_CARRUSEL"}
 
 
 def _to_bool(value):
@@ -87,6 +90,25 @@ def _normalize_value(field, value):
         if value in (None, ""):
             return None
         return int(value)
+    if field in ATTACHMENT_FIELDS:
+        if value in (None, ""):
+            return []
+        raw_items = value if isinstance(value, list) else [value]
+        attachments = []
+        for item in raw_items:
+            if isinstance(item, dict):
+                url = str(item.get("url") or "").strip()
+                filename = str(item.get("filename") or "").strip()
+            else:
+                url = str(item or "").strip()
+                filename = ""
+            if not url:
+                continue
+            attachment = {"url": url}
+            if filename:
+                attachment["filename"] = filename
+            attachments.append(attachment)
+        return attachments
     if value is None:
         return None
     if isinstance(value, str):

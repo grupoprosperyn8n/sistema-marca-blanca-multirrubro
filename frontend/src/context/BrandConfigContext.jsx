@@ -175,6 +175,10 @@ function hexToRgba(hex, alpha = 1) {
   return `rgba(${r},${g},${b},${alpha})`;
 }
 
+function cssUrl(raw) {
+  return String(raw || "").replace(/["\\\n\r]/g, "").trim();
+}
+
 function getDomainVariant() {
   if (typeof window === "undefined") return null;
   const hostname = window.location.hostname.replace(/^www\./, "");
@@ -215,6 +219,15 @@ function applyCssVariables(config) {
   }
   if (config.fontHeading) root.style.setProperty("--font-heading", config.fontHeading);
   if (config.fontBody) root.style.setProperty("--font-body", config.fontBody);
+  const backgroundUrl = cssUrl(config.business?.backgroundUrl || config.heroImageUrl);
+  if (backgroundUrl && config.business?.backgroundType === "IMAGEN") {
+    root.style.setProperty(
+      "--brand-page-background",
+      `linear-gradient(135deg, rgba(248,249,255,0.84) 0%, rgba(255,255,255,0.72) 100%), url("${backgroundUrl}")`
+    );
+  } else {
+    root.style.setProperty("--brand-page-background", `linear-gradient(135deg, ${config.brandSurface || "#eff4ff"} 0%, #ffffff 100%)`);
+  }
   root.style.setProperty("--glass-blur", config.glassBlur);
   root.style.setProperty("--glass-opacity", config.glassOpacity);
   root.style.setProperty("--glass-border-color", config.glassBorderColor);
@@ -302,6 +315,7 @@ function transformMarcaBlanca(data, base = FALLBACK) {
   if (!data || typeof data !== "object" || data.error) return base;
   const colores = data.colores || {};
   const textos = data.textos_publicos || {};
+  const heroImageUrl = normalizeText(textos.hero_imagen_url) || normalizeText(data.business_config?.fondo_url) || base.heroImageUrl || "";
   const secciones = data.secciones_visibles || {};
   const seccionesVisibles = {
     mostrar_servicios: normalizeBool(secciones.mostrar_servicios, base.seccionesVisibles?.mostrar_servicios ?? true),
@@ -333,6 +347,7 @@ function transformMarcaBlanca(data, base = FALLBACK) {
     heroCtaPrimaryUrl: normalizeText(textos.hero_cta_primario_url) || base.heroCtaPrimaryUrl,
     heroCtaSecondary: normalizeText(textos.hero_cta_secundario) || base.heroCtaSecondary,
     heroCtaSecondaryUrl: normalizeText(textos.hero_cta_secundario_url) || base.heroCtaSecondaryUrl,
+    heroImageUrl,
     bannerActive: normalizeBool(textos.banner_activo, base.bannerActive),
     bannerTitle: normalizeText(textos.banner_titulo) || base.bannerTitle,
     bannerMessage: normalizeText(textos.banner_mensaje) || base.bannerMessage,
@@ -375,6 +390,14 @@ function transformMarcaBlanca(data, base = FALLBACK) {
     versionConfig: normalizeText(data.version_config) || base.versionConfig,
     registroActivo: data.registro_activo !== undefined && data.registro_activo !== null ? normalizeBool(data.registro_activo) : base.registroActivo,
   };
+
+  if (heroImageUrl && config.business) {
+    config.business = {
+      ...config.business,
+      backgroundUrl: config.business.backgroundUrl || heroImageUrl,
+      backgroundType: config.business.backgroundType === "SOLIDO" ? "IMAGEN" : config.business.backgroundType,
+    };
+  }
 
   // Resolve {marca} placeholders in all text fields
   const textFields = ['heroTitle','heroSubtitle','heroCtaPrimary','heroCtaSecondary',
