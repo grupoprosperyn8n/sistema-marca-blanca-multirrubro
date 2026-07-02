@@ -1,6 +1,6 @@
 {
   "project": "sistema-marca-blanca-multirrubro",
-  "fase_actual": "PORTAL_BOOKING_HISTORY_UX_P8 — QA_LOCAL_PENDIENTE_DEPLOY",
+  "fase_actual": "PORTAL_BOOKING_HISTORY_UX_P8 — CERRADA_QA_DEPLOY",
   "fase_siguiente": "QA_NAVEGADOR_PORTAL_CLIENTE_RESERVA o CHECKOUT_PAYMENTS_POS_CONTRACT_P5 (requiere aprobación explícita para pagos reales)",
   "tareas": {
     "FASE_3B_PORTAL_CLIENTE": {
@@ -569,9 +569,11 @@
       }
     },
     "PORTAL_BOOKING_HISTORY_UX_P8": {
-      "status": "completed_local_pending_deploy",
+      "status": "completed_deployed",
       "closed_at": "2026-07-02",
-      "commits": [],
+      "commits": [
+        "5178c87"
+      ],
       "deliverables": [
         "frontend/src/components/ReservaTurnoModal.jsx (modal portal alineado visualmente con flujo de landing)",
         "frontend/src/pages/PortalCliente.jsx (historial compacto, acciones cancelar/cambiar más claras)",
@@ -581,7 +583,13 @@
         "backend_py_compile": "PASS",
         "frontend_build": "PASS",
         "git_diff_check": "PASS",
-        "strict_secret_scan": "PASS"
+        "strict_secret_scan": "PASS",
+        "railway_auto_deploy": "PASS_SUCCESS_5178c87_EARNEST_COMFORT",
+        "surge_deploy_bellezapro": "PASS",
+        "live_health": "PASS_200",
+        "live_agenda_alisado_diego": "PASS_200_TOTAL_1",
+        "live_me_citas_unauth": "401_PASS",
+        "live_portal_route": "PASS_200_SURGE"
       },
       "secrets_free": true,
       "env_files_touched": false,
@@ -589,7 +597,11 @@
       "reservas_table_used": false,
       "schema_changes": false,
       "delete_fisico": false,
-      "notes": "El portal ahora usa el mismo orden visual que /reserva: sucursal, servicios, agenda, confirmar. /api/clientes/me/citas devuelve items de CITA_ITEMS para que turnos creados desde landing se vean mejor en portal. Reprogramar citas multi-servicio se bloquea con 409 seguro; cancelar sí libera todos los slots vinculados."
+      "notes": "El portal ahora usa el mismo orden visual que /reserva: sucursal, servicios, agenda, confirmar. /api/clientes/me/citas devuelve items de CITA_ITEMS para que turnos creados desde landing se vean mejor en portal. Reprogramar citas multi-servicio se bloquea con 409 seguro; cancelar sí libera todos los slots vinculados.",
+      "deploy": {
+        "backend_railway": "PASS_SUCCESS_5178c87_earnest_comfort",
+        "frontend_surge": "PASS_https://bellezapro-demo.surge.sh"
+      }
     }
   },
   "deploys_activos": {

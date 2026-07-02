@@ -7,7 +7,7 @@ Backend: Railway `earnest-comfort`
 ## Estado
 
 - Fase: PORTAL_BOOKING_HISTORY_UX_P8
-- Estado: QA local completo, pendiente de commit/push/deploy.
+- Estado: completado, commiteado, pusheado y desplegado.
 
 ## Implementado
 
@@ -29,6 +29,18 @@ Backend: Railway `earnest-comfort`
 - `git diff --check`: PASS.
 - Secret scan sobre diff: PASS.
 
+## Deploy final
+
+- Commit: `5178c87`.
+- Push origin/main: PASS.
+- Railway `earnest-comfort`: SUCCESS/RUNNING para `5178c87`.
+- Surge: PASS `https://bellezapro-demo.surge.sh`.
+- Smoke live:
+  - `/health`: 200.
+  - `/api/reserva/agenda-opciones` para Alisado + Diego + 2026-07-02: total 1.
+  - `/api/clientes/me/citas` sin auth: 401.
+  - `/portal` en Surge: 200.
+
 ## Límites respetados
 
 - Sin pagos.
@@ -42,5 +54,5 @@ Backend: Railway `earnest-comfort`
 
 ## Próximo paso recomendado
 
-- Deploy y smoke live del portal cliente.
 - QA navegador con cliente demo: crear turno desde landing y verificar que aparezca en portal.
+- Si se quiere reprogramación multi-servicio real, abrir un bloque separado porque requiere elegir nuevo slot por cada item de `CITA_ITEMS`.
