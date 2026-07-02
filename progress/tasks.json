@@ -1,6 +1,6 @@
 {
   "project": "sistema-marca-blanca-multirrubro",
-  "fase_actual": "AGENDA_CONFIGURATOR_P10 — COMPLETADA_LOCAL_PENDIENTE_DEPLOY",
+  "fase_actual": "AGENDA_CONFIGURATOR_P10 — CERRADA_QA_DEPLOY",
   "fase_siguiente": "QA_NAVEGADOR_AGENDA_CONFIG_PORTAL_RESERVA o REPROGRAMACION_MULTISERVICIO_P11",
   "tareas": {
     "FASE_3B_PORTAL_CLIENTE": {
@@ -660,10 +660,10 @@
       }
     },
     "AGENDA_CONFIGURATOR_P10": {
-      "status": "completed_local_pending_deploy",
+      "status": "completed_deployed",
       "closed_at": "2026-07-02",
       "commits": [
-        "pending"
+        "1684dc6"
       ],
       "deliverables": [
         "backend/routes/agenda_config.py (bootstrap, generar-slots dry-run/crear, bloquear-slots lógico)",
@@ -701,9 +701,17 @@
         "local_reserva_agenda_opciones": "PASS_200_TOTAL_8_GROUPED",
         "local_agenda_slots_filtered": "PASS_200_TOTAL_63",
         "local_profesionales_media_dto": "PASS_FOTOURL_DESCRIPCION_KEYS",
-        "git_diff_check": "PENDING",
-        "strict_secret_scan": "PENDING",
-        "deploy": "PENDING"
+        "git_diff_check": "PASS",
+        "strict_secret_scan": "PASS",
+        "deploy": "PENDING",
+        "railway_auto_deploy": "PASS_SUCCESS_1684dc6",
+        "surge_deploy_bellezapro": "PASS",
+        "live_health": "PASS_200",
+        "live_agenda_opciones": "PASS_200_TOTAL_8_GROUPED_2_SLOTIDS_MS_2253",
+        "live_agenda_slots_filtered": "PASS_200_TOTAL_63_MS_2989",
+        "live_profesionales_media_dto": "PASS_200_TOTAL_2_FOTOURL_DESCRIPCION",
+        "live_agenda_config_unauth": "401_PASS",
+        "live_surge_routes": "PASS_200_HOME_RESERVA_PORTAL_AGENDA_CONFIG"
       },
       "secrets_free": true,
       "env_files_touched": false,
@@ -711,7 +719,11 @@
       "reservas_table_used": false,
       "schema_changes": false,
       "delete_fisico": false,
-      "notes": "No se crearon tablas ni campos. El configurador usa campos existentes de AGENDA_SLOTS, EMPLEADOS y SUCURSALES. La generación masiva tiene límite por request para evitar timeouts; para anual completo se recomienda operar por tramos o futura automatización background."
+      "notes": "No se crearon tablas ni campos. El configurador usa campos existentes de AGENDA_SLOTS, EMPLEADOS y SUCURSALES. La generación masiva tiene límite por request para evitar timeouts; para anual completo se recomienda operar por tramos o futura automatización background.",
+      "deploy": {
+        "backend_railway": "PASS_SUCCESS_1684dc6_earnest_comfort",
+        "frontend_surge": "PASS_https://bellezapro-demo.surge.sh"
+      }
     }
   },
   "deploys_activos": {

@@ -7,12 +7,13 @@ Backend: Railway `earnest-comfort`
 ## Estado
 
 - Fase: AGENDA_CONFIGURATOR_P10
-- Estado: completada localmente; pendiente commit/deploy final.
+- Estado: completada, commiteada, pusheada y desplegada.
+- Commit principal: `1684dc6 feat(agenda): add slot configurator and conflict guards`.
 
 ## Implementado
 
 - Configurador de agenda en backoffice:
-  - Ruta frontend: `/backoffice/agenda-config`.
+  - Frontend: `/backoffice/agenda-config`.
   - Backend: `/api/backoffice/agenda-config/bootstrap`.
   - Backend: `/api/backoffice/agenda-config/generar-slots`.
   - Backend: `/api/backoffice/agenda-config/bloquear-slots`.
@@ -26,23 +27,26 @@ Backend: Railway `earnest-comfort`
   - cualquier solape por profesional + fecha + rango horario, aunque sea otro slot duplicado.
 - Backoffice Citas y confirmación cliente también revalidan solape por profesional/hora.
 
-## Validación local
+## Validación
 
 - `python3 -m py_compile ...`: PASS.
 - `npm run build`: PASS.
+- `git diff --check`: PASS.
+- Secret scan estricto: PASS.
 - Dry-run configurador sobre día existente: PASS, 0 nuevos, 42 existentes omitidos.
 - Índice de slots existentes 2026-07-10: PASS, 63 keys y 7 grupos por profesional.
-- `/api/reserva/agenda-opciones`: PASS 200, total 8, slot agrupado.
-- `/api/agenda-slots` con rango: PASS 200, total 63.
-- `/api/reserva/profesionales`: PASS, DTO incluye `fotoUrl` y `descripcion`.
 
-## Pendiente antes de cerrar
+## Deploy final
 
-- `git diff --check`.
-- Secret scan estricto.
-- Commit/push.
-- Deploy Railway + Surge.
-- Smoke live.
+- Railway `earnest-comfort`: SUCCESS para `1684dc6`.
+- Surge: PASS `https://bellezapro-demo.surge.sh`.
+- Smoke live:
+  - `/health`: 200.
+  - `/api/reserva/agenda-opciones`: 200, total 8, primer slot 09:00-11:00 con 2 `slotIds`.
+  - `/api/agenda-slots` filtrado por fecha: 200, total 63.
+  - `/api/reserva/profesionales`: 200, total 2, incluye `fotoUrl` y `descripcion`.
+  - `/api/backoffice/agenda-config/bootstrap` sin auth: 401.
+  - Surge `/`, `/reserva`, `/portal`, `/backoffice/agenda-config`: 200.
 
 ## Límites respetados
 
@@ -55,3 +59,8 @@ Backend: Railway `earnest-comfort`
 - Sin crear tablas ni campos.
 - Sin tocar `.env`, `backend/.env`, `frontend/.env` ni `CREDENCIALES.md`.
 - Sin secretos impresos/commiteados.
+
+## Próximo paso recomendado
+
+- QA navegador manual creando turno desde `/reserva` y verificando que el mismo profesional/fecha/hora desaparece de disponibilidad.
+- Si se quiere reprogramación multi-servicio completa, abrir bloque `REPROGRAMACION_MULTISERVICIO_P11`.
