@@ -1,5 +1,11 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
+import {
+  applyPreviewToMarcaData,
+  isLandingPreviewRuntime,
+  readLandingPreviewPayload,
+  subscribeLandingPreviewPayload,
+} from '../utils/landingPreview';
 
 const DEFAULT_BUSINESS = {
   contractVersion: "P0.1",
@@ -389,14 +395,21 @@ export function BrandConfigProvider({ children }) {
   const [config, setConfig] = useState(() => applyDomainVariant(FALLBACK));
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const rawMarcaRef = useRef(null);
   const location = useLocation();
   const API = import.meta.env.VITE_API_BASE_URL || "";
+
+  function buildConfig(data, payload = readLandingPreviewPayload()) {
+    const previewData = isLandingPreviewRuntime() ? applyPreviewToMarcaData(data, payload) : data;
+    return applyDomainVariant(transformMarcaBlanca(previewData));
+  }
 
   async function fetchBrandConfig() {
     const res = await fetch(`${API}/api/marca-blanca`, { cache: "no-store" });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
-    return applyDomainVariant(transformMarcaBlanca(data));
+    rawMarcaRef.current = data;
+    return buildConfig(data);
   }
 
   async function refresh() {
@@ -426,6 +439,17 @@ export function BrandConfigProvider({ children }) {
     }
     fetchAndApply();
     return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    if (!isLandingPreviewRuntime()) return undefined;
+    return subscribeLandingPreviewPayload((payload) => {
+      if (!rawMarcaRef.current) return;
+      const transformed = buildConfig(rawMarcaRef.current, payload);
+      applyCssVariables(transformed);
+      setConfig(transformed);
+      setError(null);
+    });
   }, []);
 
   useEffect(() => {

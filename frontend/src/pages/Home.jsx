@@ -1,14 +1,21 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { formatPublicName, getPublicServiceImage, toPublicSlug } from "../utils/publicDataFilters";
 import SucursalesPublicas from "./SucursalesPublicas";
 import { formatCategoria } from "../utils/displayFormatters";
 import { useBrandConfig } from "../context/BrandConfigContext";
+import {
+  isLandingPreviewRuntime,
+  mergePreviewLandingSections,
+  readLandingPreviewPayload,
+  subscribeLandingPreviewPayload,
+} from "../utils/landingPreview";
 
 const API = import.meta.env.VITE_API_BASE_URL || "";
 
 export default function Home() {
   const { config } = useBrandConfig();
+  const rawLandingSectionsRef = useRef([]);
   const [servicios, setServicios] = useState([]);
   const [productos, setProductos] = useState([]);
   const [landingSections, setLandingSections] = useState([]);
@@ -51,9 +58,21 @@ export default function Home() {
       .then(r => (r.ok ? r.json() : { landing_secciones: [] }))
       .then(d => {
         const raw = Array.isArray(d) ? d : d.landing_secciones || [];
-        setLandingSections(raw.filter((section) => section.REGISTRO_ACTIVO !== false));
+        rawLandingSectionsRef.current = raw;
+        const merged = isLandingPreviewRuntime()
+          ? mergePreviewLandingSections(raw, readLandingPreviewPayload())
+          : raw;
+        setLandingSections(merged.filter((section) => section.REGISTRO_ACTIVO !== false));
       })
       .catch(() => setLandingSections([]));
+  }, []);
+
+  useEffect(() => {
+    if (!isLandingPreviewRuntime()) return undefined;
+    return subscribeLandingPreviewPayload((payload) => {
+      const merged = mergePreviewLandingSections(rawLandingSectionsRef.current, payload);
+      setLandingSections(merged.filter((section) => section.REGISTRO_ACTIVO !== false));
+    });
   }, []);
 
   const formatearMoneda = (v) => {

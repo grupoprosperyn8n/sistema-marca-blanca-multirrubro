@@ -74,6 +74,8 @@ function buildForm(marca = {}) {
       banner_activo: !!textos.banner_activo,
       banner_titulo: textos.banner_titulo || "",
       banner_mensaje: textos.banner_mensaje || "",
+      banner_cta_texto: textos.banner_cta_texto || "",
+      banner_cta_url: textos.banner_cta_url || "",
       contacto_telefono: textos.contacto_telefono || "",
       contacto_whatsapp: textos.contacto_whatsapp || "",
       contacto_email: textos.contacto_email || "",
@@ -499,7 +501,13 @@ export default function Configuracion() {
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 <Field label="CTA primario" value={form.textos_publicos.hero_cta_primario} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "hero_cta_primario", value)} />
                 <Field label="URL CTA primario" value={form.textos_publicos.hero_cta_primario_url} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "hero_cta_primario_url", value)} />
+                <Field label="CTA secundario" value={form.textos_publicos.hero_cta_secundario} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "hero_cta_secundario", value)} />
+                <Field label="URL CTA secundario" value={form.textos_publicos.hero_cta_secundario_url} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "hero_cta_secundario_url", value)} />
+                <Field label="CTA banner" value={form.textos_publicos.banner_cta_texto} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "banner_cta_texto", value)} />
+                <Field label="URL CTA banner" value={form.textos_publicos.banner_cta_url} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "banner_cta_url", value)} />
               </div>
+              <Field label="Título banner" value={form.textos_publicos.banner_titulo} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "banner_titulo", value)} />
+              <TextAreaField label="Mensaje banner" value={form.textos_publicos.banner_mensaje} disabled={!canEdit} rows={2} onChange={(value) => updateNested("textos_publicos", "banner_mensaje", value)} />
             </div>
 
             <div className="space-y-3">
@@ -691,6 +699,8 @@ export default function Configuracion() {
         liveConfig={liveConfig}
         landingRows={landingRows}
         landingDrafts={landingDrafts}
+        configRows={configRows}
+        configDrafts={configDrafts}
       />
 
       <div className="rounded-3xl border border-white/40 bg-white/75 p-5 shadow-sm">
