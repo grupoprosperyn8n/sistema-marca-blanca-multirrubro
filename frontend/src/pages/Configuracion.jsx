@@ -124,20 +124,17 @@ function urlsToAttachments(value) {
     .map((url) => ({ url }));
 }
 
-function attachmentKeepPayload(attachment) {
-  const id = String(attachment?.id || "").trim();
+function attachmentPatchPayload(attachment) {
   const url = String(attachment?.url || attachment?.download_url || "").trim();
-  const filename = String(attachment?.filename || "").trim();
-  if (id) return { id };
-  if (!url) return null;
-  return {
-    url,
-    ...(filename ? { filename } : {}),
-  };
+  return url ? { url } : null;
+}
+
+function hasDraftAttachmentUrls(value) {
+  return urlsToAttachments(value).length > 0;
 }
 
 function mergeAttachmentPayload(existing = [], draftUrls = "", { replace = false } = {}) {
-  const kept = replace ? [] : (Array.isArray(existing) ? existing : []).map(attachmentKeepPayload).filter(Boolean);
+  const kept = replace ? [] : (Array.isArray(existing) ? existing : []).map(attachmentPatchPayload).filter(Boolean);
   const added = urlsToAttachments(draftUrls);
   return [...kept, ...added];
 }
@@ -148,8 +145,12 @@ function buildLandingPayload(draft = {}, currentRow = {}) {
     IMAGENES_CARRUSEL_URLS,
     ...payload
   } = draft;
-  payload.IMAGEN_PRINCIPAL = mergeAttachmentPayload(currentRow.IMAGEN_PRINCIPAL, IMAGEN_PRINCIPAL_URL);
-  payload.IMAGENES_CARRUSEL = mergeAttachmentPayload(currentRow.IMAGENES_CARRUSEL, IMAGENES_CARRUSEL_URLS);
+  if (hasDraftAttachmentUrls(IMAGEN_PRINCIPAL_URL)) {
+    payload.IMAGEN_PRINCIPAL = mergeAttachmentPayload(currentRow.IMAGEN_PRINCIPAL, IMAGEN_PRINCIPAL_URL);
+  }
+  if (hasDraftAttachmentUrls(IMAGENES_CARRUSEL_URLS)) {
+    payload.IMAGENES_CARRUSEL = mergeAttachmentPayload(currentRow.IMAGENES_CARRUSEL, IMAGENES_CARRUSEL_URLS);
+  }
   return payload;
 }
 
@@ -177,6 +178,24 @@ function lastAttachmentUrl(value) {
   if (!Array.isArray(value) || !value.length) return "";
   const item = value[value.length - 1];
   return String(item?.url || item?.download_url || "").trim();
+}
+
+function landingMediaHelperText(claveSeccion) {
+  switch (claveSeccion) {
+    case "HOME_HERO_PRINCIPAL":
+      return "Hero: imagen ideal 1920x1080 o 1600x900; video MP4/WebM 16:9, liviano y sin audio crítico.";
+    case "HOME_SERVICIOS_DESTACADOS":
+      return "Servicios destacados: fotos 1200x900; video corto MP4/WebM, 4:3 o 16:9, para mostrar el resultado.";
+    case "HOME_PRODUCTOS_DESTACADOS":
+      return "Productos destacados: fotos limpias 1200x1200 o 1200x900; video corto MP4/WebM de producto.";
+    case "HOME_SUCURSALES_CONTACTO":
+    case "HOME_CONTACTO_RAPIDO":
+      return "Sucursales/contacto: local, fachada o mapa en 1200x800; video MP4/WebM breve de ubicación.";
+    case "HOME_FOOTER":
+      return "Footer: media opcional; imagen 1600x600 o pieza simple, video MP4/WebM liviano.";
+    default:
+      return "Media de sección: imagen 1200px+; video MP4/WebM liviano. Al subir, queda guardado inmediatamente.";
+  }
 }
 
 function isVideoAttachment(item = {}) {
@@ -305,6 +324,7 @@ function MediaAttachmentManager({
   onDelete,
   multiple = false,
   textarea = false,
+  helperText = "",
 }) {
   const items = attachmentPreviewItems(row?.[field], draftValue);
 
@@ -323,6 +343,7 @@ function MediaAttachmentManager({
         <div>
           <p className="text-sm font-semibold" style={{ color: "var(--brand-text)" }}>{label}</p>
           <p className="text-xs text-slate-500">URL pública o archivo adjunto. Soporta imagen y video.</p>
+          {helperText && <p className="mt-1 text-xs text-sky-700">{helperText}</p>}
         </div>
         <label className={`inline-flex cursor-pointer items-center justify-center rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-bold text-sky-700 ${disabled || uploading ? "pointer-events-none opacity-50" : ""}`}>
           {uploading ? "Subiendo..." : "Subir archivo"}
@@ -823,7 +844,7 @@ export default function Configuracion() {
         const itemUrl = String(item?.url || item?.download_url || "");
         return itemId !== String(attachmentId || "") && itemUrl !== String(attachmentUrl || "");
       })
-      .map(attachmentKeepPayload)
+      .map(attachmentPatchPayload)
       .filter(Boolean);
 
     setMediaUploading((prev) => ({ ...prev, [key]: true }));
@@ -1124,6 +1145,7 @@ export default function Configuracion() {
                       onDraftChange={(value) => updateLandingDraft(row.id, "IMAGEN_PRINCIPAL_URL", value)}
                       onUpload={uploadLandingAttachment}
                       onDelete={deleteLandingAttachment}
+                      helperText={landingMediaHelperText(row.CLAVE_SECCION)}
                     />
                     <MediaAttachmentManager
                       row={row}
@@ -1135,6 +1157,7 @@ export default function Configuracion() {
                       onDraftChange={(value) => updateLandingDraft(row.id, "IMAGENES_CARRUSEL_URLS", value)}
                       onUpload={uploadLandingAttachment}
                       onDelete={deleteLandingAttachment}
+                      helperText={landingMediaHelperText(row.CLAVE_SECCION)}
                       multiple
                       textarea
                     />

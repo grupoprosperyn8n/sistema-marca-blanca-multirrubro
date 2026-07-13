@@ -102,23 +102,12 @@ def _normalize_value(field, value):
         attachments = []
         for item in raw_items:
             if isinstance(item, dict):
-                attachment_id = str(item.get("id") or "").strip()
-                url = str(item.get("url") or "").strip()
-                filename = str(item.get("filename") or "").strip()
+                url = str(item.get("url") or item.get("download_url") or "").strip()
             else:
-                attachment_id = ""
                 url = str(item or "").strip()
-                filename = ""
-            if not url and not attachment_id:
+            if not url:
                 continue
-            attachment = {}
-            if attachment_id:
-                attachment["id"] = attachment_id
-            if url:
-                attachment["url"] = url
-            if filename:
-                attachment["filename"] = filename
-            attachments.append(attachment)
+            attachments.append({"url": url})
         return attachments
     if value is None:
         return None
