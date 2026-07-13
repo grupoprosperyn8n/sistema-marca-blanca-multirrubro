@@ -41,6 +41,7 @@ const FALLBACK = {
   brandText: "#1F1235",
   brandSurface: "#F8F9FF",
   brandTextSecondary: "#6B4A7A",
+  logoUrl: "",
   fontHeading: "Manrope",
   fontBody: "Manrope",
   glassBlur: "16px",
@@ -183,6 +184,31 @@ function isVideoUrl(raw) {
   return /\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(String(raw || ""));
 }
 
+const loadedBrandFonts = new Set();
+
+function loadBrandFont(raw) {
+  if (typeof document === "undefined") return;
+  const family = String(raw || "")
+    .split(",")[0]
+    .replace(/['"]/g, "")
+    .trim();
+  if (!family || loadedBrandFonts.has(family)) return;
+  if (!/^[a-zA-Z0-9\s-]+$/.test(family)) return;
+  const localFonts = new Set(["serif", "sans-serif", "monospace", "system-ui", "inherit", "initial"]);
+  if (localFonts.has(family.toLowerCase())) return;
+  const id = `brand-font-${family.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+  if (document.getElementById(id)) {
+    loadedBrandFonts.add(family);
+    return;
+  }
+  const link = document.createElement("link");
+  link.id = id;
+  link.rel = "stylesheet";
+  link.href = `https://fonts.googleapis.com/css2?family=${family.replace(/\s+/g, "+")}:wght@400;500;600;700;800&display=swap`;
+  document.head.appendChild(link);
+  loadedBrandFonts.add(family);
+}
+
 function getDomainVariant() {
   if (typeof window === "undefined") return null;
   const hostname = window.location.hostname.replace(/^www\./, "");
@@ -221,8 +247,14 @@ function applyCssVariables(config) {
     if (value) root.style.setProperty(varName, value);
     else root.style.removeProperty(varName);
   }
-  if (config.fontHeading) root.style.setProperty("--font-heading", config.fontHeading);
-  if (config.fontBody) root.style.setProperty("--font-body", config.fontBody);
+  if (config.fontHeading) {
+    loadBrandFont(config.fontHeading);
+    root.style.setProperty("--font-heading", config.fontHeading);
+  }
+  if (config.fontBody) {
+    loadBrandFont(config.fontBody);
+    root.style.setProperty("--font-body", config.fontBody);
+  }
   const backgroundUrl = cssUrl(config.business?.backgroundUrl || config.heroImageUrl);
   if (backgroundUrl && config.business?.backgroundType === "IMAGEN" && !isVideoUrl(backgroundUrl)) {
     root.style.setProperty(
@@ -333,6 +365,7 @@ function transformMarcaBlanca(data, base = FALLBACK) {
     brandLegalName: normalizeText(data.nombre_negocio) || normalizeText(data.nombre_sistema) || base.brandLegalName,
     rubro: normalizeText(data.rubro) || base.rubro,
     marcaId: normalizeText(data.marca_id) || base.marcaId,
+    logoUrl: normalizeText(data.logo) || base.logoUrl || "",
     brandPrimary: normalizeHex(colores.primario) || base.brandPrimary,
     brandSecondary: normalizeHex(colores.secundario) || base.brandSecondary,
     brandAccent: normalizeHex(colores.acento) || base.brandAccent,

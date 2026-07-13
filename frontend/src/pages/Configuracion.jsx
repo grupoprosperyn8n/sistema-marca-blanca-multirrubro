@@ -64,6 +64,8 @@ function buildForm(marca = {}) {
       fondo: colores.fondo || "",
       texto: colores.texto || "",
       texto_secundario: colores.texto_secundario || "",
+      tipografia_titulos: colores.tipografia_titulos || "",
+      tipografia_cuerpo: colores.tipografia_cuerpo || "",
     },
     textos_publicos: {
       hero_badge: textos.hero_badge || "",
@@ -98,7 +100,20 @@ function buildForm(marca = {}) {
   };
 }
 
-const inputClass = "mt-1 w-full rounded-xl border border-slate-200 bg-white/80 px-3 py-2 text-sm outline-none focus:border-sky-400";
+const labelClass = "text-xs font-bold uppercase tracking-wide text-slate-600";
+const inputClass = "mt-1 w-full rounded-xl border border-slate-200 bg-white/80 px-3 py-2 text-sm font-medium text-slate-900 outline-none focus:border-sky-400";
+const landingFontOptions = [
+  "Manrope",
+  "Inter",
+  "Poppins",
+  "Montserrat",
+  "Roboto",
+  "Lato",
+  "Open Sans",
+  "Playfair Display",
+  "Merriweather",
+  "Nunito",
+];
 const landingKeys = [
   "HOME_HERO_PRINCIPAL",
   "HOME_SERVICIOS_DESTACADOS",
@@ -245,8 +260,8 @@ function toColorInputValue(value) {
 
 function Field({ label, value, onChange, disabled, type = "text", placeholder = "" }) {
   return (
-    <label className="text-sm font-medium" style={{ color: "var(--brand-text)" }}>
-      {label}
+    <label className={labelClass}>
+      <span>{label}</span>
       <input
         type={type}
         value={value || ""}
@@ -262,8 +277,8 @@ function Field({ label, value, onChange, disabled, type = "text", placeholder = 
 function ColorField({ label, value, onChange, disabled, placeholder = "#7C3AED" }) {
   const normalized = normalizeHexInput(value);
   return (
-    <label className="text-sm font-medium" style={{ color: "var(--brand-text)" }}>
-      {label}
+    <label className={labelClass}>
+      <span>{label}</span>
       <div className={`mt-1 flex items-center gap-2 rounded-xl border border-slate-200 bg-white/80 p-1.5 ${disabled ? "opacity-60" : ""}`}>
         <input
           type="color"
@@ -298,8 +313,8 @@ function ColorField({ label, value, onChange, disabled, placeholder = "#7C3AED" 
 
 function TextAreaField({ label, value, onChange, disabled, placeholder = "", rows = 3 }) {
   return (
-    <label className="text-sm font-medium" style={{ color: "var(--brand-text)" }}>
-      {label}
+    <label className={labelClass}>
+      <span>{label}</span>
       <textarea
         value={value || ""}
         placeholder={placeholder}
@@ -308,6 +323,25 @@ function TextAreaField({ label, value, onChange, disabled, placeholder = "", row
         onChange={(event) => onChange(event.target.value)}
         className={`${inputClass} min-h-20 ${disabled ? "opacity-60" : ""}`}
       />
+    </label>
+  );
+}
+
+function SelectField({ label, value, onChange, disabled, options = [], placeholder = "Seleccionar" }) {
+  return (
+    <label className={labelClass}>
+      <span>{label}</span>
+      <select
+        value={value || ""}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.value)}
+        className={`${inputClass} ${disabled ? "opacity-60" : ""}`}
+      >
+        <option value="">{placeholder}</option>
+        {options.map((option) => (
+          <option key={option} value={option}>{option}</option>
+        ))}
+      </select>
     </label>
   );
 }
@@ -341,7 +375,7 @@ function MediaAttachmentManager({
     <div className="rounded-2xl border border-slate-200 bg-white/70 p-3">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-sm font-semibold" style={{ color: "var(--brand-text)" }}>{label}</p>
+          <p className={labelClass}>{label}</p>
           <p className="text-xs text-slate-500">URL pública o archivo adjunto. Soporta imagen y video.</p>
           {helperText && <p className="mt-1 text-xs text-sky-700">{helperText}</p>}
         </div>
@@ -349,7 +383,7 @@ function MediaAttachmentManager({
           {uploading ? "Subiendo..." : "Subir archivo"}
           <input
             type="file"
-            accept="image/*,video/*"
+            accept="image/*,image/gif,video/*"
             multiple={multiple}
             disabled={disabled || uploading}
             onChange={handleFiles}
@@ -484,7 +518,7 @@ function BackgroundLandingPanel({ form, canEdit, updateNested, uploading, onUplo
               {uploading ? "Subiendo fondo..." : "Subir archivo de fondo"}
               <input
                 type="file"
-                accept="image/*,video/*"
+                accept="image/*,image/gif,video/*"
                 disabled={!canEdit || uploading}
                 onChange={(event) => {
                   const file = event.target.files?.[0];
@@ -834,6 +868,42 @@ export default function Configuracion() {
     setSaveMessage("Archivo de fondo cargado como attachment. Guardá configuración para publicarlo como fondo.");
   }
 
+  async function uploadLogoAttachment(file) {
+    if (!canEdit || !file) return;
+    const key = "media:marca:logo";
+    setMediaUploading((prev) => ({ ...prev, [key]: true }));
+    setSaveMessage("");
+    try {
+      const fileBase64 = await fileToBase64(file);
+      const payload = {
+        filename: file.name,
+        content_type: file.type || "image/gif",
+        file_base64: fileBase64,
+      };
+      const res = await fetch(`${API}/api/backoffice/marca-blanca/logo/upload`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        const updated = data.marca || data;
+        setState((prev) => ({ ...prev, marca: updated }));
+        setForm(buildForm(updated));
+        await refresh?.();
+        setSaveMessage("Logo cargado y publicado desde MARCAS.");
+        return;
+      }
+      const detail = data?.detail?.message || data?.detail || `HTTP ${res.status}`;
+      throw new Error(typeof detail === "string" ? detail : "No se pudo subir el logo.");
+    } catch (error) {
+      setSaveMessage(`Error: ${error.message}`);
+    } finally {
+      setMediaUploading((prev) => ({ ...prev, [key]: false }));
+    }
+  }
+
   async function deleteLandingAttachment(row, field, attachmentId, attachmentUrl) {
     if (!canEdit || !row?.id) return;
     const key = `media:${row.id}:${field}`;
@@ -1115,6 +1185,21 @@ export default function Configuracion() {
                   <Field label="Nombre legal/comercial" value={form.nombre_negocio} disabled={!canEdit} onChange={(value) => updateRoot("nombre_negocio", value)} />
                   <Field label="Rubro" value={form.rubro} disabled={!canEdit} onChange={(value) => updateRoot("rubro", value)} />
                   <Field label="Logo URL" value={form.logo} disabled={!canEdit} onChange={(value) => updateRoot("logo", value)} />
+                  <label className={`inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-bold text-sky-700 ${!canEdit || mediaUploading["media:marca:logo"] ? "pointer-events-none opacity-50" : ""}`}>
+                    <span className="material-symbols-outlined text-base" aria-hidden="true">upload</span>
+                    {mediaUploading["media:marca:logo"] ? "Subiendo logo..." : "Subir logo (PNG/JPG/GIF)"}
+                    <input
+                      type="file"
+                      accept="image/*,image/gif"
+                      disabled={!canEdit || mediaUploading["media:marca:logo"]}
+                      onChange={(event) => {
+                        const file = event.target.files?.[0];
+                        event.target.value = "";
+                        if (file) uploadLogoAttachment(file);
+                      }}
+                      className="hidden"
+                    />
+                  </label>
                 </div>
                 <div className="rounded-3xl border border-slate-200 bg-white/70 p-4">
                   <p className="text-sm font-bold" style={{ color: "var(--brand-text)" }}>Preview de marca</p>
@@ -1142,6 +1227,10 @@ export default function Configuracion() {
                     <ColorField label="Fondo" value={form.colores.fondo} disabled={!canEdit} placeholder="#F8F9FF" onChange={(value) => updateNested("colores", "fondo", value)} />
                     <ColorField label="Texto" value={form.colores.texto} disabled={!canEdit} placeholder="#1F1235" onChange={(value) => updateNested("colores", "texto", value)} />
                     <ColorField label="Texto secundario" value={form.colores.texto_secundario} disabled={!canEdit} placeholder="#64748B" onChange={(value) => updateNested("colores", "texto_secundario", value)} />
+                    <SelectField label="Fuente títulos" value={form.colores.tipografia_titulos} disabled={!canEdit} options={landingFontOptions} onChange={(value) => updateNested("colores", "tipografia_titulos", value)} />
+                    <Field label="Fuente títulos personalizada" value={form.colores.tipografia_titulos} disabled={!canEdit} placeholder="Ej: Playfair Display, serif" onChange={(value) => updateNested("colores", "tipografia_titulos", value)} />
+                    <SelectField label="Fuente cuerpo" value={form.colores.tipografia_cuerpo} disabled={!canEdit} options={landingFontOptions} onChange={(value) => updateNested("colores", "tipografia_cuerpo", value)} />
+                    <Field label="Fuente cuerpo personalizada" value={form.colores.tipografia_cuerpo} disabled={!canEdit} placeholder="Ej: Inter, sans-serif" onChange={(value) => updateNested("colores", "tipografia_cuerpo", value)} />
                   </div>
                   <div className="rounded-3xl border border-slate-200 bg-white/70 p-4">
                     <p className="text-sm font-bold" style={{ color: "var(--brand-text)" }}>Identidad visual</p>

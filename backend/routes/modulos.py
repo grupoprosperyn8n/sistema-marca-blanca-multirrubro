@@ -3,8 +3,13 @@ Rutas FastAPI para MODULOS y MARCA_BLANCA — /api/modulos, /api/marca-blanca
 Lectura pública y edición controlada de MARCAS para administradores.
 """
 import sys
+import base64
+import json
 from pathlib import Path
 from unicodedata import normalize
+from urllib.parse import quote
+from urllib.request import Request, urlopen
+from urllib.error import HTTPError
 from fastapi import APIRouter, Depends, HTTPException, status
 
 _BACKEND = Path(__file__).resolve().parent.parent
@@ -204,6 +209,183 @@ def _offer_mode(uses_products, uses_services):
         return "SOLO_SERVICIOS"
     return "SIN_CATALOGO"
 
+
+
+
+def _attachment_url(value) -> str:
+    if not isinstance(value, list) or not value:
+        return ""
+    item = value[-1] or {}
+    return str(item.get("url") or item.get("download_url") or "").strip()
+
+
+LOGO_ATTACHMENT_FIELD_CANDIDATES = (
+    "LOGO",
+    "LOGO_MARCA",
+    "LOGO_ARCHIVO",
+    "LOGO_IMAGEN",
+    "IMAGEN_LOGO",
+    "ARCHIVO_LOGO",
+    "MARCA_LOGO",
+    "BRAND_LOGO",
+)
+
+
+def _safe_logo_attachment_field(table) -> str | None:
+    attachment_fields = [
+        str(getattr(field, "name", "") or "")
+        for field in getattr(table, "fields", []) or []
+        if str(getattr(field, "type", "") or "") == "multipleAttachments"
+    ]
+    by_clean_name = {_clean_token(name): name for name in attachment_fields}
+    for candidate in LOGO_ATTACHMENT_FIELD_CANDIDATES:
+        if candidate in by_clean_name:
+            return by_clean_name[candidate]
+    for name in attachment_fields:
+        clean = _clean_token(name)
+        if clean.endswith("_LOGO") or clean.startswith("LOGO_"):
+            return name
+    return None
+
+
+def _safe_landing_logo_storage_record(client: AirtableClient) -> dict | None:
+    table = client.get_table("LANDING_SECCIONES")
+    if not table or "IMAGEN_PRINCIPAL" not in set(table.field_names):
+        return None
+
+    available_fields = set(table.field_names)
+    read_fields = [
+        field
+        for field in [
+            "CLAVE_SECCION",
+            "NOMBRE_SECCION",
+            "VISIBLE_EN_FRONTEND_PUBLICO",
+            "REGISTRO_ACTIVO",
+            "IMAGEN_PRINCIPAL",
+        ]
+        if field in available_fields
+    ]
+    records = client.list_records("LANDING_SECCIONES", fields=read_fields or None)
+    candidates = []
+    for record in records:
+        fields = record.get("fields", {})
+        label = _clean_token(f"{fields.get('CLAVE_SECCION', '')} {fields.get('NOMBRE_SECCION', '')}")
+        is_logo_storage = any(token in label for token in ("LOGO", "BRAND_ASSET", "MEDIA_ASSET"))
+        is_public = _to_bool(fields.get("VISIBLE_EN_FRONTEND_PUBLICO"), False)
+        is_active = _to_bool(fields.get("REGISTRO_ACTIVO"), False)
+        if is_logo_storage and not (is_public and is_active):
+            candidates.append((0 if not is_public else 1, 0 if not is_active else 1, record))
+    if not candidates:
+        return None
+    candidates.sort(key=lambda item: item[:2])
+    return candidates[0][2]
+
+
+def _field_type(table, field_name: str) -> str:
+    for field in getattr(table, "fields", []) or []:
+        if getattr(field, "name", "") == field_name:
+            return str(getattr(field, "type", "") or "")
+    return ""
+
+
+def _safe_media_logo_storage_record(client: AirtableClient) -> dict | None:
+    """Find or create a hidden MEDIA_PUBLICA record to store brand assets."""
+    table = client.get_table("MEDIA_PUBLICA")
+    if not table or "ARCHIVO_MEDIA" not in set(table.field_names):
+        return None
+
+    available_fields = set(table.field_names)
+    read_fields = [
+        field
+        for field in [
+            "NOMBRE_MEDIA",
+            "TITULO_PUBLICO",
+            "VISIBLE_EN_FRONTEND_PUBLICO",
+            "ACTIVO",
+            "ARCHIVO_MEDIA",
+        ]
+        if field in available_fields
+    ]
+    try:
+        records = client.list_records("MEDIA_PUBLICA", fields=read_fields or None)
+    except Exception:
+        records = []
+
+    candidates = []
+    for record in records:
+        fields = record.get("fields", {})
+        label = _clean_token(f"{fields.get('NOMBRE_MEDIA', '')} {fields.get('TITULO_PUBLICO', '')}")
+        is_logo_storage = any(token in label for token in ("LOGO", "BRAND_ASSET", "MARCA_ASSET"))
+        is_public = _to_bool(fields.get("VISIBLE_EN_FRONTEND_PUBLICO"), False)
+        is_active = _to_bool(fields.get("ACTIVO"), False)
+        if is_logo_storage and not (is_public and is_active):
+            candidates.append((0 if not is_public else 1, 0 if not is_active else 1, record))
+    if candidates:
+        candidates.sort(key=lambda item: item[:2])
+        return candidates[0][2]
+
+    create_fields = {}
+    if "NOMBRE_MEDIA" in available_fields and _field_type(table, "NOMBRE_MEDIA") in {"singleLineText", "multilineText", "richText"}:
+        create_fields["NOMBRE_MEDIA"] = "LOGO_MARCA_ASSET"
+    if "TITULO_PUBLICO" in available_fields and _field_type(table, "TITULO_PUBLICO") in {"singleLineText", "multilineText", "richText"}:
+        create_fields["TITULO_PUBLICO"] = "Logo marca"
+    can_hide = False
+    if "VISIBLE_EN_FRONTEND_PUBLICO" in available_fields and _field_type(table, "VISIBLE_EN_FRONTEND_PUBLICO") == "checkbox":
+        create_fields["VISIBLE_EN_FRONTEND_PUBLICO"] = False
+        can_hide = True
+    if "ACTIVO" in available_fields and _field_type(table, "ACTIVO") == "checkbox":
+        create_fields["ACTIVO"] = False
+        can_hide = True
+    if not can_hide:
+        return None
+
+    try:
+        return client.create_record("MEDIA_PUBLICA", create_fields)
+    except Exception:
+        return None
+
+
+def _upload_attachment_to_airtable(client: AirtableClient, record_id: str, field_name: str, payload: dict, *, images_only: bool = False) -> dict:
+    filename = str(payload.get("filename") or "archivo").strip()
+    content_type = str(payload.get("content_type") or payload.get("contentType") or "application/octet-stream").strip()
+    file_base64 = str(payload.get("file_base64") or payload.get("file") or "").strip()
+    if not file_base64:
+        raise HTTPException(status_code=400, detail="Archivo base64 requerido.")
+    if "," in file_base64 and file_base64.lower().startswith("data:"):
+        file_base64 = file_base64.split(",", 1)[1]
+    try:
+        raw = base64.b64decode(file_base64, validate=True)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Archivo base64 inválido.")
+    if len(raw) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="El upload directo a Airtable soporta hasta 5 MB.")
+    if images_only and not content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="Solo se aceptan imágenes para el logo.")
+
+    upload_url = (
+        f"https://content.airtable.com/v0/{quote(client.config.base_id)}/"
+        f"{quote(record_id, safe='')}/{quote(field_name, safe='')}/uploadAttachment"
+    )
+    body = json.dumps({
+        "contentType": content_type,
+        "file": file_base64,
+        "filename": filename,
+    }).encode("utf-8")
+    req = Request(
+        upload_url,
+        data=body,
+        headers={
+            "Authorization": f"Bearer {client.config.api_token}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with urlopen(req, timeout=45) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+    except HTTPError as e:
+        detail = e.read().decode("utf-8", errors="replace")[:500]
+        raise HTTPException(status_code=e.code, detail=f"Airtable uploadAttachment error: {detail}")
 
 def _business_config_from_marca(marca_fields, modulos_activos):
     """
@@ -453,6 +635,70 @@ async def datos_marca_blanca():
             result["modulos_activos"],
         )
         return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+
+
+
+
+@router.post("/backoffice/marca-blanca/logo/upload")
+async def subir_logo_marca_blanca(payload: dict, user: dict = Depends(get_current_user)):
+    """Sube logo a un attachment seguro de MARCAS y copia su URL a LOGO_URL."""
+    _require_config_editor(user)
+    if not isinstance(payload, dict):
+        raise HTTPException(status_code=400, detail="Payload inválido.")
+
+    try:
+        client = AirtableClient()
+        table = client.get_table("MARCAS")
+        if not table:
+            raise HTTPException(status_code=404, detail="Tabla MARCAS no encontrada.")
+        available_fields = set(table.field_names)
+        if "LOGO_URL" not in available_fields:
+            raise HTTPException(status_code=404, detail="MARCAS no tiene LOGO_URL.")
+        marca_records = client.list_records("MARCAS", max_records=1)
+        if not marca_records:
+            raise HTTPException(status_code=404, detail="MARCAS no tiene registros.")
+        record_id = marca_records[0].get("id")
+
+        attachment_field = _safe_logo_attachment_field(table)
+        storage_table = "MARCAS"
+        storage_record_id = record_id
+        if not attachment_field:
+            media_storage = _safe_media_logo_storage_record(client)
+            landing_storage = None if media_storage else _safe_landing_logo_storage_record(client)
+            if media_storage:
+                storage_table = "MEDIA_PUBLICA"
+                storage_record_id = media_storage.get("id")
+                attachment_field = "ARCHIVO_MEDIA"
+            elif landing_storage:
+                storage_table = "LANDING_SECCIONES"
+                storage_record_id = landing_storage.get("id")
+                attachment_field = "IMAGEN_PRINCIPAL"
+            else:
+                raise HTTPException(
+                    status_code=404,
+                    detail="No hay attachment seguro en MARCAS, MEDIA_PUBLICA ni LANDING_SECCIONES para almacenar el logo sin afectar secciones públicas.",
+                )
+
+        upload_result = _upload_attachment_to_airtable(client, storage_record_id, attachment_field, payload, images_only=True)
+        uploaded_record = client.get_record(storage_table, storage_record_id)
+        logo_url = _attachment_url(uploaded_record.get("fields", {}).get(attachment_field))
+        if not logo_url:
+            raise HTTPException(status_code=502, detail="Airtable no devolvió URL de logo.")
+        client.patch_record("MARCAS", record_id, {"LOGO_URL": logo_url})
+        updated = await datos_marca_blanca()
+        updated["updated_fields"] = ["LOGO_URL", attachment_field]
+        return {
+            "ok": True,
+            "upload": upload_result,
+            "logo_url": logo_url,
+            "attachment_field": attachment_field,
+            "storage_table": storage_table,
+            "marca": updated,
+        }
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 

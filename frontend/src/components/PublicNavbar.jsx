@@ -16,6 +16,9 @@ export default function PublicNavbar() {
     <header className="sticky top-0 z-50 border-b border-white/10" style={{ background: 'var(--glass-surface, rgba(248,249,255,0.85))', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}>
       <div className="max-w-7xl mx-auto px-4 h-14 sm:h-16 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2 no-underline shrink-0 min-w-0">
+          {config.logoUrl && (
+            <img src={config.logoUrl} alt={`${config.brandName} logo`} className="h-9 w-9 rounded-xl object-contain sm:h-10 sm:w-10" />
+          )}
           <span className="text-lg sm:text-xl font-extrabold tracking-tight" style={{ fontFamily: 'var(--font-heading, Manrope)', color: 'var(--brand-text)' }}>
             {config.brandName}
           </span>

@@ -21,7 +21,12 @@ export default function PublicFooter() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12">
         <div className={`grid grid-cols-1 ${hasContact ? 'md:grid-cols-4' : 'md:grid-cols-3'} gap-8`}>
           <div>
-            <h3 className="font-bold text-lg mb-3" style={{ fontFamily: 'var(--font-heading, Manrope)', color: 'var(--brand-text)' }}>{config.brandName}</h3>
+            <div className="mb-3 flex items-center gap-3">
+              {config.logoUrl && (
+                <img src={config.logoUrl} alt={`${config.brandName} logo`} className="h-10 w-10 rounded-xl object-contain" />
+              )}
+              <h3 className="font-bold text-lg" style={{ fontFamily: 'var(--font-heading, Manrope)', color: 'var(--brand-text)' }}>{config.brandName}</h3>
+            </div>
             <p className="text-sm opacity-60" style={{ color: 'var(--brand-text)' }}>
               {config.seoDescription || "Sistema marca blanca para publicar catálogo, turnos y portales según el rubro configurado."}
             </p>
