@@ -20,6 +20,17 @@ function normalizeHexStyle(value) {
   return "";
 }
 
+
+function visualOrderValue(value, fallback = 999) {
+  if (value === null || value === undefined || String(value).trim() === "") return fallback;
+  const numberValue = Number(value);
+  return Number.isFinite(numberValue) ? numberValue : fallback;
+}
+
+function sortLandingSections(rows = []) {
+  return [...rows].sort((a, b) => visualOrderValue(a?.ORDEN_VISUAL) - visualOrderValue(b?.ORDEN_VISUAL) || String(a?.CLAVE_SECCION || "").localeCompare(String(b?.CLAVE_SECCION || "")));
+}
+
 function sectionTextStyle(section, fallback = "var(--brand-text)") {
   return { color: normalizeHexStyle(section?.COLOR_TEXTO_HEX) || fallback };
 }
@@ -154,7 +165,7 @@ export default function Home() {
         const merged = isLandingPreviewRuntime()
           ? mergePreviewLandingSections(raw, readLandingPreviewPayload())
           : raw;
-        setLandingSections(merged.filter((section) => section.REGISTRO_ACTIVO !== false));
+        setLandingSections(sortLandingSections(merged.filter((section) => section.REGISTRO_ACTIVO !== false)));
       })
       .catch(() => setLandingSections([]));
   }, []);
@@ -163,7 +174,7 @@ export default function Home() {
     if (!isLandingPreviewRuntime()) return undefined;
     return subscribeLandingPreviewPayload((payload) => {
       const merged = mergePreviewLandingSections(rawLandingSectionsRef.current, payload);
-      setLandingSections(merged.filter((section) => section.REGISTRO_ACTIVO !== false));
+      setLandingSections(sortLandingSections(merged.filter((section) => section.REGISTRO_ACTIVO !== false)));
     });
   }, []);
 
@@ -206,6 +217,14 @@ export default function Home() {
     : `Ver ${String(business.catalogLabel || "catálogo").toLowerCase()}`;
   const finalCtaUrl = business.usesAppointments ? "/reserva" : primaryActionUrl;
   const finalCtaText = business.usesAppointments ? "Reservar turno" : primaryActionText;
+  const sectionOrder = (keys, fallback = 500) => {
+    const keyList = Array.isArray(keys) ? keys : [keys];
+    const values = keyList
+      .map((key) => getSection(key))
+      .filter(Boolean)
+      .map((section) => visualOrderValue(section.ORDEN_VISUAL, fallback));
+    return values.length ? Math.min(...values) : fallback;
+  };
   const heroSecondaryUrl = config.heroCtaSecondaryUrl || "/catalogo";
   const showSecondaryAction = Boolean(config.heroCtaSecondary) &&
     (business.usesAppointments !== false || !heroSecondaryUrl.startsWith("/reserva"));
@@ -302,9 +321,10 @@ export default function Home() {
         </div>
       </section>
 
+      <div className="relative z-10 flex flex-col">
       {/* Servicios destacados */}
       {showServices && (
-        <section className="relative z-10 mx-auto my-8 max-w-7xl overflow-hidden px-4 py-12 sm:my-10 sm:px-8 sm:py-16" style={sectionBoxStyle(servicesSection, { force: true })}>
+        <section className="relative mx-auto my-8 max-w-7xl overflow-hidden px-4 py-12 sm:my-10 sm:px-8 sm:py-16" style={{ ...sectionBoxStyle(servicesSection, { force: true }), order: sectionOrder("HOME_SERVICIOS_DESTACADOS", 110) }}>
           {renderSectionBackgroundVideo(servicesSection)}
           <div className="relative z-10">
           <div className="text-center mb-12">
@@ -393,7 +413,7 @@ export default function Home() {
 
       {/* Productos destacados */}
       {showProducts && (
-        <section className="relative z-10 mx-auto my-8 max-w-7xl overflow-hidden px-4 py-12 sm:my-10 sm:px-8 sm:py-16" style={sectionBoxStyle(productsSection, { force: true })}>
+        <section className="relative mx-auto my-8 max-w-7xl overflow-hidden px-4 py-12 sm:my-10 sm:px-8 sm:py-16" style={{ ...sectionBoxStyle(productsSection, { force: true }), order: sectionOrder("HOME_PRODUCTOS_DESTACADOS", 120) }}>
           {renderSectionBackgroundVideo(productsSection)}
           <div className="relative z-10">
           <div className="text-center mb-12">
@@ -474,7 +494,7 @@ export default function Home() {
 
       {/* ¿Cómo funciona? */}
       {sec.mostrar_como_funciona !== false && sectionVisible("HOME_BLOQUE_RESERVAS") && (
-        <section className="relative z-10 mx-auto my-8 max-w-7xl px-4 sm:my-10 sm:px-8">
+        <section className="relative mx-auto my-8 max-w-7xl px-4 sm:my-10 sm:px-8" style={{ order: sectionOrder(["HOME_BLOQUE_RESERVAS", "HOME_AGENDA_PUBLICA"], 130) }}>
           <div className="glass-panel relative overflow-hidden p-10 sm:p-16 rounded-3xl" style={sectionBoxStyle(howSection, { force: true })}>
             {renderSectionBackgroundVideo(howSection)}
             <div className="relative z-10">
@@ -503,7 +523,7 @@ export default function Home() {
 
       {/* Contacto + CTA final */}
       {(showVisitCard || business.usesAppointments || business.usesProducts || business.usesServices) && (
-        <section className="relative z-10 mx-auto my-8 max-w-7xl px-4 pb-8 sm:my-10 sm:px-8 sm:pb-12">
+        <section className="relative mx-auto my-8 max-w-7xl px-4 pb-8 sm:my-10 sm:px-8 sm:pb-12" style={{ order: sectionOrder(["HOME_SUCURSALES_CONTACTO", "HOME_CONTACTO_RAPIDO", "HOME_FOOTER", "HOME_PORTAL_CLIENTES"], 140) }}>
           <div className={`grid gap-8 ${showVisitCard ? "lg:grid-cols-2" : "lg:grid-cols-1"}`}>
             {showVisitCard && (
               <div className="glass-panel relative overflow-hidden p-8 sm:p-12 rounded-3xl" style={sectionBoxStyle(contactSection, { force: true })}>
@@ -552,7 +572,8 @@ export default function Home() {
         </section>
       )}
 
-      {showBranches && <SucursalesPublicas />}
+      {showBranches && <div style={{ order: sectionOrder("HOME_SUCURSALES_CONTACTO", 150) }}><SucursalesPublicas /></div>}
+      </div>
     </div>
   );
 }

@@ -124,11 +124,31 @@ const landingKeys = [
   "HOME_PORTAL_CLIENTES",
   "HOME_FOOTER",
 ];
+const orderableLandingKeys = new Set([
+  "HOME_SERVICIOS_DESTACADOS",
+  "HOME_PRODUCTOS_DESTACADOS",
+  "HOME_BLOQUE_RESERVAS",
+  "HOME_SUCURSALES_CONTACTO",
+]);
 const configCategories = new Set(["BRANDING", "CTA", "CONTACTO", "SEO", "COLORES", "MODULO_VISIBLE", "LANDING", "GENERAL"]);
 const configScopes = new Set(["LANDING_PUBLICA", "GLOBAL", "CONTACTO", "SEO", "PUBLICO", "PUBLICA"]);
 
+function visualOrderValue(value, fallback = 999) {
+  if (value === null || value === undefined || String(value).trim() === "") return fallback;
+  const numberValue = Number(value);
+  return Number.isFinite(numberValue) ? numberValue : fallback;
+}
+
 function sortByOrder(a, b) {
-  return (a.ORDEN_VISUAL ?? 999) - (b.ORDEN_VISUAL ?? 999) || String(a.CLAVE_SECCION || a.CLAVE_CONFIGURACION || "").localeCompare(String(b.CLAVE_SECCION || b.CLAVE_CONFIGURACION || ""));
+  return visualOrderValue(a.ORDEN_VISUAL) - visualOrderValue(b.ORDEN_VISUAL) || String(a.CLAVE_SECCION || a.CLAVE_CONFIGURACION || "").localeCompare(String(b.CLAVE_SECCION || b.CLAVE_CONFIGURACION || ""));
+}
+
+function isFixedHeroSection(row = {}) {
+  return row.CLAVE_SECCION === "HOME_HERO_PRINCIPAL";
+}
+
+function isOrderableLandingSection(row = {}) {
+  return orderableLandingKeys.has(row.CLAVE_SECCION);
 }
 
 function urlsToAttachments(value) {
@@ -751,6 +771,36 @@ export default function Configuracion() {
     }));
   }
 
+  function normalizeLandingOrder(rows, startIndex = 1) {
+    return rows.map((row, index) => ({
+      row,
+      order: (index + startIndex) * 10,
+    }));
+  }
+
+  function moveLandingRow(rowId, direction) {
+    if (!fieldEditable("LANDING_SECCIONES", "ORDEN_VISUAL")) return;
+    const movableRows = landingRows.filter(isOrderableLandingSection);
+    const currentIndex = movableRows.findIndex((row) => row.id === rowId);
+    const nextIndex = currentIndex + direction;
+    if (currentIndex < 0 || nextIndex < 0 || nextIndex >= movableRows.length) return;
+
+    const reordered = [...movableRows];
+    const [moved] = reordered.splice(currentIndex, 1);
+    reordered.splice(nextIndex, 0, moved);
+
+    setLandingDrafts((prev) => {
+      const next = { ...prev };
+      normalizeLandingOrder(reordered, 2).forEach(({ row, order }) => {
+        next[row.id] = {
+          ...(next[row.id] || buildLandingDraft(row)),
+          ORDEN_VISUAL: order,
+        };
+      });
+      return next;
+    });
+  }
+
   function fieldEditable(table, field) {
     return canEdit && canEditField(access, table, field);
   }
@@ -792,11 +842,13 @@ export default function Configuracion() {
     setRowSaving((prev) => ({ ...prev, [key]: true }));
     setRowMessages((prev) => ({ ...prev, [key]: "" }));
     try {
+      const payload = buildLandingPayload(landingDrafts[row.id] || buildLandingDraft(row), row);
+      delete payload.ORDEN_VISUAL;
       const res = await fetch(`${API}/api/backoffice/landing-secciones/${row.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify(buildLandingPayload(landingDrafts[row.id] || buildLandingDraft(row), row)),
+        body: JSON.stringify(payload),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -811,6 +863,59 @@ export default function Configuracion() {
       setRowMessages((prev) => ({ ...prev, [key]: "Guardado" }));
     } catch (error) {
       setRowMessages((prev) => ({ ...prev, [key]: `Error: ${error.message}` }));
+    } finally {
+      setRowSaving((prev) => ({ ...prev, [key]: false }));
+    }
+  }
+
+  async function patchLandingOrder() {
+    if (!canEdit || !fieldEditable("LANDING_SECCIONES", "ORDEN_VISUAL")) return;
+    const key = "landing:order";
+    const changedRows = landingRows.filter(isOrderableLandingSection).filter((row) => {
+      const draft = landingDrafts[row.id] || buildLandingDraft(row);
+      return String(draft.ORDEN_VISUAL ?? "") !== String(row.ORDEN_VISUAL ?? "");
+    });
+    if (!changedRows.length) {
+      setSaveMessage("El orden no tiene cambios pendientes.");
+      return;
+    }
+
+    setRowSaving((prev) => ({ ...prev, [key]: true }));
+    setSaveMessage("");
+    try {
+      const updatedRows = [];
+      for (const row of changedRows) {
+        const draft = landingDrafts[row.id] || buildLandingDraft(row);
+        const res = await fetch(`${API}/api/backoffice/landing-secciones/${row.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ ORDEN_VISUAL: visualOrderValue(draft.ORDEN_VISUAL, row.ORDEN_VISUAL ?? 999) }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          const detail = data?.detail?.message || data?.detail || `HTTP ${res.status}`;
+          throw new Error(typeof detail === "string" ? detail : "No se pudo guardar el orden.");
+        }
+        updatedRows.push(data);
+      }
+      setState((prev) => ({
+        ...prev,
+        landing: prev.landing.map((item) => {
+          const updated = updatedRows.find((row) => row.id === item.id);
+          return updated ? { ...item, ...updated } : item;
+        }),
+      }));
+      setLandingDrafts((prev) => {
+        const next = { ...prev };
+        updatedRows.forEach((row) => {
+          next[row.id] = buildLandingDraft(row);
+        });
+        return next;
+      });
+      setSaveMessage(`Orden guardado. Secciones actualizadas: ${updatedRows.length}`);
+    } catch (error) {
+      setSaveMessage(`Error: ${error.message}`);
     } finally {
       setRowSaving((prev) => ({ ...prev, [key]: false }));
     }
@@ -976,7 +1081,16 @@ export default function Configuracion() {
 
   const landingRows = [...state.landing]
     .filter((row) => landingKeys.includes(row.CLAVE_SECCION))
-    .sort(sortByOrder);
+    .sort((a, b) => {
+      if (isFixedHeroSection(a) !== isFixedHeroSection(b)) return isFixedHeroSection(a) ? -1 : 1;
+      const draftA = landingDrafts[a.id] || buildLandingDraft(a);
+      const draftB = landingDrafts[b.id] || buildLandingDraft(b);
+      return visualOrderValue(draftA.ORDEN_VISUAL) - visualOrderValue(draftB.ORDEN_VISUAL) || String(a.CLAVE_SECCION || "").localeCompare(String(b.CLAVE_SECCION || ""));
+    });
+  const orderHasDraftChanges = landingRows.filter(isOrderableLandingSection).some((row) => {
+    const draft = landingDrafts[row.id] || buildLandingDraft(row);
+    return String(draft.ORDEN_VISUAL ?? "") !== String(row.ORDEN_VISUAL ?? "");
+  });
   const backgroundMediaRow = landingRows.find((row) => row.CLAVE_SECCION === "HOME_HERO_PRINCIPAL") || landingRows[0];
   const backgroundMediaKey = backgroundMediaRow ? `media:${backgroundMediaRow.id}:IMAGEN_PRINCIPAL` : "media:background:hero";
   const configRows = [...state.configuracion]
@@ -1012,6 +1126,11 @@ export default function Configuracion() {
     const draft = landingDrafts[row.id] || buildLandingDraft(row);
     const key = `landing:${row.id}`;
     const disabled = !canEdit || !!rowSaving[key];
+    const fixedHero = isFixedHeroSection(row);
+    const orderableSection = isOrderableLandingSection(row);
+    const movableRows = landingRows.filter(isOrderableLandingSection);
+    const movableIndex = movableRows.findIndex((item) => item.id === row.id);
+    const movableTotal = movableRows.length;
     return (
       <section key={row.id} className="rounded-2xl border border-slate-200 bg-white/70 p-4">
         <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
@@ -1025,6 +1144,32 @@ export default function Configuracion() {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Badge active={draft.VISIBLE_EN_FRONTEND_PUBLICO}>Pública</Badge>
+            {fixedHero && <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">Hero fijo</span>}
+            {!fixedHero && !orderableSection && <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">Agrupada</span>}
+            {!mediaOnly && (
+              <div className="inline-flex overflow-hidden rounded-xl border border-slate-200 bg-white" aria-label="Reordenar sección">
+                <button
+                  type="button"
+                  disabled={disabled || !orderableSection || movableIndex <= 0 || !fieldEditable("LANDING_SECCIONES", "ORDEN_VISUAL")}
+                  onClick={() => moveLandingRow(row.id, -1)}
+                  className="inline-flex items-center gap-1 px-3 py-2.5 text-sm font-bold text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
+                  title="Subir sección"
+                >
+                  <span className="material-symbols-outlined text-base" aria-hidden="true">keyboard_arrow_up</span>
+                  Subir
+                </button>
+                <button
+                  type="button"
+                  disabled={disabled || !orderableSection || movableIndex >= movableTotal - 1 || !fieldEditable("LANDING_SECCIONES", "ORDEN_VISUAL")}
+                  onClick={() => moveLandingRow(row.id, 1)}
+                  className="inline-flex items-center gap-1 border-l border-slate-200 px-3 py-2.5 text-sm font-bold text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
+                  title="Bajar sección"
+                >
+                  <span className="material-symbols-outlined text-base" aria-hidden="true">keyboard_arrow_down</span>
+                  Bajar
+                </button>
+              </div>
+            )}
             <button
               type="button"
               onClick={() => setPreviewOpen(true)}
@@ -1055,7 +1200,7 @@ export default function Configuracion() {
           <>
             <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
               <Field label="Nombre interno visible" value={draft.NOMBRE_SECCION} disabled={disabled || !fieldEditable("LANDING_SECCIONES", "NOMBRE_SECCION")} onChange={(value) => updateLandingDraft(row.id, "NOMBRE_SECCION", value)} />
-              <Field label="Orden" type="number" value={draft.ORDEN_VISUAL} disabled={disabled || !fieldEditable("LANDING_SECCIONES", "ORDEN_VISUAL")} onChange={(value) => updateLandingDraft(row.id, "ORDEN_VISUAL", value)} />
+              <Field label="Orden visual" type="number" value={draft.ORDEN_VISUAL} disabled={disabled || !orderableSection || !fieldEditable("LANDING_SECCIONES", "ORDEN_VISUAL")} onChange={(value) => updateLandingDraft(row.id, "ORDEN_VISUAL", value)} />
               <Field label="Título público" value={draft.TITULO_PUBLICO} disabled={disabled || !fieldEditable("LANDING_SECCIONES", "TITULO_PUBLICO")} onChange={(value) => updateLandingDraft(row.id, "TITULO_PUBLICO", value)} />
               <Field label="Subtítulo público" value={draft.SUBTITULO_PUBLICO} disabled={disabled || !fieldEditable("LANDING_SECCIONES", "SUBTITULO_PUBLICO")} onChange={(value) => updateLandingDraft(row.id, "SUBTITULO_PUBLICO", value)} />
               <TextAreaField label="Contenido público" value={draft.CONTENIDO_PUBLICO} disabled={disabled || !fieldEditable("LANDING_SECCIONES", "CONTENIDO_PUBLICO")} onChange={(value) => updateLandingDraft(row.id, "CONTENIDO_PUBLICO", value)} />
@@ -1300,13 +1445,29 @@ export default function Configuracion() {
 
           {activeTab === "secciones" && (
             <div className="rounded-3xl border border-white/40 bg-white/75 p-5 shadow-sm">
-              <div className="mb-5 flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+              <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                 <div>
                   <h3 className="text-lg font-bold" style={{ color: "var(--brand-text)" }}>Secciones de landing</h3>
-                  <p className="text-sm opacity-60" style={{ color: "var(--brand-text)" }}>Edita LANDING_SECCIONES por módulo, con media individual y guardado por sección.</p>
+                  <p className="text-sm opacity-60" style={{ color: "var(--brand-text)" }}>Edita LANDING_SECCIONES por módulo. Usá Subir/Bajar para bloques públicos reales; las secciones agrupadas mantienen orden interno fijo.</p>
                 </div>
-                <Badge active={landingRows.length > 0}>{landingRows.length} secciones mapeadas</Badge>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge active={landingRows.length > 0}>{landingRows.length} secciones mapeadas</Badge>
+                  <button
+                    type="button"
+                    disabled={!canEdit || !orderHasDraftChanges || !!rowSaving["landing:order"] || !fieldEditable("LANDING_SECCIONES", "ORDEN_VISUAL")}
+                    onClick={patchLandingOrder}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-2 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <span className="material-symbols-outlined text-base" aria-hidden="true">swap_vert</span>
+                    {rowSaving["landing:order"] ? "Guardando orden..." : "Guardar orden"}
+                  </button>
+                </div>
               </div>
+              {orderHasDraftChanges && (
+                <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-800">
+                  Orden en borrador: previsualizá antes de guardar para confirmar el recorrido público.
+                </div>
+              )}
               {landingRows.length === 0 ? <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">No hay secciones LANDING_SECCIONES compatibles para editar.</div> : <div className="space-y-4">{landingRows.map((row) => renderSectionEditor(row))}</div>}
             </div>
           )}
