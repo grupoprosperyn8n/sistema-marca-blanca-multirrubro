@@ -116,6 +116,143 @@ function renderSectionBackgroundVideo(section) {
   );
 }
 
+const FIXED_LANDING_KEYS = new Set([
+  "HOME_HERO_PRINCIPAL",
+  "HOME_SERVICIOS_DESTACADOS",
+  "HOME_PRODUCTOS_DESTACADOS",
+  "HOME_BLOQUE_RESERVAS",
+  "HOME_AGENDA_PUBLICA",
+  "HOME_SUCURSALES_CONTACTO",
+  "HOME_CONTACTO_RAPIDO",
+  "HOME_FOOTER",
+  "HOME_PORTAL_CLIENTES",
+]);
+
+function splitContentRows(value = "") {
+  return String(value || "")
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const [title, ...rest] = line.split("|");
+      return { title: (title || "").trim(), text: rest.join("|").trim() };
+    });
+}
+
+function sectionDeviceClass(section = {}) {
+  return [
+    section.VISIBLE_MOBILE === false ? "max-sm:hidden" : "",
+    section.VISIBLE_TABLET === false ? "sm:max-lg:hidden" : "",
+    section.VISIBLE_DESKTOP === false ? "lg:hidden" : "",
+  ].filter(Boolean).join(" ");
+}
+
+function safePublicUrl(value) {
+  const cleaned = String(value || "").trim();
+  if (!cleaned) return "";
+  const lowered = cleaned.toLowerCase();
+  if (cleaned.startsWith("/") && !cleaned.startsWith("//")) return cleaned;
+  if (lowered.startsWith("https://") || lowered.startsWith("http://")) return cleaned;
+  return "";
+}
+
+function CtaLink({ to, children, className = "" }) {
+  const safeTo = safePublicUrl(to);
+  if (!safeTo) return null;
+  const isExternal = /^https?:\/\//i.test(safeTo);
+  const shared = `btn-primary inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3 text-sm font-bold ${className}`;
+  if (isExternal) {
+    return <a href={safeTo} className={shared} target="_blank" rel="noreferrer">{children}</a>;
+  }
+  return <Link to={safeTo} className={shared}>{children}</Link>;
+}
+
+function GenericLandingSection({ section }) {
+  if (!section || section.VISIBLE_EN_FRONTEND_PUBLICO === false || section.REGISTRO_ACTIVO === false) return null;
+  const visual = String(section.COMPONENTE_VISUAL || "").toUpperCase();
+  const type = String(section.TIPO_SECCION || "").toUpperCase();
+  const rows = splitContentRows(section.CONTENIDO_PUBLICO);
+  const media = sectionMedia(section);
+  const isFaq = visual === "FAQ" || type === "FAQ";
+  const isTestimonials = visual === "TESTIMONIOS" || type === "TESTIMONIOS";
+  const isGallery = visual.includes("GALERIA") || type === "GALERIA";
+  const isBento = visual === "BENTO_GRID" || visual === "CARD_GRID";
+  const isCta = visual.includes("CTA") || type === "CTA" || type === "PROMOCIONES";
+
+  return (
+    <section
+      className={`relative mx-auto my-8 max-w-7xl overflow-hidden px-4 py-12 sm:my-10 sm:px-8 sm:py-16 ${sectionDeviceClass(section)}`}
+      style={{ ...sectionBoxStyle(section, { force: true }), order: visualOrderValue(section.ORDEN_VISUAL, 500) }}
+    >
+      {renderSectionBackgroundVideo(section)}
+      <div className="relative z-10">
+        <div className={`${isCta ? "mx-auto max-w-3xl text-center" : "mb-10 text-center"}`}>
+          {section.TITULO_PUBLICO && <h2 className="headline-lg mb-3" style={sectionTextStyle(section)}>{section.TITULO_PUBLICO}</h2>}
+          {section.SUBTITULO_PUBLICO && <p className="mx-auto max-w-2xl text-base" style={sectionTextStyle(section, "var(--brand-text-secondary)")}>{section.SUBTITULO_PUBLICO}</p>}
+          {isCta && section.CONTENIDO_PUBLICO && <p className="mx-auto mt-4 max-w-2xl text-sm leading-7" style={sectionTextStyle(section, "var(--brand-text-secondary)")}>{section.CONTENIDO_PUBLICO}</p>}
+          {isCta && section.URL_BOTON_CTA && (
+            <div className="mt-6">
+              <CtaLink to={section.URL_BOTON_CTA}>{section.TEXTO_BOTON_CTA || "Ver más"}<span className="material-symbols-outlined text-base">arrow_forward</span></CtaLink>
+            </div>
+          )}
+        </div>
+
+        {isGallery && media.length > 0 && (
+          <MediaCarousel items={media} alt={section.TITULO_PUBLICO || section.NOMBRE_SECCION} mediaClassName="aspect-[16/9]" imageClassName="h-full w-full object-cover" fallbackIcon="photo_library" />
+        )}
+        {isGallery && media.length === 0 && section.CONTENIDO_PUBLICO && (
+          <p className="mx-auto max-w-3xl text-center text-sm leading-7" style={sectionTextStyle(section, "var(--brand-text-secondary)")}>{section.CONTENIDO_PUBLICO}</p>
+        )}
+
+        {isFaq && rows.length > 0 && (
+          <div className="mx-auto grid max-w-4xl grid-cols-1 gap-3">
+            {rows.map((item, index) => (
+              <details key={`${item.title}-${index}`} className="rounded-2xl bg-white/70 p-5 text-left shadow-sm">
+                <summary className="cursor-pointer font-bold" style={sectionTextStyle(section)}>{item.title}</summary>
+                {item.text && <p className="mt-3 text-sm leading-6" style={sectionTextStyle(section, "var(--brand-text-secondary)")}>{item.text}</p>}
+              </details>
+            ))}
+          </div>
+        )}
+
+        {isTestimonials && rows.length > 0 && (
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            {rows.map((item, index) => (
+              <article key={`${item.title}-${index}`} className="glass-card p-6">
+                <span className="material-symbols-outlined mb-3 block" style={{ color: "var(--brand-primary)" }}>format_quote</span>
+                <p className="text-sm leading-6" style={sectionTextStyle(section, "var(--brand-text-secondary)")}>{item.text || item.title}</p>
+                {item.text && <h3 className="mt-4 font-bold" style={sectionTextStyle(section)}>{item.title}</h3>}
+              </article>
+            ))}
+          </div>
+        )}
+
+        {!isCta && !isFaq && !isTestimonials && !isGallery && (
+          <>
+            {rows.length > 0 ? (
+              <div className={`grid grid-cols-1 gap-4 ${isBento ? "md:grid-cols-2 lg:grid-cols-3" : "md:grid-cols-3"}`}>
+                {rows.map((item, index) => (
+                  <article key={`${item.title}-${index}`} className="glass-card p-6">
+                    <h3 className="mb-2 font-bold" style={sectionTextStyle(section)}>{item.title}</h3>
+                    {item.text && <p className="text-sm leading-6" style={sectionTextStyle(section, "var(--brand-text-secondary)")}>{item.text}</p>}
+                  </article>
+                ))}
+              </div>
+            ) : section.CONTENIDO_PUBLICO ? (
+              <p className="mx-auto max-w-3xl text-center text-sm leading-7" style={sectionTextStyle(section, "var(--brand-text-secondary)")}>{section.CONTENIDO_PUBLICO}</p>
+            ) : null}
+            {section.URL_BOTON_CTA && (
+              <div className="mt-8 text-center">
+                <CtaLink to={section.URL_BOTON_CTA}>{section.TEXTO_BOTON_CTA || "Ver más"}<span className="material-symbols-outlined text-base">arrow_forward</span></CtaLink>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </section>
+  );
+}
+
 export default function Home() {
   const { config } = useBrandConfig();
   const rawLandingSectionsRef = useRef([]);
@@ -230,6 +367,15 @@ export default function Home() {
     (business.usesAppointments !== false || !heroSecondaryUrl.startsWith("/reserva"));
   const heroMedia = sectionMedia(heroSection);
   const backgroundVideoUrl = isVideoUrl(config.heroImageUrl) ? config.heroImageUrl : "";
+
+  const customLandingSections = landingSections.filter((section) => {
+    const key = String(section.CLAVE_SECCION || "");
+    const scope = String(section.AMBITO_SECCION || "LANDING_PUBLICA").toUpperCase();
+    return scope === "LANDING_PUBLICA"
+      && !FIXED_LANDING_KEYS.has(key)
+      && section.VISIBLE_EN_FRONTEND_PUBLICO !== false
+      && section.REGISTRO_ACTIVO !== false;
+  });
   const howItWorks = business.usesAppointments ? [
     { num: "1", icon: "search", title: "Explorá", desc: "Navegá las opciones disponibles y elegí la que más te sirve." },
     { num: "2", icon: "event_available", title: "Reservá", desc: "Seleccioná sucursal, día y horario si el negocio trabaja con turnos." },
@@ -562,15 +708,17 @@ export default function Home() {
               <p className="text-sm mb-6 max-w-xs mx-auto" style={sectionTextStyle(finalSection, "var(--brand-text-secondary)")}>
                 {finalSection?.SUBTITULO_PUBLICO || (business.usesAppointments ? "Reservá ahora y seguí el estado desde tu portal." : "La experiencia se adapta al canal configurado por cada negocio.")}
               </p>
-              <Link to={finalSection?.URL_BOTON_CTA || finalCtaUrl} className="btn-primary inline-flex items-center gap-2 text-base px-10 py-4 rounded-xl mx-auto">
+              <CtaLink to={finalSection?.URL_BOTON_CTA || finalCtaUrl} className="mx-auto px-10 py-4 text-base">
                 <span className="material-symbols-outlined">{business.usesAppointments ? "calendar_month" : "storefront"}</span>
                 {finalSection?.TEXTO_BOTON_CTA || finalCtaText}
-              </Link>
+              </CtaLink>
               </div>
             </div>
           </div>
         </section>
       )}
+
+      {customLandingSections.map((section) => <GenericLandingSection key={section.id || section.CLAVE_SECCION} section={section} />)}
 
       {showBranches && <div style={{ order: sectionOrder("HOME_SUCURSALES_CONTACTO", 150) }}><SucursalesPublicas /></div>}
       </div>

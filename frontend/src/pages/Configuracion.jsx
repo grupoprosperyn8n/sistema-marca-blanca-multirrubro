@@ -134,6 +134,41 @@ const baseLandingOrder = Object.fromEntries(landingKeys.map((key, index) => [key
 const configCategories = new Set(["BRANDING", "CTA", "CONTACTO", "SEO", "COLORES", "MODULO_VISIBLE", "LANDING", "GENERAL"]);
 const configScopes = new Set(["LANDING_PUBLICA", "GLOBAL", "CONTACTO", "SEO", "PUBLICO", "PUBLICA"]);
 
+const sectionTemplates = [
+  { key: "CTA", label: "CTA", icon: "campaign", tipo: "CTA", componente: "CTA_PROMOCIONAL", title: "Nueva llamada a la acción", content: "Contá qué tiene que hacer la persona ahora y por qué le conviene.", cta: "Quiero avanzar" },
+  { key: "FAQ", label: "FAQ", icon: "quiz", tipo: "FAQ", componente: "FAQ", title: "Preguntas frecuentes", content: "Pregunta 1|Respuesta breve y clara\nPregunta 2|Otra respuesta útil" },
+  { key: "TESTIMONIOS", label: "Testimonios", icon: "reviews", tipo: "TESTIMONIOS", componente: "TESTIMONIOS", title: "Lo que dicen nuestros clientes", content: "Nombre|Comentario o resultado logrado" },
+  { key: "GALERIA", label: "Galería", icon: "photo_library", tipo: "GALERIA", componente: "GALERIA_RESULTADOS", title: "Galería", content: "Sumá URLs de imágenes luego desde Media; este bloque no sube archivos automáticamente." },
+  { key: "PROMOCIONES", label: "Promoción", icon: "local_offer", tipo: "PROMOCIONES", componente: "CTA_PROMOCIONAL", title: "Promoción destacada", content: "Explicá la promo, vigencia y condición principal.", cta: "Ver promoción" },
+  { key: "PROFESIONALES", label: "Equipo/Profesionales", icon: "groups", tipo: "PROFESIONALES", componente: "PROFESIONALES_DESTACADOS", title: "Equipo profesional", content: "Nombre|Rol o especialidad" },
+  { key: "SERVICIOS", label: "Servicios", icon: "design_services", tipo: "SERVICIOS", componente: "SERVICIOS_DESTACADOS", title: "Servicios recomendados", content: "Servicio|Beneficio principal" },
+  { key: "PRODUCTOS", label: "Productos", icon: "inventory_2", tipo: "PRODUCTOS", componente: "PRODUCTOS_DESTACADOS", title: "Productos destacados", content: "Producto|Detalle o beneficio" },
+  { key: "SUCURSALES", label: "Sucursales/Contacto", icon: "location_on", tipo: "SUCURSALES", componente: "SUCURSALES_CONTACTO", title: "Dónde encontrarnos", content: "Dirección, horarios o canales de contacto." },
+  { key: "RESERVAS", label: "Agenda/Reservas", icon: "calendar_month", tipo: "AGENDA_PUBLICA", componente: "AGENDA_PUBLICA", title: "Agenda abierta", content: "Indicá cuándo y cómo reservar.", cta: "Reservar" },
+  { key: "BENTO", label: "Texto/Bento", icon: "view_quilt", tipo: "CTA", componente: "BENTO_GRID", title: "Bloque informativo", content: "Punto uno|Detalle breve\nPunto dos|Detalle breve" },
+];
+
+function buildSectionConstructorDraft(template = sectionTemplates[0]) {
+  return {
+    templateKey: template.key,
+    NOMBRE_SECCION: template.title,
+    TIPO_SECCION: template.tipo,
+    COMPONENTE_VISUAL: template.componente,
+    TITULO_PUBLICO: template.title,
+    SUBTITULO_PUBLICO: "",
+    CONTENIDO_PUBLICO: template.content || "",
+    TEXTO_BOTON_CTA: template.cta || "",
+    URL_BOTON_CTA: "",
+    COLOR_FONDO_HEX: "",
+    COLOR_TEXTO_HEX: "",
+    VISIBLE_EN_FRONTEND_PUBLICO: true,
+    REGISTRO_ACTIVO: true,
+    VISIBLE_MOBILE: true,
+    VISIBLE_TABLET: true,
+    VISIBLE_DESKTOP: true,
+  };
+}
+
 function visualOrderValue(value, fallback = 999) {
   if (value === null || value === undefined || String(value).trim() === "") return fallback;
   const numberValue = Number(value);
@@ -149,7 +184,7 @@ function isFixedHeroSection(row = {}) {
 }
 
 function isOrderableLandingSection(row = {}) {
-  return orderableLandingKeys.has(row.CLAVE_SECCION);
+  return orderableLandingKeys.has(row.CLAVE_SECCION) || String(row.CLAVE_SECCION || "").startsWith("CUSTOM_");
 }
 
 function urlsToAttachments(value) {
@@ -653,6 +688,7 @@ export default function Configuracion() {
   const [mediaUploading, setMediaUploading] = useState({});
   const [previewOpen, setPreviewOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("resumen");
+  const [constructorDraft, setConstructorDraft] = useState(() => buildSectionConstructorDraft());
 
   useEffect(() => {
     let cancelled = false;
@@ -830,6 +866,59 @@ export default function Configuracion() {
       return next;
     });
     setSaveMessage("Estructura base aplicada en borrador. Previsualizá y guardá el orden para publicarla.");
+  }
+
+
+  function updateConstructorDraft(field, value) {
+    setConstructorDraft((prev) => ({ ...prev, [field]: value }));
+  }
+
+  function selectSectionTemplate(template) {
+    setConstructorDraft((prev) => ({
+      ...buildSectionConstructorDraft(template),
+      COLOR_FONDO_HEX: prev.COLOR_FONDO_HEX,
+      COLOR_TEXTO_HEX: prev.COLOR_TEXTO_HEX,
+      VISIBLE_EN_FRONTEND_PUBLICO: prev.VISIBLE_EN_FRONTEND_PUBLICO,
+      REGISTRO_ACTIVO: prev.REGISTRO_ACTIVO,
+      VISIBLE_MOBILE: prev.VISIBLE_MOBILE,
+      VISIBLE_TABLET: prev.VISIBLE_TABLET,
+      VISIBLE_DESKTOP: prev.VISIBLE_DESKTOP,
+    }));
+  }
+
+  async function createLandingSection() {
+    if (!canEdit) return;
+    const key = "landing:create";
+    setRowSaving((prev) => ({ ...prev, [key]: true }));
+    setRowMessages((prev) => ({ ...prev, [key]: "" }));
+    try {
+      const payload = {
+        ...constructorDraft,
+        FUENTE_CONTENIDO: "MANUAL",
+        AMBITO_SECCION: "LANDING_PUBLICA",
+      };
+      delete payload.templateKey;
+      const res = await fetch(`${API}/api/backoffice/landing-secciones`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const detail = data?.detail?.message || data?.detail || `HTTP ${res.status}`;
+        throw new Error(typeof detail === "string" ? detail : "No se pudo crear la sección.");
+      }
+      setState((prev) => ({ ...prev, landing: [...prev.landing, data] }));
+      setLandingDrafts((prev) => ({ ...prev, [data.id]: buildLandingDraft(data) }));
+      setConstructorDraft(buildSectionConstructorDraft(sectionTemplates[0]));
+      setRowMessages((prev) => ({ ...prev, [key]: "Sección creada y agregada al builder." }));
+      setPreviewOpen(true);
+    } catch (error) {
+      setRowMessages((prev) => ({ ...prev, [key]: `Error: ${error.message}` }));
+    } finally {
+      setRowSaving((prev) => ({ ...prev, [key]: false }));
+    }
   }
 
   function fieldEditable(table, field) {
@@ -1111,7 +1200,7 @@ export default function Configuracion() {
   }
 
   const landingRows = [...state.landing]
-    .filter((row) => landingKeys.includes(row.CLAVE_SECCION))
+    .filter((row) => String(row.AMBITO_SECCION || "LANDING_PUBLICA").toUpperCase() === "LANDING_PUBLICA" || landingKeys.includes(row.CLAVE_SECCION))
     .sort((a, b) => {
       if (isFixedHeroSection(a) !== isFixedHeroSection(b)) return isFixedHeroSection(a) ? -1 : 1;
       const draftA = landingDrafts[a.id] || buildLandingDraft(a);
@@ -1509,6 +1598,65 @@ export default function Configuracion() {
                   >
                     <span className="material-symbols-outlined text-base" aria-hidden="true">swap_vert</span>
                     {rowSaving["landing:order"] ? "Guardando orden..." : "Guardar orden"}
+                  </button>
+                </div>
+              </div>
+
+              <div className="mb-5 rounded-3xl border border-sky-100 bg-sky-50/70 p-4 sm:p-5">
+                <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-[0.16em] text-sky-700">Constructor de sección</p>
+                    <h4 className="text-lg font-black text-slate-900">Creá un bloque público nuevo</h4>
+                    <p className="text-sm text-slate-600">Elegí una plantilla, completá contenido mínimo y publicala como sección manual. Las imágenes y videos se agregan después: nada se sube automáticamente.</p>
+                  </div>
+                  <Badge active={!!constructorDraft.VISIBLE_EN_FRONTEND_PUBLICO}>Borrador visible</Badge>
+                </div>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+                  {sectionTemplates.map((template) => (
+                    <button
+                      key={template.key}
+                      type="button"
+                      onClick={() => selectSectionTemplate(template)}
+                      className={`min-h-20 rounded-2xl border p-3 text-left text-sm font-bold transition ${constructorDraft.templateKey === template.key ? "border-sky-400 bg-white text-sky-800 shadow-sm" : "border-white/70 bg-white/60 text-slate-700 hover:bg-white"}`}
+                    >
+                      <span className="material-symbols-outlined mb-1 block text-xl" aria-hidden="true">{template.icon}</span>
+                      {template.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-2">
+                  <Field label="Título" value={constructorDraft.TITULO_PUBLICO} disabled={!canEdit || !!rowSaving["landing:create"]} onChange={(value) => updateConstructorDraft("TITULO_PUBLICO", value)} />
+                  <Field label="Subtítulo" value={constructorDraft.SUBTITULO_PUBLICO} disabled={!canEdit || !!rowSaving["landing:create"]} onChange={(value) => updateConstructorDraft("SUBTITULO_PUBLICO", value)} />
+                  <TextAreaField label="Contenido" value={constructorDraft.CONTENIDO_PUBLICO} rows={4} disabled={!canEdit || !!rowSaving["landing:create"]} onChange={(value) => updateConstructorDraft("CONTENIDO_PUBLICO", value)} />
+                  <div className="grid grid-cols-1 gap-3">
+                    <Field label="Texto CTA" value={constructorDraft.TEXTO_BOTON_CTA} disabled={!canEdit || !!rowSaving["landing:create"]} onChange={(value) => updateConstructorDraft("TEXTO_BOTON_CTA", value)} />
+                    <Field label="URL CTA" value={constructorDraft.URL_BOTON_CTA} placeholder="/reserva o https://..." disabled={!canEdit || !!rowSaving["landing:create"]} onChange={(value) => updateConstructorDraft("URL_BOTON_CTA", value)} />
+                  </div>
+                  <ColorField label="Color fondo" value={constructorDraft.COLOR_FONDO_HEX} placeholder="#EFF6FF" disabled={!canEdit || !!rowSaving["landing:create"]} onChange={(value) => updateConstructorDraft("COLOR_FONDO_HEX", value)} />
+                  <ColorField label="Color texto" value={constructorDraft.COLOR_TEXTO_HEX} placeholder="#0F172A" disabled={!canEdit || !!rowSaving["landing:create"]} onChange={(value) => updateConstructorDraft("COLOR_TEXTO_HEX", value)} />
+                </div>
+                <div className="mt-4 grid grid-cols-1 gap-2 md:grid-cols-5">
+                  <Toggle label="Pública" checked={constructorDraft.VISIBLE_EN_FRONTEND_PUBLICO} disabled={!canEdit || !!rowSaving["landing:create"]} onChange={(value) => updateConstructorDraft("VISIBLE_EN_FRONTEND_PUBLICO", value)} />
+                  <Toggle label="Activa" checked={constructorDraft.REGISTRO_ACTIVO} disabled={!canEdit || !!rowSaving["landing:create"]} onChange={(value) => updateConstructorDraft("REGISTRO_ACTIVO", value)} />
+                  <Toggle label="Mobile" checked={constructorDraft.VISIBLE_MOBILE} disabled={!canEdit || !!rowSaving["landing:create"]} onChange={(value) => updateConstructorDraft("VISIBLE_MOBILE", value)} />
+                  <Toggle label="Tablet" checked={constructorDraft.VISIBLE_TABLET} disabled={!canEdit || !!rowSaving["landing:create"]} onChange={(value) => updateConstructorDraft("VISIBLE_TABLET", value)} />
+                  <Toggle label="Desktop" checked={constructorDraft.VISIBLE_DESKTOP} disabled={!canEdit || !!rowSaving["landing:create"]} onChange={(value) => updateConstructorDraft("VISIBLE_DESKTOP", value)} />
+                </div>
+                {rowMessages["landing:create"] && (
+                  <div className={`mt-4 rounded-xl border p-3 text-sm ${rowMessages["landing:create"].startsWith("Error") ? "border-red-200 bg-red-50 text-red-700" : "border-green-200 bg-green-50 text-green-700"}`}>
+                    {rowMessages["landing:create"]}
+                  </div>
+                )}
+                <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-xs font-semibold text-slate-500">Se crea con CLAVE_SECCION CUSTOM_*, orden automático y fuente MANUAL.</p>
+                  <button
+                    type="button"
+                    disabled={!canEdit || !!rowSaving["landing:create"] || !constructorDraft.TITULO_PUBLICO}
+                    onClick={createLandingSection}
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <span className="material-symbols-outlined text-base" aria-hidden="true">add_circle</span>
+                    {rowSaving["landing:create"] ? "Creando..." : "Crear sección"}
                   </button>
                 </div>
               </div>
