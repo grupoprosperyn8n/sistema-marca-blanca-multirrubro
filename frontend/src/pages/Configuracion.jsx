@@ -904,6 +904,35 @@ export default function Configuracion() {
     }
   }
 
+  async function deleteLogoAttachment() {
+    if (!canEdit) return;
+    const key = "media:marca:logo";
+    setMediaUploading((prev) => ({ ...prev, [key]: true }));
+    setSaveMessage("");
+    try {
+      const res = await fetch(`${API}/api/backoffice/marca-blanca/logo`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        const updated = data.marca || data;
+        setState((prev) => ({ ...prev, marca: updated }));
+        setForm(buildForm(updated));
+        await refresh?.();
+        const cleanupErrors = data.attachment_cleanup_errors || [];
+        setSaveMessage(cleanupErrors.length ? "Logo eliminado de la marca. Revisar limpieza de attachment." : "Logo eliminado de la marca y del storage.");
+        return;
+      }
+      const detail = data?.detail?.message || data?.detail || `HTTP ${res.status}`;
+      throw new Error(typeof detail === "string" ? detail : "No se pudo eliminar el logo.");
+    } catch (error) {
+      setSaveMessage(`Error: ${error.message}`);
+    } finally {
+      setMediaUploading((prev) => ({ ...prev, [key]: false }));
+    }
+  }
+
   async function deleteLandingAttachment(row, field, attachmentId, attachmentUrl) {
     if (!canEdit || !row?.id) return;
     const key = `media:${row.id}:${field}`;
@@ -1185,21 +1214,32 @@ export default function Configuracion() {
                   <Field label="Nombre legal/comercial" value={form.nombre_negocio} disabled={!canEdit} onChange={(value) => updateRoot("nombre_negocio", value)} />
                   <Field label="Rubro" value={form.rubro} disabled={!canEdit} onChange={(value) => updateRoot("rubro", value)} />
                   <Field label="Logo URL" value={form.logo} disabled={!canEdit} onChange={(value) => updateRoot("logo", value)} />
-                  <label className={`inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-bold text-sky-700 ${!canEdit || mediaUploading["media:marca:logo"] ? "pointer-events-none opacity-50" : ""}`}>
-                    <span className="material-symbols-outlined text-base" aria-hidden="true">upload</span>
-                    {mediaUploading["media:marca:logo"] ? "Subiendo logo..." : "Subir logo (PNG/JPG/GIF)"}
-                    <input
-                      type="file"
-                      accept="image/*,image/gif"
-                      disabled={!canEdit || mediaUploading["media:marca:logo"]}
-                      onChange={(event) => {
-                        const file = event.target.files?.[0];
-                        event.target.value = "";
-                        if (file) uploadLogoAttachment(file);
-                      }}
-                      className="hidden"
-                    />
-                  </label>
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto]">
+                    <label className={`inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-bold text-sky-700 ${!canEdit || mediaUploading["media:marca:logo"] ? "pointer-events-none opacity-50" : ""}`}>
+                      <span className="material-symbols-outlined text-base" aria-hidden="true">upload</span>
+                      {mediaUploading["media:marca:logo"] ? "Procesando..." : "Subir logo (PNG/JPG/GIF)"}
+                      <input
+                        type="file"
+                        accept="image/*,image/gif"
+                        disabled={!canEdit || mediaUploading["media:marca:logo"]}
+                        onChange={(event) => {
+                          const file = event.target.files?.[0];
+                          event.target.value = "";
+                          if (file) uploadLogoAttachment(file);
+                        }}
+                        className="hidden"
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      disabled={!canEdit || !form.logo || mediaUploading["media:marca:logo"]}
+                      onClick={deleteLogoAttachment}
+                      className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-bold text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <span className="material-symbols-outlined text-base" aria-hidden="true">delete</span>
+                      Eliminar
+                    </button>
+                  </div>
                 </div>
                 <div className="rounded-3xl border border-slate-200 bg-white/70 p-4">
                   <p className="text-sm font-bold" style={{ color: "var(--brand-text)" }}>Preview de marca</p>

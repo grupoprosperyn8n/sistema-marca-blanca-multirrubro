@@ -219,6 +219,45 @@ def _attachment_url(value) -> str:
     return str(item.get("url") or item.get("download_url") or "").strip()
 
 
+def _attachment_patch_payload(item: dict) -> dict | None:
+    if not isinstance(item, dict):
+        return None
+    url = str(item.get("url") or item.get("download_url") or "").strip()
+    if not url:
+        return None
+    return {"url": url}
+
+
+def _remove_attachment_url_from_record(
+    client: AirtableClient,
+    table_name: str,
+    record_id: str,
+    field_name: str,
+    target_url: str,
+) -> bool:
+    if not target_url or not record_id or not field_name:
+        return False
+    record = client.get_record(table_name, record_id)
+    current = record.get("fields", {}).get(field_name)
+    if not isinstance(current, list) or not current:
+        return False
+
+    removed = False
+    remaining = []
+    for item in current:
+        item_url = str((item or {}).get("url") or (item or {}).get("download_url") or "").strip()
+        if item_url == target_url:
+            removed = True
+            continue
+        patch_item = _attachment_patch_payload(item)
+        if patch_item:
+            remaining.append(patch_item)
+
+    if removed:
+        client.patch_record(table_name, record_id, {field_name: remaining})
+    return removed
+
+
 LOGO_ATTACHMENT_FIELD_CANDIDATES = (
     "LOGO",
     "LOGO_MARCA",
@@ -288,7 +327,7 @@ def _field_type(table, field_name: str) -> str:
     return ""
 
 
-def _safe_media_logo_storage_record(client: AirtableClient) -> dict | None:
+def _safe_media_logo_storage_record(client: AirtableClient, create_if_missing: bool = True) -> dict | None:
     """Find or create a hidden MEDIA_PUBLICA record to store brand assets."""
     table = client.get_table("MEDIA_PUBLICA")
     if not table or "ARCHIVO_MEDIA" not in set(table.field_names):
@@ -323,6 +362,9 @@ def _safe_media_logo_storage_record(client: AirtableClient) -> dict | None:
     if candidates:
         candidates.sort(key=lambda item: item[:2])
         return candidates[0][2]
+
+    if not create_if_missing:
+        return None
 
     create_fields = {}
     if "NOMBRE_MEDIA" in available_fields and _field_type(table, "NOMBRE_MEDIA") in {"singleLineText", "multilineText", "richText"}:
@@ -695,6 +737,83 @@ async def subir_logo_marca_blanca(payload: dict, user: dict = Depends(get_curren
             "logo_url": logo_url,
             "attachment_field": attachment_field,
             "storage_table": storage_table,
+            "marca": updated,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+
+
+@router.delete("/backoffice/marca-blanca/logo")
+async def eliminar_logo_marca_blanca(user: dict = Depends(get_current_user)):
+    """Elimina el logo publicado y limpia el attachment usado como storage seguro."""
+    _require_config_editor(user)
+
+    try:
+        client = AirtableClient()
+        table = client.get_table("MARCAS")
+        if not table:
+            raise HTTPException(status_code=404, detail="Tabla MARCAS no encontrada.")
+        available_fields = set(table.field_names)
+        if "LOGO_URL" not in available_fields:
+            raise HTTPException(status_code=404, detail="MARCAS no tiene LOGO_URL.")
+
+        marca_records = client.list_records("MARCAS", max_records=1)
+        if not marca_records:
+            raise HTTPException(status_code=404, detail="MARCAS no tiene registros.")
+
+        marca_record = marca_records[0]
+        record_id = marca_record.get("id")
+        marca_fields = marca_record.get("fields", {})
+        current_logo_url = str(marca_fields.get("LOGO_URL") or "").strip()
+
+        storage_candidates = []
+        marca_attachment_field = _safe_logo_attachment_field(table)
+        if marca_attachment_field:
+            storage_candidates.append(("MARCAS", record_id, marca_attachment_field))
+
+        media_storage = _safe_media_logo_storage_record(client, create_if_missing=False)
+        if media_storage:
+            storage_candidates.append(("MEDIA_PUBLICA", media_storage.get("id"), "ARCHIVO_MEDIA"))
+
+        landing_storage = _safe_landing_logo_storage_record(client)
+        if landing_storage:
+            storage_candidates.append(("LANDING_SECCIONES", landing_storage.get("id"), "IMAGEN_PRINCIPAL"))
+
+        removed_attachments = []
+        cleanup_errors = []
+        for table_name, storage_record_id, attachment_field in storage_candidates:
+            try:
+                if _remove_attachment_url_from_record(
+                    client,
+                    table_name,
+                    storage_record_id,
+                    attachment_field,
+                    current_logo_url,
+                ):
+                    removed_attachments.append({
+                        "table": table_name,
+                        "field": attachment_field,
+                    })
+            except Exception as e:
+                cleanup_errors.append({
+                    "table": table_name,
+                    "field": attachment_field,
+                    "message": str(e)[:250],
+                })
+
+        client.patch_record("MARCAS", record_id, {"LOGO_URL": None})
+
+        updated = await datos_marca_blanca()
+        updated["updated_fields"] = ["LOGO_URL"]
+        updated["removed_attachments"] = removed_attachments
+        updated["attachment_cleanup_errors"] = cleanup_errors
+        return {
+            "ok": True,
+            "logo_url": None,
+            "removed_attachments": removed_attachments,
+            "attachment_cleanup_errors": cleanup_errors,
             "marca": updated,
         }
     except HTTPException:
