@@ -597,6 +597,7 @@ export default function Configuracion() {
   const [rowMessages, setRowMessages] = useState({});
   const [mediaUploading, setMediaUploading] = useState({});
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("resumen");
 
   useEffect(() => {
     let cancelled = false;
@@ -887,535 +888,404 @@ export default function Configuracion() {
     })
     .sort(sortByOrder);
 
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-        <div>
-          <p className="text-sm font-semibold" style={{ color: "var(--brand-primary)" }}>
-            Contrato P0 marca blanca
-          </p>
-          <h2 className="text-2xl font-bold" style={{ color: "var(--brand-text)" }}>
-            Configuración del negocio
-          </h2>
-          <p className="mt-1 max-w-3xl text-sm opacity-70" style={{ color: "var(--brand-text)" }}>
-            Esta pantalla traduce MARCAS, CONFIGURACION_PUBLICA y MODULOS en comportamiento real del frontend y backoffice.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <span className="rounded-full bg-white/70 px-3 py-1 text-xs font-semibold" style={{ color: "var(--brand-text)" }}>
-            Rol: {role}
-          </span>
-          <span className="rounded-full bg-white/70 px-3 py-1 text-xs font-semibold" style={{ color: "var(--brand-text)" }}>
-            {canEdit ? "Edición habilitada por permisos" : "Solo lectura"}
-          </span>
-        </div>
-      </div>
+  const tabs = [
+    ["resumen", "Resumen", "dashboard"],
+    ["marca", "Marca", "storefront"],
+    ["diseno", "Diseño", "palette"],
+    ["secciones", "Secciones", "view_quilt"],
+    ["media", "Media", "perm_media"],
+    ["seo", "SEO", "travel_explore"],
+    ["avanzado", "Avanzado", "tune"],
+  ];
+  const isBrandFormTab = ["marca", "diseno", "seo"].includes(activeTab);
+  const visibleLandingRows = landingRows.filter((row) => {
+    const draft = landingDrafts[row.id] || buildLandingDraft(row);
+    return draft.VISIBLE_EN_FRONTEND_PUBLICO && draft.REGISTRO_ACTIVO;
+  }).length;
+  const rowsWithMedia = landingRows.filter((row) => {
+    const draft = landingDrafts[row.id] || buildLandingDraft(row);
+    return attachmentPreviewItems(row.IMAGEN_PRINCIPAL, draft.IMAGEN_PRINCIPAL_URL).length > 0 || attachmentPreviewItems(row.IMAGENES_CARRUSEL, draft.IMAGENES_CARRUSEL_URLS).length > 0;
+  }).length;
+  const seoReady = !!(form?.seo_title && form?.seo_description);
+  const brandReady = !!(form?.nombre_sistema && form?.rubro && form?.logo);
 
-      {form && (
-        <form onSubmit={handleSave} className="rounded-3xl border border-white/40 bg-white/75 p-5 shadow-sm">
-          <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-            <div>
-              <h3 className="text-lg font-bold" style={{ color: "var(--brand-text)" }}>
-                Editor de marca blanca
-              </h3>
-              <p className="text-sm opacity-60" style={{ color: "var(--brand-text)" }}>
-                Edita campos seguros de MARCAS. Los cambios impactan en frontend después de guardar.
-              </p>
-            </div>
-            <button
-              type="submit"
-              disabled={!canEdit || saving}
-              className="rounded-xl px-5 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-              style={{ background: "linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))" }}
-            >
-              {saving ? "Guardando..." : canEdit ? "Guardar configuración" : "Solo lectura"}
-            </button>
-          </div>
-
-          {saveMessage && (
-            <div className={`mb-4 rounded-xl border p-3 text-sm ${saveMessage.startsWith("Error") ? "border-red-200 bg-red-50 text-red-700" : "border-green-200 bg-green-50 text-green-700"}`}>
-              {saveMessage}
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
-            <div className="space-y-3">
-              <h4 className="text-sm font-bold uppercase tracking-wide opacity-60" style={{ color: "var(--brand-text)" }}>
-                Identidad
-              </h4>
-              <Field label="Nombre público" value={form.nombre_sistema} disabled={!canEdit} onChange={(value) => updateRoot("nombre_sistema", value)} />
-              <Field label="Nombre legal/comercial" value={form.nombre_negocio} disabled={!canEdit} onChange={(value) => updateRoot("nombre_negocio", value)} />
-              <Field label="Rubro" value={form.rubro} disabled={!canEdit} onChange={(value) => updateRoot("rubro", value)} />
-              <Field label="Logo URL" value={form.logo} disabled={!canEdit} onChange={(value) => updateRoot("logo", value)} />
-            </div>
-
-            <div className="space-y-3">
-              <h4 className="text-sm font-bold uppercase tracking-wide opacity-60" style={{ color: "var(--brand-text)" }}>
-                Colores
-              </h4>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-1">
-                <ColorField label="Primario" value={form.colores.primario} disabled={!canEdit} placeholder="#006686" onChange={(value) => updateNested("colores", "primario", value)} />
-                <ColorField label="Secundario" value={form.colores.secundario} disabled={!canEdit} placeholder="#7DD3FC" onChange={(value) => updateNested("colores", "secundario", value)} />
-                <ColorField label="Acento" value={form.colores.acento} disabled={!canEdit} placeholder="#38BDF8" onChange={(value) => updateNested("colores", "acento", value)} />
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <h4 className="text-sm font-bold uppercase tracking-wide opacity-60" style={{ color: "var(--brand-text)" }}>
-                Modelo visible
-              </h4>
-              <Toggle label="Mostrar servicios" checked={form.secciones_visibles.mostrar_servicios} disabled={!canEdit} onChange={(value) => updateNested("secciones_visibles", "mostrar_servicios", value)} />
-              <Toggle label="Mostrar productos" checked={form.secciones_visibles.mostrar_productos} disabled={!canEdit} onChange={(value) => updateNested("secciones_visibles", "mostrar_productos", value)} />
-              <Toggle label="Mostrar sucursales/contacto físico" checked={form.secciones_visibles.mostrar_sucursales} disabled={!canEdit} onChange={(value) => updateNested("secciones_visibles", "mostrar_sucursales", value)} />
-              <Toggle label="Mostrar cómo funciona" checked={form.secciones_visibles.mostrar_como_funciona} disabled={!canEdit} onChange={(value) => updateNested("secciones_visibles", "mostrar_como_funciona", value)} />
-              <Toggle label="Banner activo" checked={form.textos_publicos.banner_activo} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "banner_activo", value)} />
-            </div>
-          </div>
-
-          <BackgroundLandingPanel
-            form={form}
-            canEdit={canEdit}
-            updateNested={updateNested}
-            uploading={mediaUploading[backgroundMediaKey]}
-            onUploadFile={uploadBackgroundAttachment}
-          />
-
-          <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-2">
-            <div className="space-y-3">
-              <h4 className="text-sm font-bold uppercase tracking-wide opacity-60" style={{ color: "var(--brand-text)" }}>
-                Hero y CTAs
-              </h4>
-              <Field label="Badge" value={form.textos_publicos.hero_badge} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "hero_badge", value)} />
-              <Field label="Título hero" value={form.textos_publicos.hero_titulo} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "hero_titulo", value)} />
-              <Field label="Subtítulo hero" value={form.textos_publicos.hero_subtitulo} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "hero_subtitulo", value)} />
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                <Field label="CTA primario" value={form.textos_publicos.hero_cta_primario} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "hero_cta_primario", value)} />
-                <Field label="URL CTA primario" value={form.textos_publicos.hero_cta_primario_url} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "hero_cta_primario_url", value)} />
-                <Field label="CTA secundario" value={form.textos_publicos.hero_cta_secundario} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "hero_cta_secundario", value)} />
-                <Field label="URL CTA secundario" value={form.textos_publicos.hero_cta_secundario_url} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "hero_cta_secundario_url", value)} />
-                <Field label="CTA banner" value={form.textos_publicos.banner_cta_texto} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "banner_cta_texto", value)} />
-                <Field label="URL CTA banner" value={form.textos_publicos.banner_cta_url} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "banner_cta_url", value)} />
-              </div>
-              <Field label="Título banner" value={form.textos_publicos.banner_titulo} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "banner_titulo", value)} />
-              <TextAreaField label="Mensaje banner" value={form.textos_publicos.banner_mensaje} disabled={!canEdit} rows={2} onChange={(value) => updateNested("textos_publicos", "banner_mensaje", value)} />
-            </div>
-
-            <div className="space-y-3">
-              <h4 className="text-sm font-bold uppercase tracking-wide opacity-60" style={{ color: "var(--brand-text)" }}>
-                Contacto y SEO
-              </h4>
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                <Field label="Teléfono" value={form.textos_publicos.contacto_telefono} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "contacto_telefono", value)} />
-                <Field label="WhatsApp" value={form.textos_publicos.contacto_whatsapp} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "contacto_whatsapp", value)} />
-              </div>
-              <Field label="Email" value={form.textos_publicos.contacto_email} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "contacto_email", value)} />
-              <Field label="Dirección pública" value={form.textos_publicos.contacto_direccion} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "contacto_direccion", value)} />
-              <Field label="SEO title" value={form.seo_title} disabled={!canEdit} onChange={(value) => updateRoot("seo_title", value)} />
-              <Field label="SEO description" value={form.seo_description} disabled={!canEdit} onChange={(value) => updateRoot("seo_description", value)} />
-            </div>
-          </div>
-        </form>
-      )}
-
-      <div className="rounded-3xl border border-white/40 bg-white/75 p-5 shadow-sm">
-        <div className="mb-5 flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+  function renderSectionEditor(row, { mediaOnly = false } = {}) {
+    const draft = landingDrafts[row.id] || buildLandingDraft(row);
+    const key = `landing:${row.id}`;
+    const disabled = !canEdit || !!rowSaving[key];
+    return (
+      <section key={row.id} className="rounded-2xl border border-slate-200 bg-white/70 p-4">
+        <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <div>
-            <h3 className="text-lg font-bold" style={{ color: "var(--brand-text)" }}>
-              Constructor de landing
-            </h3>
-            <p className="text-sm opacity-60" style={{ color: "var(--brand-text)" }}>
-              Edita LANDING_SECCIONES sin tocar código. El frontend público lee estas secciones con cache deshabilitado.
+            <p className="text-xs font-semibold uppercase tracking-wide opacity-50" style={{ color: "var(--brand-text)" }}>
+              {row.CLAVE_SECCION}
             </p>
+            <h4 className="font-bold" style={{ color: "var(--brand-text)" }}>
+              {draft.NOMBRE_SECCION || row.NOMBRE_SECCION || "Sección"}
+            </h4>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Badge active={landingRows.length > 0}>{landingRows.length} secciones mapeadas</Badge>
+            <Badge active={draft.VISIBLE_EN_FRONTEND_PUBLICO}>Pública</Badge>
             <button
               type="button"
               onClick={() => setPreviewOpen(true)}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
             >
-              <span className="material-symbols-outlined text-base" aria-hidden="true">preview</span>
-              Previsualizar landing
+              <span className="material-symbols-outlined text-base" aria-hidden="true">visibility</span>
+              Previsualizar
+            </button>
+            <button
+              type="button"
+              disabled={disabled}
+              onClick={() => patchLandingRow(row)}
+              className="rounded-xl px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+              style={{ background: "linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))" }}
+            >
+              {rowSaving[key] ? "Guardando..." : canEdit ? "Guardar sección" : "Solo lectura"}
             </button>
           </div>
         </div>
 
-        {landingRows.length === 0 ? (
-          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-            No hay secciones LANDING_SECCIONES compatibles para editar.
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {landingRows.map((row) => {
-              const draft = landingDrafts[row.id] || buildLandingDraft(row);
-              const key = `landing:${row.id}`;
-              const disabled = !canEdit || !!rowSaving[key];
-              return (
-                <section key={row.id} className="rounded-2xl border border-slate-200 bg-white/70 p-4">
-                  <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-wide opacity-50" style={{ color: "var(--brand-text)" }}>
-                        {row.CLAVE_SECCION}
-                      </p>
-                      <h4 className="font-bold" style={{ color: "var(--brand-text)" }}>
-                        {draft.NOMBRE_SECCION || row.NOMBRE_SECCION || "Sección"}
-                      </h4>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Badge active={draft.VISIBLE_EN_FRONTEND_PUBLICO}>Pública</Badge>
-                      <button
-                        type="button"
-                        onClick={() => setPreviewOpen(true)}
-                        className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-                      >
-                        <span className="material-symbols-outlined text-base" aria-hidden="true">visibility</span>
-                        Previsualizar
-                      </button>
-                      <button
-                        type="button"
-                        disabled={disabled}
-                        onClick={() => patchLandingRow(row)}
-                        className="rounded-xl px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-                        style={{ background: "linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))" }}
-                      >
-                        {rowSaving[key] ? "Guardando..." : canEdit ? "Guardar sección" : "Solo lectura"}
-                      </button>
-                    </div>
-                  </div>
-
-                  {rowMessages[key] && (
-                    <div className={`mb-4 rounded-xl border p-3 text-sm ${rowMessages[key].startsWith("Error") ? "border-red-200 bg-red-50 text-red-700" : "border-green-200 bg-green-50 text-green-700"}`}>
-                      {rowMessages[key]}
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-                    <Field
-                      label="Nombre interno visible"
-                      value={draft.NOMBRE_SECCION}
-                      disabled={disabled || !fieldEditable("LANDING_SECCIONES", "NOMBRE_SECCION")}
-                      onChange={(value) => updateLandingDraft(row.id, "NOMBRE_SECCION", value)}
-                    />
-                    <Field
-                      label="Orden"
-                      type="number"
-                      value={draft.ORDEN_VISUAL}
-                      disabled={disabled || !fieldEditable("LANDING_SECCIONES", "ORDEN_VISUAL")}
-                      onChange={(value) => updateLandingDraft(row.id, "ORDEN_VISUAL", value)}
-                    />
-                    <Field
-                      label="Título público"
-                      value={draft.TITULO_PUBLICO}
-                      disabled={disabled || !fieldEditable("LANDING_SECCIONES", "TITULO_PUBLICO")}
-                      onChange={(value) => updateLandingDraft(row.id, "TITULO_PUBLICO", value)}
-                    />
-                    <Field
-                      label="Subtítulo público"
-                      value={draft.SUBTITULO_PUBLICO}
-                      disabled={disabled || !fieldEditable("LANDING_SECCIONES", "SUBTITULO_PUBLICO")}
-                      onChange={(value) => updateLandingDraft(row.id, "SUBTITULO_PUBLICO", value)}
-                    />
-                    <TextAreaField
-                      label="Contenido público"
-                      value={draft.CONTENIDO_PUBLICO}
-                      disabled={disabled || !fieldEditable("LANDING_SECCIONES", "CONTENIDO_PUBLICO")}
-                      onChange={(value) => updateLandingDraft(row.id, "CONTENIDO_PUBLICO", value)}
-                    />
-                    <div className="grid grid-cols-1 gap-3">
-                      <Field
-                        label="Texto CTA"
-                        value={draft.TEXTO_BOTON_CTA}
-                        disabled={disabled || !fieldEditable("LANDING_SECCIONES", "TEXTO_BOTON_CTA")}
-                        onChange={(value) => updateLandingDraft(row.id, "TEXTO_BOTON_CTA", value)}
-                      />
-                      <Field
-                        label="URL CTA"
-                        value={draft.URL_BOTON_CTA}
-                        disabled={disabled || !fieldEditable("LANDING_SECCIONES", "URL_BOTON_CTA")}
-                        onChange={(value) => updateLandingDraft(row.id, "URL_BOTON_CTA", value)}
-                      />
-                    </div>
-                    <MediaAttachmentManager
-                      row={row}
-                      field="IMAGEN_PRINCIPAL"
-                      label="Imagen/video principal"
-                      draftValue={draft.IMAGEN_PRINCIPAL_URL}
-                      disabled={disabled || !fieldEditable("LANDING_SECCIONES", "IMAGEN_PRINCIPAL")}
-                      uploading={mediaUploading[`media:${row.id}:IMAGEN_PRINCIPAL`]}
-                      onDraftChange={(value) => updateLandingDraft(row.id, "IMAGEN_PRINCIPAL_URL", value)}
-                      onUpload={uploadLandingAttachment}
-                      onDelete={deleteLandingAttachment}
-                      helperText={landingMediaHelperText(row.CLAVE_SECCION)}
-                    />
-                    <MediaAttachmentManager
-                      row={row}
-                      field="IMAGENES_CARRUSEL"
-                      label="Carrusel imagen/video"
-                      draftValue={draft.IMAGENES_CARRUSEL_URLS}
-                      disabled={disabled || !fieldEditable("LANDING_SECCIONES", "IMAGENES_CARRUSEL")}
-                      uploading={mediaUploading[`media:${row.id}:IMAGENES_CARRUSEL`]}
-                      onDraftChange={(value) => updateLandingDraft(row.id, "IMAGENES_CARRUSEL_URLS", value)}
-                      onUpload={uploadLandingAttachment}
-                      onDelete={deleteLandingAttachment}
-                      helperText={landingMediaHelperText(row.CLAVE_SECCION)}
-                      multiple
-                      textarea
-                    />
-                    <ColorField
-                      label="Color fondo"
-                      value={draft.COLOR_FONDO_HEX}
-                      placeholder="#FDF4FF"
-                      disabled={disabled || !fieldEditable("LANDING_SECCIONES", "COLOR_FONDO_HEX")}
-                      onChange={(value) => updateLandingDraft(row.id, "COLOR_FONDO_HEX", value)}
-                    />
-                    <ColorField
-                      label="Color texto"
-                      value={draft.COLOR_TEXTO_HEX}
-                      placeholder="#1F1235"
-                      disabled={disabled || !fieldEditable("LANDING_SECCIONES", "COLOR_TEXTO_HEX")}
-                      onChange={(value) => updateLandingDraft(row.id, "COLOR_TEXTO_HEX", value)}
-                    />
-                  </div>
-
-                  <div className="mt-4 grid grid-cols-1 gap-2 md:grid-cols-5">
-                    <Toggle
-                      label="Pública"
-                      checked={draft.VISIBLE_EN_FRONTEND_PUBLICO}
-                      disabled={disabled || !fieldEditable("LANDING_SECCIONES", "VISIBLE_EN_FRONTEND_PUBLICO")}
-                      onChange={(value) => updateLandingDraft(row.id, "VISIBLE_EN_FRONTEND_PUBLICO", value)}
-                    />
-                    <Toggle
-                      label="Activa"
-                      checked={draft.REGISTRO_ACTIVO}
-                      disabled={disabled || !fieldEditable("LANDING_SECCIONES", "REGISTRO_ACTIVO")}
-                      onChange={(value) => updateLandingDraft(row.id, "REGISTRO_ACTIVO", value)}
-                    />
-                    <Toggle
-                      label="Mobile"
-                      checked={draft.VISIBLE_MOBILE}
-                      disabled={disabled || !fieldEditable("LANDING_SECCIONES", "VISIBLE_MOBILE")}
-                      onChange={(value) => updateLandingDraft(row.id, "VISIBLE_MOBILE", value)}
-                    />
-                    <Toggle
-                      label="Tablet"
-                      checked={draft.VISIBLE_TABLET}
-                      disabled={disabled || !fieldEditable("LANDING_SECCIONES", "VISIBLE_TABLET")}
-                      onChange={(value) => updateLandingDraft(row.id, "VISIBLE_TABLET", value)}
-                    />
-                    <Toggle
-                      label="Desktop"
-                      checked={draft.VISIBLE_DESKTOP}
-                      disabled={disabled || !fieldEditable("LANDING_SECCIONES", "VISIBLE_DESKTOP")}
-                      onChange={(value) => updateLandingDraft(row.id, "VISIBLE_DESKTOP", value)}
-                    />
-                  </div>
-                </section>
-              );
-            })}
+        {rowMessages[key] && (
+          <div className={`mb-4 rounded-xl border p-3 text-sm ${rowMessages[key].startsWith("Error") ? "border-red-200 bg-red-50 text-red-700" : "border-green-200 bg-green-50 text-green-700"}`}>
+            {rowMessages[key]}
           </div>
         )}
+
+        {!mediaOnly && (
+          <>
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+              <Field label="Nombre interno visible" value={draft.NOMBRE_SECCION} disabled={disabled || !fieldEditable("LANDING_SECCIONES", "NOMBRE_SECCION")} onChange={(value) => updateLandingDraft(row.id, "NOMBRE_SECCION", value)} />
+              <Field label="Orden" type="number" value={draft.ORDEN_VISUAL} disabled={disabled || !fieldEditable("LANDING_SECCIONES", "ORDEN_VISUAL")} onChange={(value) => updateLandingDraft(row.id, "ORDEN_VISUAL", value)} />
+              <Field label="Título público" value={draft.TITULO_PUBLICO} disabled={disabled || !fieldEditable("LANDING_SECCIONES", "TITULO_PUBLICO")} onChange={(value) => updateLandingDraft(row.id, "TITULO_PUBLICO", value)} />
+              <Field label="Subtítulo público" value={draft.SUBTITULO_PUBLICO} disabled={disabled || !fieldEditable("LANDING_SECCIONES", "SUBTITULO_PUBLICO")} onChange={(value) => updateLandingDraft(row.id, "SUBTITULO_PUBLICO", value)} />
+              <TextAreaField label="Contenido público" value={draft.CONTENIDO_PUBLICO} disabled={disabled || !fieldEditable("LANDING_SECCIONES", "CONTENIDO_PUBLICO")} onChange={(value) => updateLandingDraft(row.id, "CONTENIDO_PUBLICO", value)} />
+              <div className="grid grid-cols-1 gap-3">
+                <Field label="Texto CTA" value={draft.TEXTO_BOTON_CTA} disabled={disabled || !fieldEditable("LANDING_SECCIONES", "TEXTO_BOTON_CTA")} onChange={(value) => updateLandingDraft(row.id, "TEXTO_BOTON_CTA", value)} />
+                <Field label="URL CTA" value={draft.URL_BOTON_CTA} disabled={disabled || !fieldEditable("LANDING_SECCIONES", "URL_BOTON_CTA")} onChange={(value) => updateLandingDraft(row.id, "URL_BOTON_CTA", value)} />
+              </div>
+              <ColorField label="Color fondo" value={draft.COLOR_FONDO_HEX} placeholder="#FDF4FF" disabled={disabled || !fieldEditable("LANDING_SECCIONES", "COLOR_FONDO_HEX")} onChange={(value) => updateLandingDraft(row.id, "COLOR_FONDO_HEX", value)} />
+              <ColorField label="Color texto" value={draft.COLOR_TEXTO_HEX} placeholder="#1F1235" disabled={disabled || !fieldEditable("LANDING_SECCIONES", "COLOR_TEXTO_HEX")} onChange={(value) => updateLandingDraft(row.id, "COLOR_TEXTO_HEX", value)} />
+            </div>
+
+            <div className="mt-4 grid grid-cols-1 gap-2 md:grid-cols-5">
+              <Toggle label="Pública" checked={draft.VISIBLE_EN_FRONTEND_PUBLICO} disabled={disabled || !fieldEditable("LANDING_SECCIONES", "VISIBLE_EN_FRONTEND_PUBLICO")} onChange={(value) => updateLandingDraft(row.id, "VISIBLE_EN_FRONTEND_PUBLICO", value)} />
+              <Toggle label="Activa" checked={draft.REGISTRO_ACTIVO} disabled={disabled || !fieldEditable("LANDING_SECCIONES", "REGISTRO_ACTIVO")} onChange={(value) => updateLandingDraft(row.id, "REGISTRO_ACTIVO", value)} />
+              <Toggle label="Mobile" checked={draft.VISIBLE_MOBILE} disabled={disabled || !fieldEditable("LANDING_SECCIONES", "VISIBLE_MOBILE")} onChange={(value) => updateLandingDraft(row.id, "VISIBLE_MOBILE", value)} />
+              <Toggle label="Tablet" checked={draft.VISIBLE_TABLET} disabled={disabled || !fieldEditable("LANDING_SECCIONES", "VISIBLE_TABLET")} onChange={(value) => updateLandingDraft(row.id, "VISIBLE_TABLET", value)} />
+              <Toggle label="Desktop" checked={draft.VISIBLE_DESKTOP} disabled={disabled || !fieldEditable("LANDING_SECCIONES", "VISIBLE_DESKTOP")} onChange={(value) => updateLandingDraft(row.id, "VISIBLE_DESKTOP", value)} />
+            </div>
+          </>
+        )}
+
+        <div className={`grid grid-cols-1 gap-3 ${mediaOnly ? "lg:grid-cols-2" : "mt-4 lg:grid-cols-2"}`}>
+          <MediaAttachmentManager row={row} field="IMAGEN_PRINCIPAL" label="Imagen/video principal" draftValue={draft.IMAGEN_PRINCIPAL_URL} disabled={disabled || !fieldEditable("LANDING_SECCIONES", "IMAGEN_PRINCIPAL")} uploading={mediaUploading[`media:${row.id}:IMAGEN_PRINCIPAL`]} onDraftChange={(value) => updateLandingDraft(row.id, "IMAGEN_PRINCIPAL_URL", value)} onUpload={uploadLandingAttachment} onDelete={deleteLandingAttachment} helperText={landingMediaHelperText(row.CLAVE_SECCION)} />
+          <MediaAttachmentManager row={row} field="IMAGENES_CARRUSEL" label="Carrusel imagen/video" draftValue={draft.IMAGENES_CARRUSEL_URLS} disabled={disabled || !fieldEditable("LANDING_SECCIONES", "IMAGENES_CARRUSEL")} uploading={mediaUploading[`media:${row.id}:IMAGENES_CARRUSEL`]} onDraftChange={(value) => updateLandingDraft(row.id, "IMAGENES_CARRUSEL_URLS", value)} onUpload={uploadLandingAttachment} onDelete={deleteLandingAttachment} helperText={landingMediaHelperText(row.CLAVE_SECCION)} multiple textarea />
+        </div>
+      </section>
+    );
+  }
+
+  function renderConfigEditor() {
+    if (configRows.length === 0) {
+      return <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">No hay registros de CONFIGURACION_PUBLICA filtrados para esta landing.</div>;
+    }
+    return (
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        {configRows.map((row) => {
+          const draft = configDrafts[row.id] || buildConfigDraft(row);
+          const key = `config:${row.id}`;
+          const disabled = !canEdit || !!rowSaving[key];
+          return (
+            <section key={row.id} className="rounded-2xl border border-slate-200 bg-white/70 p-4">
+              <div className="mb-4 flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide opacity-50" style={{ color: "var(--brand-text)" }}>{row.CLAVE_CONFIGURACION || row.CATEGORIA_CONFIGURACION || "CONFIG"}</p>
+                  <h4 className="font-bold" style={{ color: "var(--brand-text)" }}>{draft.NOMBRE_CONFIGURACION || row.NOMBRE_CONFIGURACION || "Configuración"}</h4>
+                </div>
+                <Badge active={draft.VISIBLE_EN_FRONTEND_PUBLICO}>Visible</Badge>
+              </div>
+
+              {rowMessages[key] && <div className={`mb-4 rounded-xl border p-3 text-sm ${rowMessages[key].startsWith("Error") ? "border-red-200 bg-red-50 text-red-700" : "border-green-200 bg-green-50 text-green-700"}`}>{rowMessages[key]}</div>}
+
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <Field label="Nombre" value={draft.NOMBRE_CONFIGURACION} disabled={disabled || !fieldEditable("CONFIGURACION_PUBLICA", "NOMBRE_CONFIGURACION")} onChange={(value) => updateConfigDraft(row.id, "NOMBRE_CONFIGURACION", value)} />
+                <Field label="Orden" type="number" value={draft.ORDEN_VISUAL} disabled={disabled || !fieldEditable("CONFIGURACION_PUBLICA", "ORDEN_VISUAL")} onChange={(value) => updateConfigDraft(row.id, "ORDEN_VISUAL", value)} />
+                <TextAreaField label="Texto" value={draft.TEXTO_CONFIGURACION} disabled={disabled || !fieldEditable("CONFIGURACION_PUBLICA", "TEXTO_CONFIGURACION")} onChange={(value) => updateConfigDraft(row.id, "TEXTO_CONFIGURACION", value)} />
+                <div className="grid grid-cols-1 gap-3">
+                  <Field label="URL" value={draft.URL_CONFIGURACION} disabled={disabled || !fieldEditable("CONFIGURACION_PUBLICA", "URL_CONFIGURACION")} onChange={(value) => updateConfigDraft(row.id, "URL_CONFIGURACION", value)} />
+                  <ColorField label="Color" value={draft.COLOR_HEX_CONFIGURACION} placeholder="#7C3AED" disabled={disabled || !fieldEditable("CONFIGURACION_PUBLICA", "COLOR_HEX_CONFIGURACION")} onChange={(value) => updateConfigDraft(row.id, "COLOR_HEX_CONFIGURACION", value)} />
+                </div>
+              </div>
+
+              <div className="mt-4 grid grid-cols-1 gap-2 md:grid-cols-3">
+                <Toggle label="Sí/No" checked={draft.SI_NO_CONFIGURACION} disabled={disabled || !fieldEditable("CONFIGURACION_PUBLICA", "SI_NO_CONFIGURACION")} onChange={(value) => updateConfigDraft(row.id, "SI_NO_CONFIGURACION", value)} />
+                <Toggle label="Visible frontend" checked={draft.VISIBLE_EN_FRONTEND_PUBLICO} disabled={disabled || !fieldEditable("CONFIGURACION_PUBLICA", "VISIBLE_EN_FRONTEND_PUBLICO")} onChange={(value) => updateConfigDraft(row.id, "VISIBLE_EN_FRONTEND_PUBLICO", value)} />
+                <Toggle label="Activa" checked={draft.REGISTRO_ACTIVO} disabled={disabled || !fieldEditable("CONFIGURACION_PUBLICA", "REGISTRO_ACTIVO")} onChange={(value) => updateConfigDraft(row.id, "REGISTRO_ACTIVO", value)} />
+              </div>
+
+              <button type="button" disabled={disabled} onClick={() => patchConfigRow(row)} className="mt-4 w-full rounded-xl px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50" style={{ background: "linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))" }}>
+                {rowSaving[key] ? "Guardando..." : canEdit ? "Guardar flag" : "Solo lectura"}
+              </button>
+            </section>
+          );
+        })}
       </div>
+    );
+  }
 
-      <LandingPreviewModal
-        open={previewOpen}
-        onClose={() => setPreviewOpen(false)}
-        form={form}
-        liveConfig={liveConfig}
-        landingRows={landingRows}
-        landingDrafts={landingDrafts}
-        configRows={configRows}
-        configDrafts={configDrafts}
-      />
-
-      <div className="rounded-3xl border border-white/40 bg-white/75 p-5 shadow-sm">
-        <div className="mb-5 flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+  return (
+    <div className="space-y-6">
+      <div className="sticky top-0 z-20 -mx-2 rounded-b-3xl border-b border-white/50 bg-slate-50/90 px-2 py-3 backdrop-blur md:top-2 md:rounded-3xl md:border md:shadow-sm">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h3 className="text-lg font-bold" style={{ color: "var(--brand-text)" }}>
-              Configuración pública rápida
-            </h3>
-            <p className="text-sm opacity-60" style={{ color: "var(--brand-text)" }}>
-              Edita claves seguras de CONFIGURACION_PUBLICA. No se exponen notas internas ni campos sensibles.
-            </p>
+            <p className="text-sm font-semibold" style={{ color: "var(--brand-primary)" }}>Constructor público · LANDING_BUILDER_ADMIN_UX_P5</p>
+            <h2 className="text-2xl font-bold" style={{ color: "var(--brand-text)" }}>Configuración de landing</h2>
+            <p className="mt-1 max-w-3xl text-sm opacity-70" style={{ color: "var(--brand-text)" }}>Organizá marca, diseño, secciones, media y SEO sin perder control de permisos.</p>
           </div>
-          <Badge active={configRows.length > 0}>{configRows.length} flags editables</Badge>
-        </div>
-
-        {configRows.length === 0 ? (
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-            No hay registros de CONFIGURACION_PUBLICA filtrados para esta landing.
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-            {configRows.map((row) => {
-              const draft = configDrafts[row.id] || buildConfigDraft(row);
-              const key = `config:${row.id}`;
-              const disabled = !canEdit || !!rowSaving[key];
-              return (
-                <section key={row.id} className="rounded-2xl border border-slate-200 bg-white/70 p-4">
-                  <div className="mb-4 flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-wide opacity-50" style={{ color: "var(--brand-text)" }}>
-                        {row.CLAVE_CONFIGURACION || row.CATEGORIA_CONFIGURACION || "CONFIG"}
-                      </p>
-                      <h4 className="font-bold" style={{ color: "var(--brand-text)" }}>
-                        {draft.NOMBRE_CONFIGURACION || row.NOMBRE_CONFIGURACION || "Configuración"}
-                      </h4>
-                    </div>
-                    <Badge active={draft.VISIBLE_EN_FRONTEND_PUBLICO}>Visible</Badge>
-                  </div>
-
-                  {rowMessages[key] && (
-                    <div className={`mb-4 rounded-xl border p-3 text-sm ${rowMessages[key].startsWith("Error") ? "border-red-200 bg-red-50 text-red-700" : "border-green-200 bg-green-50 text-green-700"}`}>
-                      {rowMessages[key]}
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                    <Field
-                      label="Nombre"
-                      value={draft.NOMBRE_CONFIGURACION}
-                      disabled={disabled || !fieldEditable("CONFIGURACION_PUBLICA", "NOMBRE_CONFIGURACION")}
-                      onChange={(value) => updateConfigDraft(row.id, "NOMBRE_CONFIGURACION", value)}
-                    />
-                    <Field
-                      label="Orden"
-                      type="number"
-                      value={draft.ORDEN_VISUAL}
-                      disabled={disabled || !fieldEditable("CONFIGURACION_PUBLICA", "ORDEN_VISUAL")}
-                      onChange={(value) => updateConfigDraft(row.id, "ORDEN_VISUAL", value)}
-                    />
-                    <TextAreaField
-                      label="Texto"
-                      value={draft.TEXTO_CONFIGURACION}
-                      disabled={disabled || !fieldEditable("CONFIGURACION_PUBLICA", "TEXTO_CONFIGURACION")}
-                      onChange={(value) => updateConfigDraft(row.id, "TEXTO_CONFIGURACION", value)}
-                    />
-                    <div className="grid grid-cols-1 gap-3">
-                      <Field
-                        label="URL"
-                        value={draft.URL_CONFIGURACION}
-                        disabled={disabled || !fieldEditable("CONFIGURACION_PUBLICA", "URL_CONFIGURACION")}
-                        onChange={(value) => updateConfigDraft(row.id, "URL_CONFIGURACION", value)}
-                      />
-                      <ColorField
-                        label="Color"
-                        value={draft.COLOR_HEX_CONFIGURACION}
-                        placeholder="#7C3AED"
-                        disabled={disabled || !fieldEditable("CONFIGURACION_PUBLICA", "COLOR_HEX_CONFIGURACION")}
-                        onChange={(value) => updateConfigDraft(row.id, "COLOR_HEX_CONFIGURACION", value)}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="mt-4 grid grid-cols-1 gap-2 md:grid-cols-3">
-                    <Toggle
-                      label="Sí/No"
-                      checked={draft.SI_NO_CONFIGURACION}
-                      disabled={disabled || !fieldEditable("CONFIGURACION_PUBLICA", "SI_NO_CONFIGURACION")}
-                      onChange={(value) => updateConfigDraft(row.id, "SI_NO_CONFIGURACION", value)}
-                    />
-                    <Toggle
-                      label="Visible frontend"
-                      checked={draft.VISIBLE_EN_FRONTEND_PUBLICO}
-                      disabled={disabled || !fieldEditable("CONFIGURACION_PUBLICA", "VISIBLE_EN_FRONTEND_PUBLICO")}
-                      onChange={(value) => updateConfigDraft(row.id, "VISIBLE_EN_FRONTEND_PUBLICO", value)}
-                    />
-                    <Toggle
-                      label="Activa"
-                      checked={draft.REGISTRO_ACTIVO}
-                      disabled={disabled || !fieldEditable("CONFIGURACION_PUBLICA", "REGISTRO_ACTIVO")}
-                      onChange={(value) => updateConfigDraft(row.id, "REGISTRO_ACTIVO", value)}
-                    />
-                  </div>
-
-                  <button
-                    type="button"
-                    disabled={disabled}
-                    onClick={() => patchConfigRow(row)}
-                    className="mt-4 w-full rounded-xl px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-                    style={{ background: "linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))" }}
-                  >
-                    {rowSaving[key] ? "Guardando..." : canEdit ? "Guardar flag" : "Solo lectura"}
-                  </button>
-                </section>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <InfoCard label="Marca" value={marca.nombre_sistema || liveConfig.brandName} hint={marca.rubro || liveConfig.rubro} />
-        <InfoCard label="Modo de oferta" value={rawBusiness.modo_oferta || business.offerMode} hint={business.catalogLabel} />
-        <InfoCard label="Canal" value={rawBusiness.canal_operacion || business.operationChannel} hint="Online, físico o mixto" />
-        <InfoCard label="Landing config" value={state.landing.length} hint={`${state.configuracion.length} flags públicos`} />
-      </div>
-
-      <div className="rounded-3xl border border-white/40 bg-white/70 p-5 shadow-sm">
-        <h3 className="mb-4 text-lg font-bold" style={{ color: "var(--brand-text)" }}>
-          Comportamiento público
-        </h3>
-        <div className="flex flex-wrap gap-2">
-          <Badge active={business.usesProducts}>Productos</Badge>
-          <Badge active={business.usesServices}>Servicios</Badge>
-          <Badge active={business.usesAppointments}>Turnos</Badge>
-          <Badge active={business.usesBranches}>Sucursales</Badge>
-          <Badge active={business.usesMultiBranch}>Multi-sucursal</Badge>
-          <Badge active={business.showContactAddress}>Dirección pública</Badge>
-          <Badge active={business.showMap}>Mapa</Badge>
-          <Badge active={business.usesCart}>Carrito</Badge>
-          <Badge active={business.usesCheckout}>Checkout</Badge>
-          <Badge active={business.usesOnlinePayments}>Pago online</Badge>
-          <Badge active={business.usesPhysicalPOS}>Caja física</Badge>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <div className="rounded-3xl border border-white/40 bg-white/70 p-5 shadow-sm">
-          <h3 className="mb-4 text-lg font-bold" style={{ color: "var(--brand-text)" }}>
-            Identidad visual
-          </h3>
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            {[
-              ["Primario", liveConfig.brandPrimary],
-              ["Secundario", liveConfig.brandSecondary],
-              ["Acento", liveConfig.brandAccent],
-              ["Fondo", liveConfig.brandSurface],
-            ].map(([label, value]) => (
-              <div key={label} className="rounded-xl bg-slate-50 p-3">
-                <div className="mb-2 h-8 rounded-lg border" style={{ background: value }} />
-                <p className="text-xs opacity-60">{label}</p>
-                <p className="font-mono text-xs">{value}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="rounded-3xl border border-white/40 bg-white/70 p-5 shadow-sm">
-          <h3 className="mb-4 text-lg font-bold" style={{ color: "var(--brand-text)" }}>
-            Estado del contrato
-          </h3>
-          <div className="space-y-3 text-sm" style={{ color: "var(--brand-text)" }}>
-            <p>
-              <strong>Versión:</strong> {rawBusiness.contract_version || business.contractVersion || "P0.1"}
-            </p>
-            <p>
-              <strong>Pasarela de pago:</strong> {rawBusiness.payment_gateway_status || business.paymentGatewayStatus || "PENDIENTE"}
-            </p>
-            <p>
-              <strong>Flujo principal:</strong> {rawBusiness.primary_flow || business.primaryFlow || "—"}
-            </p>
-            <p>
-              <strong>Flags CONFIGURACION_PUBLICA:</strong> {state.configuracion.length}
-            </p>
-            {faltantes.length > 0 && (
-              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
-                <strong>Campos faltantes:</strong> {faltantes.join(", ")}
-              </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-white/80 px-3 py-1 text-xs font-semibold" style={{ color: "var(--brand-text)" }}>Rol: {role}</span>
+            <span className="rounded-full bg-white/80 px-3 py-1 text-xs font-semibold" style={{ color: "var(--brand-text)" }}>{canEdit ? "Edición habilitada" : "Solo lectura"}</span>
+            <button type="button" onClick={() => setPreviewOpen(true)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+              <span className="material-symbols-outlined text-base" aria-hidden="true">preview</span>
+              Preview
+            </button>
+            {form && isBrandFormTab && (
+              <button type="submit" form="brand-config-form" disabled={!canEdit || saving} className="rounded-xl px-5 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50" style={{ background: "linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))" }}>
+                {saving ? "Guardando..." : canEdit ? "Guardar config" : "Solo lectura"}
+              </button>
             )}
           </div>
         </div>
+        <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
+          {tabs.map(([id, label, icon]) => (
+            <button key={id} type="button" onClick={() => setActiveTab(id)} className={`inline-flex shrink-0 items-center gap-2 rounded-2xl border px-3 py-2 text-sm font-bold transition ${activeTab === id ? "border-sky-300 bg-sky-50 text-sky-700" : "border-white/60 bg-white/70 text-slate-600 hover:bg-white"}`}>
+              <span className="material-symbols-outlined text-base" aria-hidden="true">{icon}</span>
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
+
+      {saveMessage && (
+        <div className={`rounded-xl border p-3 text-sm ${saveMessage.startsWith("Error") ? "border-red-200 bg-red-50 text-red-700" : "border-green-200 bg-green-50 text-green-700"}`}>
+          {saveMessage}
+        </div>
+      )}
+
+      {form && (
+        <form id="brand-config-form" onSubmit={handleSave} className="contents">
+          {activeTab === "resumen" && (
+            <div className="space-y-5">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <InfoCard label="Marca" value={marca.nombre_sistema || liveConfig.brandName} hint={marca.rubro || liveConfig.rubro} />
+                <InfoCard label="Secciones públicas" value={`${visibleLandingRows}/${landingRows.length}`} hint="Activas y visibles" />
+                <InfoCard label="Media cargada" value={`${rowsWithMedia}/${landingRows.length}`} hint="Secciones con imagen o video" />
+                <InfoCard label="SEO" value={seoReady ? "Completo" : "Pendiente"} hint="Title + description" />
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_360px]">
+                <div className="rounded-3xl border border-white/40 bg-white/75 p-5 shadow-sm">
+                  <h3 className="text-lg font-bold" style={{ color: "var(--brand-text)" }}>Checklist de publicación</h3>
+                  <div className="mt-4 grid grid-cols-1 gap-2 md:grid-cols-2">
+                    <Badge active={brandReady}>Marca, rubro y logo</Badge>
+                    <Badge active={visibleLandingRows > 0}>Secciones visibles</Badge>
+                    <Badge active={rowsWithMedia > 0}>Media por sección</Badge>
+                    <Badge active={seoReady}>SEO básico</Badge>
+                    <Badge active={form.textos_publicos.contacto_whatsapp || form.textos_publicos.contacto_email}>Contacto público</Badge>
+                    <Badge active={configRows.length > 0}>Flags públicos filtrados</Badge>
+                  </div>
+                </div>
+                <div className="rounded-3xl border border-white/40 bg-white/75 p-5 shadow-sm">
+                  <h3 className="text-lg font-bold" style={{ color: "var(--brand-text)" }}>Vista rápida</h3>
+                  <p className="mt-2 text-sm text-slate-500">Abrí la previsualización antes de guardar cambios grandes. Esto evita publicar a ciegas, que es donde nacen los dolores caros.</p>
+                  <button type="button" onClick={() => setPreviewOpen(true)} className="mt-4 w-full rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-bold text-white">Previsualizar landing</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === "marca" && (
+            <div className="rounded-3xl border border-white/40 bg-white/75 p-5 shadow-sm">
+              <h3 className="text-lg font-bold" style={{ color: "var(--brand-text)" }}>Marca e identidad básica</h3>
+              <p className="text-sm opacity-60" style={{ color: "var(--brand-text)" }}>Campos seguros de MARCAS. Guardá desde la barra superior.</p>
+              <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-2">
+                <div className="space-y-3">
+                  <Field label="Nombre público" value={form.nombre_sistema} disabled={!canEdit} onChange={(value) => updateRoot("nombre_sistema", value)} />
+                  <Field label="Nombre legal/comercial" value={form.nombre_negocio} disabled={!canEdit} onChange={(value) => updateRoot("nombre_negocio", value)} />
+                  <Field label="Rubro" value={form.rubro} disabled={!canEdit} onChange={(value) => updateRoot("rubro", value)} />
+                  <Field label="Logo URL" value={form.logo} disabled={!canEdit} onChange={(value) => updateRoot("logo", value)} />
+                </div>
+                <div className="rounded-3xl border border-slate-200 bg-white/70 p-4">
+                  <p className="text-sm font-bold" style={{ color: "var(--brand-text)" }}>Preview de marca</p>
+                  <div className="mt-4 flex items-center gap-4 rounded-2xl bg-slate-50 p-4">
+                    {form.logo ? <img src={form.logo} alt="Logo" className="h-16 w-16 rounded-2xl object-cover" /> : <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white text-xs text-slate-400">Logo</div>}
+                    <div>
+                      <p className="text-lg font-bold" style={{ color: form.colores.texto || "var(--brand-text)" }}>{form.nombre_sistema || "Nombre público"}</p>
+                      <p className="text-sm text-slate-500">{form.rubro || "Rubro"}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === "diseno" && (
+            <div className="space-y-5">
+              <div className="rounded-3xl border border-white/40 bg-white/75 p-5 shadow-sm">
+                <h3 className="text-lg font-bold" style={{ color: "var(--brand-text)" }}>Diseño visual</h3>
+                <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <ColorField label="Primario" value={form.colores.primario} disabled={!canEdit} placeholder="#006686" onChange={(value) => updateNested("colores", "primario", value)} />
+                    <ColorField label="Secundario" value={form.colores.secundario} disabled={!canEdit} placeholder="#7DD3FC" onChange={(value) => updateNested("colores", "secundario", value)} />
+                    <ColorField label="Acento" value={form.colores.acento} disabled={!canEdit} placeholder="#38BDF8" onChange={(value) => updateNested("colores", "acento", value)} />
+                    <ColorField label="Fondo" value={form.colores.fondo} disabled={!canEdit} placeholder="#F8F9FF" onChange={(value) => updateNested("colores", "fondo", value)} />
+                    <ColorField label="Texto" value={form.colores.texto} disabled={!canEdit} placeholder="#1F1235" onChange={(value) => updateNested("colores", "texto", value)} />
+                    <ColorField label="Texto secundario" value={form.colores.texto_secundario} disabled={!canEdit} placeholder="#64748B" onChange={(value) => updateNested("colores", "texto_secundario", value)} />
+                  </div>
+                  <div className="rounded-3xl border border-slate-200 bg-white/70 p-4">
+                    <p className="text-sm font-bold" style={{ color: "var(--brand-text)" }}>Identidad visual</p>
+                    <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                      {[["Primario", form.colores.primario || liveConfig.brandPrimary], ["Secundario", form.colores.secundario || liveConfig.brandSecondary], ["Acento", form.colores.acento || liveConfig.brandAccent], ["Fondo", form.colores.fondo || liveConfig.brandSurface]].map(([label, value]) => (
+                        <div key={label} className="rounded-xl bg-slate-50 p-3">
+                          <div className="mb-2 h-8 rounded-lg border" style={{ background: value }} />
+                          <p className="text-xs opacity-60">{label}</p>
+                          <p className="font-mono text-xs">{value || "—"}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <BackgroundLandingPanel form={form} canEdit={canEdit} updateNested={updateNested} uploading={mediaUploading[backgroundMediaKey]} onUploadFile={uploadBackgroundAttachment} />
+                <div className="mt-5 grid grid-cols-1 gap-2 md:grid-cols-3">
+                  <Toggle label="Mostrar servicios" checked={form.secciones_visibles.mostrar_servicios} disabled={!canEdit} onChange={(value) => updateNested("secciones_visibles", "mostrar_servicios", value)} />
+                  <Toggle label="Mostrar productos" checked={form.secciones_visibles.mostrar_productos} disabled={!canEdit} onChange={(value) => updateNested("secciones_visibles", "mostrar_productos", value)} />
+                  <Toggle label="Mostrar sucursales/contacto físico" checked={form.secciones_visibles.mostrar_sucursales} disabled={!canEdit} onChange={(value) => updateNested("secciones_visibles", "mostrar_sucursales", value)} />
+                  <Toggle label="Mostrar cómo funciona" checked={form.secciones_visibles.mostrar_como_funciona} disabled={!canEdit} onChange={(value) => updateNested("secciones_visibles", "mostrar_como_funciona", value)} />
+                  <Toggle label="Mostrar ofertas" checked={form.secciones_visibles.mostrar_ofertas} disabled={!canEdit} onChange={(value) => updateNested("secciones_visibles", "mostrar_ofertas", value)} />
+                  <Toggle label="Mostrar testimonios" checked={form.secciones_visibles.mostrar_testimonios} disabled={!canEdit} onChange={(value) => updateNested("secciones_visibles", "mostrar_testimonios", value)} />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === "secciones" && (
+            <div className="rounded-3xl border border-white/40 bg-white/75 p-5 shadow-sm">
+              <div className="mb-5 flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                <div>
+                  <h3 className="text-lg font-bold" style={{ color: "var(--brand-text)" }}>Secciones de landing</h3>
+                  <p className="text-sm opacity-60" style={{ color: "var(--brand-text)" }}>Edita LANDING_SECCIONES por módulo, con media individual y guardado por sección.</p>
+                </div>
+                <Badge active={landingRows.length > 0}>{landingRows.length} secciones mapeadas</Badge>
+              </div>
+              {landingRows.length === 0 ? <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">No hay secciones LANDING_SECCIONES compatibles para editar.</div> : <div className="space-y-4">{landingRows.map((row) => renderSectionEditor(row))}</div>}
+            </div>
+          )}
+
+          {activeTab === "media" && (
+            <div className="rounded-3xl border border-white/40 bg-white/75 p-5 shadow-sm">
+              <div className="mb-5 flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                <div>
+                  <h3 className="text-lg font-bold" style={{ color: "var(--brand-text)" }}>Biblioteca de media por sección</h3>
+                  <p className="text-sm opacity-60" style={{ color: "var(--brand-text)" }}>Vista consolidada: cada sección mantiene su propio upload, attachment y URL. Nada global, nada compartido por accidente.</p>
+                </div>
+                <Badge active={rowsWithMedia > 0}>{rowsWithMedia} secciones con media</Badge>
+              </div>
+              {landingRows.length === 0 ? <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">No hay secciones para administrar media.</div> : <div className="space-y-4">{landingRows.map((row) => renderSectionEditor(row, { mediaOnly: true }))}</div>}
+            </div>
+          )}
+
+          {activeTab === "seo" && (
+            <div className="rounded-3xl border border-white/40 bg-white/75 p-5 shadow-sm">
+              <h3 className="text-lg font-bold" style={{ color: "var(--brand-text)" }}>SEO, contenido público y contacto</h3>
+              <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-2">
+                <div className="space-y-3">
+                  <h4 className="text-sm font-bold uppercase tracking-wide opacity-60" style={{ color: "var(--brand-text)" }}>Hero y CTAs</h4>
+                  <Field label="Badge" value={form.textos_publicos.hero_badge} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "hero_badge", value)} />
+                  <Field label="Título hero" value={form.textos_publicos.hero_titulo} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "hero_titulo", value)} />
+                  <Field label="Subtítulo hero" value={form.textos_publicos.hero_subtitulo} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "hero_subtitulo", value)} />
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                    <Field label="CTA primario" value={form.textos_publicos.hero_cta_primario} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "hero_cta_primario", value)} />
+                    <Field label="URL CTA primario" value={form.textos_publicos.hero_cta_primario_url} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "hero_cta_primario_url", value)} />
+                    <Field label="CTA secundario" value={form.textos_publicos.hero_cta_secundario} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "hero_cta_secundario", value)} />
+                    <Field label="URL CTA secundario" value={form.textos_publicos.hero_cta_secundario_url} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "hero_cta_secundario_url", value)} />
+                  </div>
+                  <Toggle label="Banner activo" checked={form.textos_publicos.banner_activo} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "banner_activo", value)} />
+                  <Field label="Título banner" value={form.textos_publicos.banner_titulo} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "banner_titulo", value)} />
+                  <TextAreaField label="Mensaje banner" value={form.textos_publicos.banner_mensaje} disabled={!canEdit} rows={2} onChange={(value) => updateNested("textos_publicos", "banner_mensaje", value)} />
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                    <Field label="CTA banner" value={form.textos_publicos.banner_cta_texto} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "banner_cta_texto", value)} />
+                    <Field label="URL CTA banner" value={form.textos_publicos.banner_cta_url} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "banner_cta_url", value)} />
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <h4 className="text-sm font-bold uppercase tracking-wide opacity-60" style={{ color: "var(--brand-text)" }}>SEO, contacto y redes</h4>
+                  <Field label="SEO title" value={form.seo_title} disabled={!canEdit} onChange={(value) => updateRoot("seo_title", value)} />
+                  <TextAreaField label="SEO description" value={form.seo_description} disabled={!canEdit} rows={2} onChange={(value) => updateRoot("seo_description", value)} />
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                    <Field label="Teléfono" value={form.textos_publicos.contacto_telefono} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "contacto_telefono", value)} />
+                    <Field label="WhatsApp" value={form.textos_publicos.contacto_whatsapp} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "contacto_whatsapp", value)} />
+                  </div>
+                  <Field label="Email" value={form.textos_publicos.contacto_email} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "contacto_email", value)} />
+                  <Field label="Dirección pública" value={form.textos_publicos.contacto_direccion} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "contacto_direccion", value)} />
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                    <Field label="Instagram" value={form.textos_publicos.redes_instagram} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "redes_instagram", value)} />
+                    <Field label="Facebook" value={form.textos_publicos.redes_facebook} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "redes_facebook", value)} />
+                  </div>
+                  <Field label="Google Maps" value={form.textos_publicos.redes_maps} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "redes_maps", value)} />
+                  <TextAreaField label="Aviso legal" value={form.legal_aviso} disabled={!canEdit} rows={2} onChange={(value) => updateRoot("legal_aviso", value)} />
+                </div>
+              </div>
+            </div>
+          )}
+        </form>
+      )}
+
+      {activeTab === "avanzado" && (
+        <div className="space-y-5">
+          <div className="rounded-3xl border border-white/40 bg-white/75 p-5 shadow-sm">
+            <div className="mb-5 flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+              <div>
+                <h3 className="text-lg font-bold" style={{ color: "var(--brand-text)" }}>Configuración pública avanzada</h3>
+                <p className="text-sm opacity-60" style={{ color: "var(--brand-text)" }}>Editor controlado de CONFIGURACION_PUBLICA filtrado para landing y público.</p>
+              </div>
+              <Badge active={configRows.length > 0}>{configRows.length} flags editables</Badge>
+            </div>
+            {renderConfigEditor()}
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <div className="rounded-3xl border border-white/40 bg-white/70 p-5 shadow-sm">
+              <h3 className="mb-4 text-lg font-bold" style={{ color: "var(--brand-text)" }}>Comportamiento público</h3>
+              <div className="flex flex-wrap gap-2">
+                <Badge active={business.usesProducts}>Productos</Badge>
+                <Badge active={business.usesServices}>Servicios</Badge>
+                <Badge active={business.usesAppointments}>Turnos</Badge>
+                <Badge active={business.usesBranches}>Sucursales</Badge>
+                <Badge active={business.usesMultiBranch}>Multi-sucursal</Badge>
+                <Badge active={business.showContactAddress}>Dirección pública</Badge>
+                <Badge active={business.showMap}>Mapa</Badge>
+                <Badge active={business.usesCart}>Carrito</Badge>
+                <Badge active={business.usesCheckout}>Checkout</Badge>
+                <Badge active={business.usesOnlinePayments}>Pago online</Badge>
+                <Badge active={business.usesPhysicalPOS}>Caja física</Badge>
+              </div>
+            </div>
+            <div className="rounded-3xl border border-white/40 bg-white/70 p-5 shadow-sm">
+              <h3 className="mb-4 text-lg font-bold" style={{ color: "var(--brand-text)" }}>Estado del contrato</h3>
+              <div className="space-y-3 text-sm" style={{ color: "var(--brand-text)" }}>
+                <p><strong>Versión:</strong> {rawBusiness.contract_version || business.contractVersion || "P0.1"}</p>
+                <p><strong>Pasarela de pago:</strong> {rawBusiness.payment_gateway_status || business.paymentGatewayStatus || "PENDIENTE"}</p>
+                <p><strong>Flujo principal:</strong> {rawBusiness.primary_flow || business.primaryFlow || "—"}</p>
+                <p><strong>Flags CONFIGURACION_PUBLICA:</strong> {state.configuracion.length}</p>
+                {faltantes.length > 0 && <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800"><strong>Campos faltantes:</strong> {faltantes.join(", ")}</div>}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <LandingPreviewModal open={previewOpen} onClose={() => setPreviewOpen(false)} form={form} liveConfig={liveConfig} landingRows={landingRows} landingDrafts={landingDrafts} configRows={configRows} configDrafts={configDrafts} />
     </div>
   );
 }
