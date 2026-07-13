@@ -232,6 +232,10 @@ function applyDomainVariant(config) {
   };
 }
 
+function domainBaseConfig() {
+  return applyDomainVariant(FALLBACK);
+}
+
 function applyCssVariables(config) {
   const root = document.documentElement;
   if (!root) return;
@@ -461,7 +465,7 @@ export function BrandConfigProvider({ children }) {
 
   function buildConfig(data, payload = readLandingPreviewPayload()) {
     const previewData = isLandingPreviewRuntime() ? applyPreviewToMarcaData(data, payload) : data;
-    return applyDomainVariant(transformMarcaBlanca(previewData));
+    return transformMarcaBlanca(previewData, domainBaseConfig());
   }
 
   async function fetchBrandConfig() {
@@ -526,7 +530,8 @@ export function BrandConfigProvider({ children }) {
 export function useBrandConfig() {
   const ctx = useContext(BrandConfigContext);
   if (!ctx) {
-    return { config: FALLBACK, loading: false, error: null, refresh: async () => FALLBACK };
+    const fallback = domainBaseConfig();
+    return { config: fallback, loading: false, error: null, refresh: async () => fallback };
   }
   return ctx;
 }
