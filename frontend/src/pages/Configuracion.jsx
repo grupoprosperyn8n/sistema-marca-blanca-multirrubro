@@ -436,7 +436,7 @@ function MediaAttachmentManager({
           {helperText && <p className="mt-1 text-xs text-sky-700">{helperText}</p>}
         </div>
         <label className={`inline-flex cursor-pointer items-center justify-center rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-bold text-sky-700 ${disabled || uploading ? "pointer-events-none opacity-50" : ""}`}>
-          {uploading ? "Subiendo..." : "Subir archivo"}
+          {uploading ? "Subiendo…" : "Subir archivo"}
           <input
             type="file"
             accept="image/*,image/gif,video/*"
@@ -462,7 +462,7 @@ function MediaAttachmentManager({
           <input
             type="text"
             value={draftValue || ""}
-            placeholder="Agregar URL nueva https://..."
+            placeholder="Agregar URL nueva https://…"
             disabled={disabled}
             onChange={(event) => onDraftChange(event.target.value)}
             className={`${inputClass} ${disabled ? "opacity-60" : ""}`}
@@ -566,12 +566,12 @@ function BackgroundLandingPanel({ form, canEdit, updateNested, uploading, onUplo
               label="URL imagen/video de fondo"
               value={imageUrl}
               disabled={!canEdit || !isImageMode}
-              placeholder="https://..."
+              placeholder="https://…"
               onChange={(value) => updateNested("textos_publicos", "hero_imagen_url", value)}
             />
             <label className={`inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-bold text-sky-700 ${!canEdit || uploading ? "pointer-events-none opacity-50" : ""}`}>
               <span className="material-symbols-outlined text-base" aria-hidden="true">upload</span>
-              {uploading ? "Subiendo fondo..." : "Subir archivo de fondo"}
+              {uploading ? "Subiendo fondo…" : "Subir archivo de fondo"}
               <input
                 type="file"
                 accept="image/*,image/gif,video/*"
@@ -688,6 +688,7 @@ export default function Configuracion() {
   const [mediaUploading, setMediaUploading] = useState({});
   const [previewOpen, setPreviewOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("resumen");
+  const [activeSectionTab, setActiveSectionTab] = useState("contenido");
   const [constructorDraft, setConstructorDraft] = useState(() => buildSectionConstructorDraft());
 
   useEffect(() => {
@@ -731,13 +732,13 @@ export default function Configuracion() {
   if (state.loading) {
     return (
       <div className="py-12 text-center" style={{ color: "var(--brand-text)" }}>
-        Cargando configuración de marca blanca...
+        Cargando configuración de marca blanca…
       </div>
     );
   }
 
   if (state.error) {
-    return <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">Error: {state.error}</div>;
+    return <div role="alert" aria-live="assertive" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">Error: {state.error}</div>;
   }
 
   const marca = state.marca || {};
@@ -1226,7 +1227,6 @@ export default function Configuracion() {
     ["marca", "Marca", "storefront"],
     ["diseno", "Diseño", "palette"],
     ["secciones", "Secciones", "view_quilt"],
-    ["media", "Media", "perm_media"],
     ["seo", "SEO", "travel_explore"],
     ["avanzado", "Avanzado", "tune"],
   ];
@@ -1242,18 +1242,36 @@ export default function Configuracion() {
   const seoReady = !!(form?.seo_title && form?.seo_description);
   const brandReady = !!(form?.nombre_sistema && form?.rubro && form?.logo);
 
-  function renderSectionEditor(row, { mediaOnly = false } = {}) {
+  function handleTabKeyDown(event, ids, setter, prefix = "tab") {
+    const index = ids.indexOf(event.currentTarget.dataset.tabId);
+    if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+      event.preventDefault();
+      const next = ids[(index + 1) % ids.length];
+      setter(next);
+      document.getElementById(`${prefix}-${next}`)?.focus();
+    }
+    if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+      event.preventDefault();
+      const next = ids[(index - 1 + ids.length) % ids.length];
+      setter(next);
+      document.getElementById(`${prefix}-${next}`)?.focus();
+    }
+  }
+
+  function renderSectionEditor(row, { mode = "content" } = {}) {
     const draft = landingDrafts[row.id] || buildLandingDraft(row);
     const key = `landing:${row.id}`;
     const disabled = !canEdit || !!rowSaving[key];
     const fixedHero = isFixedHeroSection(row);
     const orderableSection = isOrderableLandingSection(row);
+    const draftBase = buildLandingDraft(row);
+    const hasDraftChanges = Object.keys(draft).some((field) => field !== "templateKey" && String(draft[field] ?? "") !== String(draftBase[field] ?? ""));
     const movableRows = landingRows.filter(isOrderableLandingSection);
     const movableIndex = movableRows.findIndex((item) => item.id === row.id);
     const movableTotal = movableRows.length;
     return (
       <section key={row.id} className="rounded-2xl border border-slate-200 bg-white/70 p-4">
-        <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+        <div className="md:sticky md:top-24 md:z-10 -mx-1 mb-4 flex flex-col gap-2 rounded-xl bg-white/90 px-1 py-2 backdrop-blur md:flex-row md:items-center md:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide opacity-50" style={{ color: "var(--brand-text)" }}>
               {row.CLAVE_SECCION}
@@ -1266,7 +1284,8 @@ export default function Configuracion() {
             <Badge active={draft.VISIBLE_EN_FRONTEND_PUBLICO}>Pública</Badge>
             {fixedHero && <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">Hero fijo</span>}
             {!fixedHero && !orderableSection && <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">Agrupada</span>}
-            {!mediaOnly && (
+            <span aria-live="polite" className={`rounded-full px-3 py-1 text-xs font-bold ${hasDraftChanges ? "bg-amber-100 text-amber-800" : "bg-slate-100 text-slate-500"}`}>{hasDraftChanges ? "Cambios sin guardar" : "Guardado"}</span>
+            {mode === "order" && (
               <div className="inline-flex overflow-hidden rounded-xl border border-slate-200 bg-white" aria-label="Reordenar sección">
                 <button
                   type="button"
@@ -1298,6 +1317,7 @@ export default function Configuracion() {
               <span className="material-symbols-outlined text-base" aria-hidden="true">visibility</span>
               Previsualizar
             </button>
+            {mode !== "order" && (
             <button
               type="button"
               disabled={disabled}
@@ -1305,22 +1325,22 @@ export default function Configuracion() {
               className="rounded-xl px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
               style={{ background: "linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))" }}
             >
-              {rowSaving[key] ? "Guardando..." : canEdit ? "Guardar sección" : "Solo lectura"}
+              {rowSaving[key] ? "Guardando…" : canEdit ? "Guardar sección" : "Solo lectura"}
             </button>
+            )}
           </div>
         </div>
 
         {rowMessages[key] && (
-          <div className={`mb-4 rounded-xl border p-3 text-sm ${rowMessages[key].startsWith("Error") ? "border-red-200 bg-red-50 text-red-700" : "border-green-200 bg-green-50 text-green-700"}`}>
+          <div role="status" aria-live={rowMessages[key].startsWith("Error") ? "assertive" : "polite"} className={`mb-4 rounded-xl border p-3 text-sm ${rowMessages[key].startsWith("Error") ? "border-red-200 bg-red-50 text-red-700" : "border-green-200 bg-green-50 text-green-700"}`}>
             {rowMessages[key]}
           </div>
         )}
 
-        {!mediaOnly && (
+        {mode === "content" && (
           <>
             <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
               <Field label="Nombre interno visible" value={draft.NOMBRE_SECCION} disabled={disabled || !fieldEditable("LANDING_SECCIONES", "NOMBRE_SECCION")} onChange={(value) => updateLandingDraft(row.id, "NOMBRE_SECCION", value)} />
-              <Field label="Orden visual" type="number" value={draft.ORDEN_VISUAL} disabled={disabled || !orderableSection || !fieldEditable("LANDING_SECCIONES", "ORDEN_VISUAL")} onChange={(value) => updateLandingDraft(row.id, "ORDEN_VISUAL", value)} />
               <Field label="Título público" value={draft.TITULO_PUBLICO} disabled={disabled || !fieldEditable("LANDING_SECCIONES", "TITULO_PUBLICO")} onChange={(value) => updateLandingDraft(row.id, "TITULO_PUBLICO", value)} />
               <Field label="Subtítulo público" value={draft.SUBTITULO_PUBLICO} disabled={disabled || !fieldEditable("LANDING_SECCIONES", "SUBTITULO_PUBLICO")} onChange={(value) => updateLandingDraft(row.id, "SUBTITULO_PUBLICO", value)} />
               <TextAreaField label="Contenido público" value={draft.CONTENIDO_PUBLICO} disabled={disabled || !fieldEditable("LANDING_SECCIONES", "CONTENIDO_PUBLICO")} onChange={(value) => updateLandingDraft(row.id, "CONTENIDO_PUBLICO", value)} />
@@ -1342,10 +1362,16 @@ export default function Configuracion() {
           </>
         )}
 
-        <div className={`grid grid-cols-1 gap-3 ${mediaOnly ? "lg:grid-cols-2" : "mt-4 lg:grid-cols-2"}`}>
+        {mode === "order" && (
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto] md:items-end">
+            <Field label="Orden visual" type="number" value={draft.ORDEN_VISUAL} disabled={disabled || !orderableSection || !fieldEditable("LANDING_SECCIONES", "ORDEN_VISUAL")} onChange={(value) => updateLandingDraft(row.id, "ORDEN_VISUAL", value)} />
+          </div>
+        )}
+
+        {mode === "media" && <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
           <MediaAttachmentManager row={row} field="IMAGEN_PRINCIPAL" label="Imagen/video principal" draftValue={draft.IMAGEN_PRINCIPAL_URL} disabled={disabled || !fieldEditable("LANDING_SECCIONES", "IMAGEN_PRINCIPAL")} uploading={mediaUploading[`media:${row.id}:IMAGEN_PRINCIPAL`]} onDraftChange={(value) => updateLandingDraft(row.id, "IMAGEN_PRINCIPAL_URL", value)} onUpload={uploadLandingAttachment} onDelete={deleteLandingAttachment} helperText={landingMediaHelperText(row.CLAVE_SECCION)} />
           <MediaAttachmentManager row={row} field="IMAGENES_CARRUSEL" label="Carrusel imagen/video" draftValue={draft.IMAGENES_CARRUSEL_URLS} disabled={disabled || !fieldEditable("LANDING_SECCIONES", "IMAGENES_CARRUSEL")} uploading={mediaUploading[`media:${row.id}:IMAGENES_CARRUSEL`]} onDraftChange={(value) => updateLandingDraft(row.id, "IMAGENES_CARRUSEL_URLS", value)} onUpload={uploadLandingAttachment} onDelete={deleteLandingAttachment} helperText={landingMediaHelperText(row.CLAVE_SECCION)} multiple textarea />
-        </div>
+        </div>}
       </section>
     );
   }
@@ -1370,7 +1396,7 @@ export default function Configuracion() {
                 <Badge active={draft.VISIBLE_EN_FRONTEND_PUBLICO}>Visible</Badge>
               </div>
 
-              {rowMessages[key] && <div className={`mb-4 rounded-xl border p-3 text-sm ${rowMessages[key].startsWith("Error") ? "border-red-200 bg-red-50 text-red-700" : "border-green-200 bg-green-50 text-green-700"}`}>{rowMessages[key]}</div>}
+              {rowMessages[key] && <div role="status" aria-live={rowMessages[key].startsWith("Error") ? "assertive" : "polite"} className={`mb-4 rounded-xl border p-3 text-sm ${rowMessages[key].startsWith("Error") ? "border-red-200 bg-red-50 text-red-700" : "border-green-200 bg-green-50 text-green-700"}`}>{rowMessages[key]}</div>}
 
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 <Field label="Nombre" value={draft.NOMBRE_CONFIGURACION} disabled={disabled || !fieldEditable("CONFIGURACION_PUBLICA", "NOMBRE_CONFIGURACION")} onChange={(value) => updateConfigDraft(row.id, "NOMBRE_CONFIGURACION", value)} />
@@ -1389,7 +1415,7 @@ export default function Configuracion() {
               </div>
 
               <button type="button" disabled={disabled} onClick={() => patchConfigRow(row)} className="mt-4 w-full rounded-xl px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50" style={{ background: "linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))" }}>
-                {rowSaving[key] ? "Guardando..." : canEdit ? "Guardar flag" : "Solo lectura"}
+                {rowSaving[key] ? "Guardando…" : canEdit ? "Guardar flag" : "Solo lectura"}
               </button>
             </section>
           );
@@ -1416,14 +1442,14 @@ export default function Configuracion() {
             </button>
             {form && isBrandFormTab && (
               <button type="submit" form="brand-config-form" disabled={!canEdit || saving} className="rounded-xl px-5 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50" style={{ background: "linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))" }}>
-                {saving ? "Guardando..." : canEdit ? "Guardar config" : "Solo lectura"}
+                {saving ? "Guardando…" : canEdit ? "Guardar config" : "Solo lectura"}
               </button>
             )}
           </div>
         </div>
-        <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
+        <div role="tablist" aria-label="Secciones de configuración" className="mt-4 flex gap-2 overflow-x-auto pb-1">
           {tabs.map(([id, label, icon]) => (
-            <button key={id} type="button" onClick={() => setActiveTab(id)} className={`inline-flex shrink-0 items-center gap-2 rounded-2xl border px-3 py-2 text-sm font-bold transition ${activeTab === id ? "border-sky-300 bg-sky-50 text-sky-700" : "border-white/60 bg-white/70 text-slate-600 hover:bg-white"}`}>
+            <button key={id} id={`tab-${id}`} data-tab-id={id} role="tab" aria-selected={activeTab === id} aria-controls={`panel-${id}`} tabIndex={activeTab === id ? 0 : -1} type="button" onKeyDown={(event) => handleTabKeyDown(event, tabs.map(([tabId]) => tabId), setActiveTab)} onClick={() => setActiveTab(id)} className={`inline-flex shrink-0 items-center gap-2 rounded-2xl border px-3 py-2 text-sm font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${activeTab === id ? "border-sky-300 bg-sky-50 text-sky-700" : "border-white/60 bg-white/70 text-slate-600 hover:bg-white"}`}>
               <span className="material-symbols-outlined text-base" aria-hidden="true">{icon}</span>
               {label}
             </button>
@@ -1432,11 +1458,12 @@ export default function Configuracion() {
       </div>
 
       {saveMessage && (
-        <div className={`rounded-xl border p-3 text-sm ${saveMessage.startsWith("Error") ? "border-red-200 bg-red-50 text-red-700" : "border-green-200 bg-green-50 text-green-700"}`}>
+        <div role="status" aria-live={saveMessage.startsWith("Error") ? "assertive" : "polite"} className={`rounded-xl border p-3 text-sm ${saveMessage.startsWith("Error") ? "border-red-200 bg-red-50 text-red-700" : "border-green-200 bg-green-50 text-green-700"}`}>
           {saveMessage}
         </div>
       )}
 
+      <div role="tabpanel" id={`panel-${activeTab}`} aria-labelledby={`tab-${activeTab}`} tabIndex={0}>
       {form && (
         <form id="brand-config-form" onSubmit={handleSave} className="contents">
           {activeTab === "resumen" && (
@@ -1482,7 +1509,7 @@ export default function Configuracion() {
                   <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto]">
                     <label className={`inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-bold text-sky-700 ${!canEdit || mediaUploading["media:marca:logo"] ? "pointer-events-none opacity-50" : ""}`}>
                       <span className="material-symbols-outlined text-base" aria-hidden="true">upload</span>
-                      {mediaUploading["media:marca:logo"] ? "Procesando..." : "Subir logo (PNG/JPG/GIF)"}
+                      {mediaUploading["media:marca:logo"] ? "Procesando…" : "Subir logo (PNG/JPG/GIF)"}
                       <input
                         type="file"
                         accept="image/*,image/gif"
@@ -1565,43 +1592,23 @@ export default function Configuracion() {
 
           {activeTab === "secciones" && (
             <div className="rounded-3xl border border-white/40 bg-white/75 p-5 shadow-sm">
-              <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+              <div className="mb-5 flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                 <div>
                   <h3 className="text-lg font-bold" style={{ color: "var(--brand-text)" }}>Secciones de landing</h3>
-                  <p className="text-sm opacity-60" style={{ color: "var(--brand-text)" }}>Edita LANDING_SECCIONES por módulo. Usá Subir/Bajar para bloques públicos reales; las secciones agrupadas mantienen orden interno fijo.</p>
+                  <p className="text-sm opacity-60" style={{ color: "var(--brand-text)" }}>Separá contenido, orden y media para editar cada módulo con menos ruido.</p>
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge active={landingRows.length > 0}>{landingRows.length} secciones mapeadas</Badge>
-                  <button
-                    type="button"
-                    disabled={!canEdit || !orderHasDraftChanges || !!rowSaving["landing:order"] || !fieldEditable("LANDING_SECCIONES", "ORDEN_VISUAL")}
-                    onClick={undoLandingOrderChanges}
-                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <span className="material-symbols-outlined text-base" aria-hidden="true">undo</span>
-                    Deshacer
+                <Badge active={landingRows.length > 0}>{landingRows.length} secciones mapeadas</Badge>
+              </div>
+              <div role="tablist" aria-label="Editor de secciones" className="mb-5 flex gap-2 overflow-x-auto border-b border-slate-200 pb-2">
+                {[ ["contenido", "Contenido", "edit_note"], ["orden", "Orden", "swap_vert"], ["media", "Media", "perm_media"] ].map(([id, label, icon]) => (
+                  <button key={id} id={`section-tab-${id}`} data-tab-id={id} role="tab" aria-selected={activeSectionTab === id} aria-controls={`section-panel-${id}`} tabIndex={activeSectionTab === id ? 0 : -1} type="button" onKeyDown={(event) => handleTabKeyDown(event, ["contenido", "orden", "media"], setActiveSectionTab, "section-tab")} onClick={() => setActiveSectionTab(id)} className={`inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl border px-3 py-2 text-sm font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${activeSectionTab === id ? "border-sky-300 bg-sky-50 text-sky-700" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}>
+                    <span className="material-symbols-outlined text-base" aria-hidden="true">{icon}</span>{label}
                   </button>
-                  <button
-                    type="button"
-                    disabled={!canEdit || !!rowSaving["landing:order"] || !fieldEditable("LANDING_SECCIONES", "ORDEN_VISUAL")}
-                    onClick={resetLandingOrderToBase}
-                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-bold text-amber-800 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <span className="material-symbols-outlined text-base" aria-hidden="true">restart_alt</span>
-                    Restablecer base
-                  </button>
-                  <button
-                    type="button"
-                    disabled={!canEdit || !orderHasDraftChanges || !!rowSaving["landing:order"] || !fieldEditable("LANDING_SECCIONES", "ORDEN_VISUAL")}
-                    onClick={patchLandingOrder}
-                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <span className="material-symbols-outlined text-base" aria-hidden="true">swap_vert</span>
-                    {rowSaving["landing:order"] ? "Guardando orden..." : "Guardar orden"}
-                  </button>
-                </div>
+                ))}
               </div>
 
+              {activeSectionTab === "contenido" && (
+                <div id="section-panel-contenido" role="tabpanel" aria-labelledby="section-tab-contenido" tabIndex={0}>
               <div className="mb-5 rounded-3xl border border-sky-100 bg-sky-50/70 p-4 sm:p-5">
                 <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                   <div>
@@ -1630,7 +1637,7 @@ export default function Configuracion() {
                   <TextAreaField label="Contenido" value={constructorDraft.CONTENIDO_PUBLICO} rows={4} disabled={!canEdit || !!rowSaving["landing:create"]} onChange={(value) => updateConstructorDraft("CONTENIDO_PUBLICO", value)} />
                   <div className="grid grid-cols-1 gap-3">
                     <Field label="Texto CTA" value={constructorDraft.TEXTO_BOTON_CTA} disabled={!canEdit || !!rowSaving["landing:create"]} onChange={(value) => updateConstructorDraft("TEXTO_BOTON_CTA", value)} />
-                    <Field label="URL CTA" value={constructorDraft.URL_BOTON_CTA} placeholder="/reserva o https://..." disabled={!canEdit || !!rowSaving["landing:create"]} onChange={(value) => updateConstructorDraft("URL_BOTON_CTA", value)} />
+                    <Field label="URL CTA" value={constructorDraft.URL_BOTON_CTA} placeholder="/reserva o https://…" disabled={!canEdit || !!rowSaving["landing:create"]} onChange={(value) => updateConstructorDraft("URL_BOTON_CTA", value)} />
                   </div>
                   <ColorField label="Color fondo" value={constructorDraft.COLOR_FONDO_HEX} placeholder="#EFF6FF" disabled={!canEdit || !!rowSaving["landing:create"]} onChange={(value) => updateConstructorDraft("COLOR_FONDO_HEX", value)} />
                   <ColorField label="Color texto" value={constructorDraft.COLOR_TEXTO_HEX} placeholder="#0F172A" disabled={!canEdit || !!rowSaving["landing:create"]} onChange={(value) => updateConstructorDraft("COLOR_TEXTO_HEX", value)} />
@@ -1643,7 +1650,7 @@ export default function Configuracion() {
                   <Toggle label="Desktop" checked={constructorDraft.VISIBLE_DESKTOP} disabled={!canEdit || !!rowSaving["landing:create"]} onChange={(value) => updateConstructorDraft("VISIBLE_DESKTOP", value)} />
                 </div>
                 {rowMessages["landing:create"] && (
-                  <div className={`mt-4 rounded-xl border p-3 text-sm ${rowMessages["landing:create"].startsWith("Error") ? "border-red-200 bg-red-50 text-red-700" : "border-green-200 bg-green-50 text-green-700"}`}>
+                  <div role="status" aria-live={rowMessages["landing:create"].startsWith("Error") ? "assertive" : "polite"} className={`mt-4 rounded-xl border p-3 text-sm ${rowMessages["landing:create"].startsWith("Error") ? "border-red-200 bg-red-50 text-red-700" : "border-green-200 bg-green-50 text-green-700"}`}>
                     {rowMessages["landing:create"]}
                   </div>
                 )}
@@ -1656,29 +1663,50 @@ export default function Configuracion() {
                     className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <span className="material-symbols-outlined text-base" aria-hidden="true">add_circle</span>
-                    {rowSaving["landing:create"] ? "Creando..." : "Crear sección"}
+                    {rowSaving["landing:create"] ? "Creando…" : "Crear sección"}
                   </button>
                 </div>
               </div>
-              {orderHasDraftChanges && (
-                <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-800">
-                  Orden en borrador: previsualizá antes de guardar para confirmar el recorrido público.
+
+                  {orderHasDraftChanges && (
+                    <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-800" aria-live="polite">
+                      Orden en borrador: previsualizá antes de guardar para confirmar el recorrido público.
+                    </div>
+                  )}
+                  {landingRows.length === 0 ? <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">No hay secciones LANDING_SECCIONES compatibles para editar.</div> : <div className="space-y-4">{landingRows.map((row) => renderSectionEditor(row, { mode: "content" }))}</div>}
                 </div>
               )}
-              {landingRows.length === 0 ? <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">No hay secciones LANDING_SECCIONES compatibles para editar.</div> : <div className="space-y-4">{landingRows.map((row) => renderSectionEditor(row))}</div>}
-            </div>
-          )}
 
-          {activeTab === "media" && (
-            <div className="rounded-3xl border border-white/40 bg-white/75 p-5 shadow-sm">
-              <div className="mb-5 flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
-                <div>
-                  <h3 className="text-lg font-bold" style={{ color: "var(--brand-text)" }}>Biblioteca de media por sección</h3>
-                  <p className="text-sm opacity-60" style={{ color: "var(--brand-text)" }}>Vista consolidada: cada sección mantiene su propio upload, attachment y URL. Nada global, nada compartido por accidente.</p>
+              {activeSectionTab === "orden" && (
+                <div id="section-panel-orden" role="tabpanel" aria-labelledby="section-tab-orden" tabIndex={0}>
+                  <div className="mb-5 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white/70 p-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <h4 className="font-bold text-slate-900">Orden de los bloques públicos</h4>
+                      <p className="text-sm text-slate-600">Ajustá el recorrido sin abrir los campos de contenido. Los cambios quedan en borrador hasta guardarlos.</p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <button type="button" disabled={!canEdit || !orderHasDraftChanges || !!rowSaving["landing:order"] || !fieldEditable("LANDING_SECCIONES", "ORDEN_VISUAL")} onClick={undoLandingOrderChanges} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 disabled:opacity-50"><span className="material-symbols-outlined text-base" aria-hidden="true">undo</span>Deshacer</button>
+                      <button type="button" disabled={!canEdit || !!rowSaving["landing:order"] || !fieldEditable("LANDING_SECCIONES", "ORDEN_VISUAL")} onClick={resetLandingOrderToBase} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-bold text-amber-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 disabled:opacity-50"><span className="material-symbols-outlined text-base" aria-hidden="true">restart_alt</span>Restablecer base</button>
+                      <button type="button" disabled={!canEdit || !orderHasDraftChanges || !!rowSaving["landing:order"] || !fieldEditable("LANDING_SECCIONES", "ORDEN_VISUAL")} onClick={patchLandingOrder} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 disabled:opacity-50"><span className="material-symbols-outlined text-base" aria-hidden="true">swap_vert</span>{rowSaving["landing:order"] ? "Guardando orden…" : "Guardar orden"}</button>
+                    </div>
+                  </div>
+                  {landingRows.length === 0 ? <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">No hay secciones para ordenar.</div> : <div className="space-y-4">{landingRows.map((row) => renderSectionEditor(row, { mode: "order" }))}</div>}
+                  {saveMessage && <p aria-live="polite" className="mt-4 text-sm font-semibold text-slate-600">{saveMessage}</p>}
                 </div>
-                <Badge active={rowsWithMedia > 0}>{rowsWithMedia} secciones con media</Badge>
-              </div>
-              {landingRows.length === 0 ? <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">No hay secciones para administrar media.</div> : <div className="space-y-4">{landingRows.map((row) => renderSectionEditor(row, { mediaOnly: true }))}</div>}
+              )}
+
+              {activeSectionTab === "media" && (
+                <div id="section-panel-media" role="tabpanel" aria-labelledby="section-tab-media" tabIndex={0}>
+                  <div className="mb-5 rounded-2xl border border-sky-100 bg-sky-50/70 p-4">
+                    <h4 className="font-bold text-slate-900">Media por sección</h4>
+                    <p className="text-sm text-slate-600">Subí archivos o agregá URLs sin mezclar estos controles con el contenido. Las cargas existentes se mantienen y usan los mismos handlers.</p>
+                  </div>
+                  {landingRows.length === 0 ? <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">No hay secciones para administrar media.</div> : <div className="space-y-4">{landingRows.map((row) => renderSectionEditor(row, { mode: "media" }))}</div>}
+                </div>
+              )}
+              {["contenido", "orden", "media"].filter((id) => id !== activeSectionTab).map((id) => (
+                <div key={id} id={`section-panel-${id}`} role="tabpanel" aria-labelledby={`section-tab-${id}`} hidden />
+              ))}
             </div>
           )}
 
@@ -1772,6 +1800,10 @@ export default function Configuracion() {
         </div>
       )}
 
+      {tabs.filter(([id]) => id !== activeTab).map(([id]) => (
+        <div key={id} id={`panel-${id}`} role="tabpanel" aria-labelledby={`tab-${id}`} hidden />
+      ))}
+      </div>
       <LandingPreviewModal open={previewOpen} onClose={() => setPreviewOpen(false)} form={form} liveConfig={liveConfig} landingRows={landingRows} landingDrafts={landingDrafts} configRows={configRows} configDrafts={configDrafts} />
     </div>
   );
