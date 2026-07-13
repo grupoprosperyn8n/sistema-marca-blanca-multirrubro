@@ -24,9 +24,45 @@ function sectionTextStyle(section, fallback = "var(--brand-text)") {
   return { color: normalizeHexStyle(section?.COLOR_TEXTO_HEX) || fallback };
 }
 
-function sectionBoxStyle(section) {
+function cssUrl(raw) {
+  return String(raw || "").replace(/["\\\n\r]/g, "").trim();
+}
+
+function sectionBackgroundMedia(section) {
+  const principal = Array.isArray(section?.IMAGEN_PRINCIPAL) ? section.IMAGEN_PRINCIPAL : [];
+  return principal.map(attachmentToMedia).find((item) => item?.url) || null;
+}
+
+function hexToRgba(value, alpha = 1) {
+  const normalized = normalizeHexStyle(value);
+  if (!normalized) return `rgba(255,255,255,${alpha})`;
+  let raw = normalized.replace("#", "");
+  if (raw.length === 3) raw = raw.split("").map((char) => char + char).join("");
+  const r = parseInt(raw.slice(0, 2), 16);
+  const g = parseInt(raw.slice(2, 4), 16);
+  const b = parseInt(raw.slice(4, 6), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+function sectionBoxStyle(section, { force = false } = {}) {
   const background = normalizeHexStyle(section?.COLOR_FONDO_HEX);
-  return background ? { background, borderRadius: "2rem" } : {};
+  const media = sectionBackgroundMedia(section);
+  const safeUrl = cssUrl(media?.url);
+  if (!background && !safeUrl && !force) return {};
+  const baseBackground = background || "rgba(255,255,255,0.72)";
+  const style = {
+    background: baseBackground,
+    borderRadius: "2rem",
+    border: "1px solid rgba(255,255,255,0.58)",
+    boxShadow: "0 24px 70px -42px rgba(15,23,42,0.45)",
+  };
+  if (safeUrl && !isVideoUrl(safeUrl)) {
+    const overlay = background ? hexToRgba(background, 0.9) : "rgba(255,255,255,0.78)";
+    style.background = `linear-gradient(135deg, ${overlay}, rgba(255,255,255,0.76)), url("${safeUrl}")`;
+    style.backgroundSize = "cover";
+    style.backgroundPosition = "center";
+  }
+  return style;
 }
 
 function attachmentToMedia(attachment, index = 0) {
@@ -51,6 +87,22 @@ function sectionMedia(section) {
 
 function isVideoUrl(url = "") {
   return /\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(String(url || ""));
+}
+
+function renderSectionBackgroundVideo(section) {
+  const media = sectionBackgroundMedia(section);
+  if (!media?.url || !isVideoUrl(media.url)) return null;
+  return (
+    <video
+      aria-hidden="true"
+      src={media.url}
+      autoPlay
+      loop
+      muted
+      playsInline
+      className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-[0.18]"
+    />
+  );
 }
 
 export default function Home() {
@@ -252,7 +304,9 @@ export default function Home() {
 
       {/* Servicios destacados */}
       {showServices && (
-        <section className="relative z-10 max-w-7xl mx-auto px-4 sm:px-8 pb-20" style={sectionBoxStyle(servicesSection)}>
+        <section className="relative z-10 mx-auto my-8 max-w-7xl overflow-hidden px-4 py-12 sm:my-10 sm:px-8 sm:py-16" style={sectionBoxStyle(servicesSection, { force: true })}>
+          {renderSectionBackgroundVideo(servicesSection)}
+          <div className="relative z-10">
           <div className="text-center mb-12">
             <h2 className="headline-lg mb-3" style={sectionTextStyle(servicesSection)}>{servicesSection?.TITULO_PUBLICO || "Servicios destacados"}</h2>
             <p className="text-base max-w-lg mx-auto" style={sectionTextStyle(servicesSection, "var(--brand-text-secondary)")}>
@@ -333,12 +387,15 @@ export default function Home() {
               </Link>
             </div>
           </div>
+          </div>
         </section>
       )}
 
       {/* Productos destacados */}
       {showProducts && (
-        <section className="relative z-10 max-w-7xl mx-auto px-4 sm:px-8 pb-20" style={sectionBoxStyle(productsSection)}>
+        <section className="relative z-10 mx-auto my-8 max-w-7xl overflow-hidden px-4 py-12 sm:my-10 sm:px-8 sm:py-16" style={sectionBoxStyle(productsSection, { force: true })}>
+          {renderSectionBackgroundVideo(productsSection)}
+          <div className="relative z-10">
           <div className="text-center mb-12">
             <h2 className="headline-lg mb-3" style={sectionTextStyle(productsSection)}>{productsSection?.TITULO_PUBLICO || "Productos destacados"}</h2>
             <p className="text-base max-w-lg mx-auto" style={sectionTextStyle(productsSection, "var(--brand-text-secondary)")}>
@@ -411,16 +468,19 @@ export default function Home() {
               <span className="material-symbols-outlined text-base">arrow_forward</span>
             </Link>
           </div>
+          </div>
         </section>
       )}
 
       {/* ¿Cómo funciona? */}
       {sec.mostrar_como_funciona !== false && sectionVisible("HOME_BLOQUE_RESERVAS") && (
-        <section className="relative z-10 max-w-7xl mx-auto px-4 sm:px-8 pb-20">
-          <div className="glass-panel p-10 sm:p-16 rounded-3xl">
+        <section className="relative z-10 mx-auto my-8 max-w-7xl px-4 sm:my-10 sm:px-8">
+          <div className="glass-panel relative overflow-hidden p-10 sm:p-16 rounded-3xl" style={sectionBoxStyle(howSection, { force: true })}>
+            {renderSectionBackgroundVideo(howSection)}
+            <div className="relative z-10">
             <div className="text-center mb-12">
-              <h2 className="headline-lg mb-3" style={{ color: 'var(--brand-text)' }}>{howSection?.TITULO_PUBLICO || "¿Cómo funciona?"}</h2>
-              <p className="text-base max-w-lg mx-auto" style={{ color: 'var(--brand-text-secondary)' }}>
+              <h2 className="headline-lg mb-3" style={sectionTextStyle(howSection)}>{howSection?.TITULO_PUBLICO || "¿Cómo funciona?"}</h2>
+              <p className="text-base max-w-lg mx-auto" style={sectionTextStyle(howSection, "var(--brand-text-secondary)")}>
                 {howSection?.SUBTITULO_PUBLICO || (business.usesAppointments ? "Reservas simples cuando el negocio trabaja con turnos" : "Un flujo adaptable al canal comercial de cada negocio")}
               </p>
             </div>
@@ -436,29 +496,32 @@ export default function Home() {
                 </div>
               ))}
             </div>
+            </div>
           </div>
         </section>
       )}
 
       {/* Contacto + CTA final */}
       {(showVisitCard || business.usesAppointments || business.usesProducts || business.usesServices) && (
-        <section className="relative z-10 max-w-7xl mx-auto px-4 sm:px-8 pb-20">
+        <section className="relative z-10 mx-auto my-8 max-w-7xl px-4 pb-8 sm:my-10 sm:px-8 sm:pb-12">
           <div className={`grid gap-8 ${showVisitCard ? "lg:grid-cols-2" : "lg:grid-cols-1"}`}>
             {showVisitCard && (
-              <div className="glass-panel p-8 sm:p-12 rounded-3xl">
+              <div className="glass-panel relative overflow-hidden p-8 sm:p-12 rounded-3xl" style={sectionBoxStyle(contactSection, { force: true })}>
+                {renderSectionBackgroundVideo(contactSection)}
+                <div className="relative z-10">
                 <span className="material-symbols-outlined text-3xl mb-4 block" style={{ color: 'var(--brand-primary)' }}>location_on</span>
-                <h3 className="text-xl font-semibold mb-3" style={{ color: 'var(--brand-text)' }}>{contactSection?.TITULO_PUBLICO || "Ubicación y contacto"}</h3>
+                <h3 className="text-xl font-semibold mb-3" style={sectionTextStyle(contactSection)}>{contactSection?.TITULO_PUBLICO || "Ubicación y contacto"}</h3>
                 {contactSection?.SUBTITULO_PUBLICO && (
-                  <p className="text-sm mb-4" style={{ color: 'var(--brand-text-secondary)' }}>{contactSection.SUBTITULO_PUBLICO}</p>
+                  <p className="text-sm mb-4" style={sectionTextStyle(contactSection, "var(--brand-text-secondary)")}>{contactSection.SUBTITULO_PUBLICO}</p>
                 )}
                 {config.address && (
-                  <p className="text-sm mb-2" style={{ color: 'var(--brand-text-secondary)' }}>📍 {config.address}</p>
+                  <p className="text-sm mb-2" style={sectionTextStyle(contactSection, "var(--brand-text-secondary)")}>📍 {config.address}</p>
                 )}
                 {config.phone && (
-                  <p className="text-sm mb-2" style={{ color: 'var(--brand-text-secondary)' }}>📞 {config.phone}</p>
+                  <p className="text-sm mb-2" style={sectionTextStyle(contactSection, "var(--brand-text-secondary)")}>📞 {config.phone}</p>
                 )}
                 {config.email && (
-                  <p className="text-sm mb-4" style={{ color: 'var(--brand-text-secondary)' }}>✉️ {config.email}</p>
+                  <p className="text-sm mb-4" style={sectionTextStyle(contactSection, "var(--brand-text-secondary)")}>✉️ {config.email}</p>
                 )}
                 {showBranches && (
                   <Link to="/sucursales" className="text-sm font-medium inline-flex items-center gap-1" style={{ color: 'var(--brand-primary)' }}>
@@ -466,20 +529,24 @@ export default function Home() {
                     <span className="material-symbols-outlined text-base">arrow_forward</span>
                   </Link>
                 )}
+                </div>
               </div>
             )}
-            <div className="glass-panel p-8 sm:p-12 rounded-3xl flex flex-col justify-center text-center"
-              style={{ background: 'linear-gradient(135deg, rgba(125,211,252,0.2), rgba(220,233,255,0.2))' }}>
-              <h3 className="text-2xl font-bold mb-2" style={{ color: 'var(--brand-text)' }}>
+            <div className="glass-panel relative overflow-hidden p-8 sm:p-12 rounded-3xl flex flex-col justify-center text-center"
+              style={sectionBoxStyle(finalSection, { force: true })}>
+              {renderSectionBackgroundVideo(finalSection)}
+              <div className="relative z-10">
+              <h3 className="text-2xl font-bold mb-2" style={sectionTextStyle(finalSection)}>
                 {finalSection?.TITULO_PUBLICO || (business.usesAppointments ? "¿Listo para coordinar tu turno?" : `Explorá ${String(business.catalogLabel || "el catálogo").toLowerCase()}`)}
               </h3>
-              <p className="text-sm mb-6 max-w-xs mx-auto" style={{ color: 'var(--brand-text-secondary)' }}>
+              <p className="text-sm mb-6 max-w-xs mx-auto" style={sectionTextStyle(finalSection, "var(--brand-text-secondary)")}>
                 {finalSection?.SUBTITULO_PUBLICO || (business.usesAppointments ? "Reservá ahora y seguí el estado desde tu portal." : "La experiencia se adapta al canal configurado por cada negocio.")}
               </p>
               <Link to={finalSection?.URL_BOTON_CTA || finalCtaUrl} className="btn-primary inline-flex items-center gap-2 text-base px-10 py-4 rounded-xl mx-auto">
                 <span className="material-symbols-outlined">{business.usesAppointments ? "calendar_month" : "storefront"}</span>
                 {finalSection?.TEXTO_BOTON_CTA || finalCtaText}
               </Link>
+              </div>
             </div>
           </div>
         </section>
