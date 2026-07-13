@@ -130,6 +130,7 @@ const orderableLandingKeys = new Set([
   "HOME_BLOQUE_RESERVAS",
   "HOME_SUCURSALES_CONTACTO",
 ]);
+const baseLandingOrder = Object.fromEntries(landingKeys.map((key, index) => [key, (index + 1) * 10]));
 const configCategories = new Set(["BRANDING", "CTA", "CONTACTO", "SEO", "COLORES", "MODULO_VISIBLE", "LANDING", "GENERAL"]);
 const configScopes = new Set(["LANDING_PUBLICA", "GLOBAL", "CONTACTO", "SEO", "PUBLICO", "PUBLICA"]);
 
@@ -801,6 +802,36 @@ export default function Configuracion() {
     });
   }
 
+  function undoLandingOrderChanges() {
+    if (!fieldEditable("LANDING_SECCIONES", "ORDEN_VISUAL")) return;
+    setLandingDrafts((prev) => {
+      const next = { ...prev };
+      landingRows.filter(isOrderableLandingSection).forEach((row) => {
+        next[row.id] = {
+          ...(next[row.id] || buildLandingDraft(row)),
+          ORDEN_VISUAL: row.ORDEN_VISUAL ?? "",
+        };
+      });
+      return next;
+    });
+    setSaveMessage("Orden deshecho. Volviste al orden guardado actual.");
+  }
+
+  function resetLandingOrderToBase() {
+    if (!fieldEditable("LANDING_SECCIONES", "ORDEN_VISUAL")) return;
+    setLandingDrafts((prev) => {
+      const next = { ...prev };
+      landingRows.filter(isOrderableLandingSection).forEach((row) => {
+        next[row.id] = {
+          ...(next[row.id] || buildLandingDraft(row)),
+          ORDEN_VISUAL: baseLandingOrder[row.CLAVE_SECCION] ?? visualOrderValue(row.ORDEN_VISUAL),
+        };
+      });
+      return next;
+    });
+    setSaveMessage("Estructura base aplicada en borrador. Previsualizá y guardá el orden para publicarla.");
+  }
+
   function fieldEditable(table, field) {
     return canEdit && canEditField(access, table, field);
   }
@@ -1455,8 +1486,26 @@ export default function Configuracion() {
                   <button
                     type="button"
                     disabled={!canEdit || !orderHasDraftChanges || !!rowSaving["landing:order"] || !fieldEditable("LANDING_SECCIONES", "ORDEN_VISUAL")}
+                    onClick={undoLandingOrderChanges}
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <span className="material-symbols-outlined text-base" aria-hidden="true">undo</span>
+                    Deshacer
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!canEdit || !!rowSaving["landing:order"] || !fieldEditable("LANDING_SECCIONES", "ORDEN_VISUAL")}
+                    onClick={resetLandingOrderToBase}
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-bold text-amber-800 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <span className="material-symbols-outlined text-base" aria-hidden="true">restart_alt</span>
+                    Restablecer base
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!canEdit || !orderHasDraftChanges || !!rowSaving["landing:order"] || !fieldEditable("LANDING_SECCIONES", "ORDEN_VISUAL")}
                     onClick={patchLandingOrder}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-2 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <span className="material-symbols-outlined text-base" aria-hidden="true">swap_vert</span>
                     {rowSaving["landing:order"] ? "Guardando orden..." : "Guardar orden"}
