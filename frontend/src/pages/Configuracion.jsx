@@ -1700,13 +1700,13 @@ export default function Configuracion() {
                   </div>
                   <Badge active={!!constructorDraft.VISIBLE_EN_FRONTEND_PUBLICO}>Borrador visible</Badge>
                 </div>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+                <div className="grid min-w-0 grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
                   {sectionTemplates.map((template) => (
                     <button
                       key={template.key}
                       type="button"
                       onClick={() => selectSectionTemplate(template)}
-                      className={`min-h-20 rounded-2xl border p-3 text-left text-sm font-bold transition ${constructorDraft.templateKey === template.key ? "border-sky-400 bg-white text-sky-800 shadow-sm" : "border-white/70 bg-white/60 text-slate-700 hover:bg-white"}`}
+                      className={`min-w-0 overflow-hidden break-words rounded-2xl border p-3 text-left text-sm font-bold transition ${constructorDraft.templateKey === template.key ? "border-sky-400 bg-white text-sky-800 shadow-sm" : "border-white/70 bg-white/60 text-slate-700 hover:bg-white"}`}
                     >
                       <span className="material-symbols-outlined mb-1 block text-xl" aria-hidden="true">{template.icon}</span>
                       {template.label}

@@ -64,18 +64,6 @@ function isVideoUrl(url = "") {
   return /\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(String(url || ""));
 }
 
-const FIXED_LANDING_KEYS = new Set([
-  "HOME_HERO_PRINCIPAL",
-  "HOME_SERVICIOS_DESTACADOS",
-  "HOME_PRODUCTOS_DESTACADOS",
-  "HOME_BLOQUE_RESERVAS",
-  "HOME_AGENDA_PUBLICA",
-  "HOME_SUCURSALES_CONTACTO",
-  "HOME_CONTACTO_RAPIDO",
-  "HOME_FOOTER",
-  "HOME_PORTAL_CLIENTES",
-]);
-
 function splitContentRows(value = "") {
   return String(value || "")
     .split(/\n+/)
@@ -318,9 +306,10 @@ export default function Home() {
 
   const customLandingSections = landingSections.filter((section) => {
     const key = String(section.CLAVE_SECCION || "");
+    const normalizedKey = key.toUpperCase();
     const scope = String(section.AMBITO_SECCION || "LANDING_PUBLICA").toUpperCase();
     return scope === "LANDING_PUBLICA"
-      && !FIXED_LANDING_KEYS.has(key)
+      && normalizedKey.startsWith("CUSTOM_")
       && section.VISIBLE_EN_FRONTEND_PUBLICO !== false
       && section.REGISTRO_ACTIVO !== false;
   });
