@@ -688,6 +688,7 @@ export default function Configuracion() {
   const [mediaUploading, setMediaUploading] = useState({});
   const [previewOpen, setPreviewOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("resumen");
+  const [activeLandingTab, setActiveLandingTab] = useState("contenido");
   const [activeSectionTab, setActiveSectionTab] = useState("contenido");
   const [constructorDraft, setConstructorDraft] = useState(() => buildSectionConstructorDraft());
 
@@ -1226,11 +1227,17 @@ export default function Configuracion() {
     ["resumen", "Resumen", "dashboard"],
     ["marca", "Marca", "storefront"],
     ["diseno", "Diseño", "palette"],
-    ["secciones", "Secciones", "view_quilt"],
-    ["seo", "SEO", "travel_explore"],
+    ["landing", "Landing", "web"],
+    ["seo", "SEO y legal", "travel_explore"],
     ["avanzado", "Avanzado", "tune"],
   ];
-  const isBrandFormTab = ["marca", "diseno", "seo"].includes(activeTab);
+  const landingTabs = [
+    ["contenido", "Hero, CTAs y contacto", "campaign"],
+    ["secciones", "Secciones", "view_quilt"],
+    ["visibilidad", "Visibilidad", "visibility"],
+  ];
+  const isBrandFormTab = ["marca", "diseno", "seo"].includes(activeTab)
+    || (activeTab === "landing" && activeLandingTab !== "secciones");
   const visibleLandingRows = landingRows.filter((row) => {
     const draft = landingDrafts[row.id] || buildLandingDraft(row);
     return draft.VISIBLE_EN_FRONTEND_PUBLICO && draft.REGISTRO_ACTIVO;
@@ -1244,13 +1251,13 @@ export default function Configuracion() {
 
   function handleTabKeyDown(event, ids, setter, prefix = "tab") {
     const index = ids.indexOf(event.currentTarget.dataset.tabId);
-    if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+    if (event.key === "ArrowRight") {
       event.preventDefault();
       const next = ids[(index + 1) % ids.length];
       setter(next);
       document.getElementById(`${prefix}-${next}`)?.focus();
     }
-    if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+    if (event.key === "ArrowLeft") {
       event.preventDefault();
       const next = ids[(index - 1 + ids.length) % ids.length];
       setter(next);
@@ -1429,20 +1436,20 @@ export default function Configuracion() {
       <div className="sticky top-0 z-20 -mx-2 rounded-b-3xl border-b border-white/50 bg-slate-50/90 px-2 py-3 backdrop-blur md:top-2 md:rounded-3xl md:border md:shadow-sm">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-sm font-semibold" style={{ color: "var(--brand-primary)" }}>Constructor público · LANDING_BUILDER_ADMIN_UX_P5</p>
-            <h2 className="text-2xl font-bold" style={{ color: "var(--brand-text)" }}>Configuración de landing</h2>
-            <p className="mt-1 max-w-3xl text-sm opacity-70" style={{ color: "var(--brand-text)" }}>Organizá marca, diseño, secciones, media y SEO sin perder control de permisos.</p>
+            <p className="text-sm font-semibold" style={{ color: "var(--brand-primary)" }}>Configurador de landing</p>
+            <h2 className="text-2xl font-bold text-pretty" style={{ color: "var(--brand-text)" }}>Personalizá tu sitio, paso a paso</h2>
+            <p className="mt-1 max-w-3xl text-sm opacity-70" style={{ color: "var(--brand-text)" }}>Primero definí la marca, después el estilo y por último el contenido que verá tu cliente.</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <span className="rounded-full bg-white/80 px-3 py-1 text-xs font-semibold" style={{ color: "var(--brand-text)" }}>Rol: {role}</span>
             <span className="rounded-full bg-white/80 px-3 py-1 text-xs font-semibold" style={{ color: "var(--brand-text)" }}>{canEdit ? "Edición habilitada" : "Solo lectura"}</span>
             <button type="button" onClick={() => setPreviewOpen(true)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
               <span className="material-symbols-outlined text-base" aria-hidden="true">preview</span>
-              Preview
+              Previsualizar
             </button>
             {form && isBrandFormTab && (
               <button type="submit" form="brand-config-form" disabled={!canEdit || saving} className="rounded-xl px-5 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50" style={{ background: "linear-gradient(135deg, var(--brand-secondary), var(--brand-primary))" }}>
-                {saving ? "Guardando…" : canEdit ? "Guardar config" : "Solo lectura"}
+                {saving ? "Guardando…" : canEdit ? "Guardar cambios" : "Solo lectura"}
               </button>
             )}
           </div>
@@ -1463,7 +1470,7 @@ export default function Configuracion() {
         </div>
       )}
 
-      <div role="tabpanel" id={`panel-${activeTab}`} aria-labelledby={`tab-${activeTab}`} tabIndex={0}>
+      <div role="tabpanel" id={`panel-${activeTab}`} aria-labelledby={`tab-${activeTab}`}>
       {form && (
         <form id="brand-config-form" onSubmit={handleSave} className="contents">
           {activeTab === "resumen" && (
@@ -1498,8 +1505,13 @@ export default function Configuracion() {
 
           {activeTab === "marca" && (
             <div className="rounded-3xl border border-white/40 bg-white/75 p-5 shadow-sm">
-              <h3 className="text-lg font-bold" style={{ color: "var(--brand-text)" }}>Marca e identidad básica</h3>
-              <p className="text-sm opacity-60" style={{ color: "var(--brand-text)" }}>Campos seguros de MARCAS. Guardá desde la barra superior.</p>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <h3 className="text-lg font-bold" style={{ color: "var(--brand-text)" }}>Marca e identidad básica</h3>
+                  <p className="text-sm opacity-60" style={{ color: "var(--brand-text)" }}>Nombre, rubro y logo que aparecen en toda la landing.</p>
+                </div>
+                <span className="w-fit rounded-full bg-violet-50 px-3 py-1 text-xs font-bold text-violet-700">Se guarda en MARCAS</span>
+              </div>
               <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-2">
                 <div className="space-y-3">
                   <Field label="Nombre público" value={form.nombre_sistema} disabled={!canEdit} onChange={(value) => updateRoot("nombre_sistema", value)} />
@@ -1550,7 +1562,13 @@ export default function Configuracion() {
           {activeTab === "diseno" && (
             <div className="space-y-5">
               <div className="rounded-3xl border border-white/40 bg-white/75 p-5 shadow-sm">
-                <h3 className="text-lg font-bold" style={{ color: "var(--brand-text)" }}>Diseño visual</h3>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <h3 className="text-lg font-bold" style={{ color: "var(--brand-text)" }}>Diseño visual</h3>
+                    <p className="text-sm opacity-60" style={{ color: "var(--brand-text)" }}>Colores, tipografías y fondo general de la landing.</p>
+                  </div>
+                  <span className="w-fit rounded-full bg-violet-50 px-3 py-1 text-xs font-bold text-violet-700">Se guarda en MARCAS</span>
+                </div>
                 <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-[1.2fr_0.8fr]">
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <ColorField label="Primario" value={form.colores.primario} disabled={!canEdit} placeholder="#006686" onChange={(value) => updateNested("colores", "primario", value)} />
@@ -1578,20 +1596,84 @@ export default function Configuracion() {
                   </div>
                 </div>
                 <BackgroundLandingPanel form={form} canEdit={canEdit} updateNested={updateNested} uploading={mediaUploading[backgroundMediaKey]} onUploadFile={uploadBackgroundAttachment} />
-                <div className="mt-5 grid grid-cols-1 gap-2 md:grid-cols-3">
-                  <Toggle label="Mostrar servicios" checked={form.secciones_visibles.mostrar_servicios} disabled={!canEdit} onChange={(value) => updateNested("secciones_visibles", "mostrar_servicios", value)} />
-                  <Toggle label="Mostrar productos" checked={form.secciones_visibles.mostrar_productos} disabled={!canEdit} onChange={(value) => updateNested("secciones_visibles", "mostrar_productos", value)} />
-                  <Toggle label="Mostrar sucursales/contacto físico" checked={form.secciones_visibles.mostrar_sucursales} disabled={!canEdit} onChange={(value) => updateNested("secciones_visibles", "mostrar_sucursales", value)} />
-                  <Toggle label="Mostrar cómo funciona" checked={form.secciones_visibles.mostrar_como_funciona} disabled={!canEdit} onChange={(value) => updateNested("secciones_visibles", "mostrar_como_funciona", value)} />
-                  <Toggle label="Mostrar ofertas" checked={form.secciones_visibles.mostrar_ofertas} disabled={!canEdit} onChange={(value) => updateNested("secciones_visibles", "mostrar_ofertas", value)} />
-                  <Toggle label="Mostrar testimonios" checked={form.secciones_visibles.mostrar_testimonios} disabled={!canEdit} onChange={(value) => updateNested("secciones_visibles", "mostrar_testimonios", value)} />
-                </div>
+
               </div>
             </div>
           )}
 
-          {activeTab === "secciones" && (
-            <div className="rounded-3xl border border-white/40 bg-white/75 p-5 shadow-sm">
+          {activeTab === "landing" && (
+            <div className="space-y-5">
+              <div className="rounded-3xl border border-white/40 bg-white/75 p-5 shadow-sm">
+                <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                  <div>
+                    <h3 className="text-lg font-bold" style={{ color: "var(--brand-text)" }}>Contenido de la landing</h3>
+                    <p className="text-sm opacity-60" style={{ color: "var(--brand-text)" }}>Editá cada grupo por separado: mensaje principal, secciones o qué se muestra.</p>
+                  </div>
+                  <span className="w-fit rounded-full bg-violet-50 px-3 py-1 text-xs font-bold text-violet-700">MARCAS + LANDING_SECCIONES</span>
+                </div>
+                <div role="tablist" aria-label="Áreas de contenido de la landing" className="mt-5 flex gap-2 overflow-x-auto border-b border-slate-200 pb-2">
+                  {landingTabs.map(([id, label, icon]) => (
+                    <button key={id} id={`landing-tab-${id}`} data-tab-id={id} role="tab" aria-selected={activeLandingTab === id} aria-controls={`landing-panel-${id}`} tabIndex={activeLandingTab === id ? 0 : -1} type="button" onKeyDown={(event) => handleTabKeyDown(event, landingTabs.map(([tabId]) => tabId), setActiveLandingTab, "landing-tab")} onClick={() => setActiveLandingTab(id)} className={`inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl border px-3 py-2 text-sm font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${activeLandingTab === id ? "border-sky-300 bg-sky-50 text-sky-700" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}>
+                      <span className="material-symbols-outlined text-base" aria-hidden="true">{icon}</span>{label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {activeLandingTab === "contenido" && (
+                <section id="landing-panel-contenido" role="tabpanel" aria-labelledby="landing-tab-contenido" className="rounded-3xl border border-white/40 bg-white/75 p-5 shadow-sm">
+                  <div className="mb-5 flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                    <div>
+                      <h4 className="text-lg font-bold" style={{ color: "var(--brand-text)" }}>Mensaje, llamados a la acción y contacto</h4>
+                      <p className="text-sm opacity-60" style={{ color: "var(--brand-text)" }}>Lo que abre la landing y los canales que encuentra tu cliente.</p>
+                    </div>
+                    <span className="w-fit rounded-full bg-violet-50 px-3 py-1 text-xs font-bold text-violet-700">Se guarda en MARCAS</span>
+                  </div>
+                  <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+                    <div className="space-y-3">
+                      <h5 className="text-sm font-bold uppercase tracking-wide opacity-60" style={{ color: "var(--brand-text)" }}>Hero y CTAs</h5>
+                      <Field label="Badge" value={form.textos_publicos.hero_badge} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "hero_badge", value)} />
+                      <Field label="Título hero" value={form.textos_publicos.hero_titulo} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "hero_titulo", value)} />
+                      <Field label="Subtítulo hero" value={form.textos_publicos.hero_subtitulo} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "hero_subtitulo", value)} />
+                      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                        <Field label="CTA primario" value={form.textos_publicos.hero_cta_primario} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "hero_cta_primario", value)} />
+                        <Field label="URL CTA primario" value={form.textos_publicos.hero_cta_primario_url} placeholder="/reserva o https://…" disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "hero_cta_primario_url", value)} />
+                        <Field label="CTA secundario" value={form.textos_publicos.hero_cta_secundario} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "hero_cta_secundario", value)} />
+                        <Field label="URL CTA secundario" value={form.textos_publicos.hero_cta_secundario_url} placeholder="/catalogo o https://…" disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "hero_cta_secundario_url", value)} />
+                      </div>
+                      <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-3">
+                        <Toggle label="Mostrar banner superior" checked={form.textos_publicos.banner_activo} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "banner_activo", value)} />
+                        <div className="mt-3 space-y-3">
+                          <Field label="Título banner" value={form.textos_publicos.banner_titulo} disabled={!canEdit || !form.textos_publicos.banner_activo} onChange={(value) => updateNested("textos_publicos", "banner_titulo", value)} />
+                          <TextAreaField label="Mensaje banner" value={form.textos_publicos.banner_mensaje} disabled={!canEdit || !form.textos_publicos.banner_activo} rows={2} onChange={(value) => updateNested("textos_publicos", "banner_mensaje", value)} />
+                          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                            <Field label="CTA banner" value={form.textos_publicos.banner_cta_texto} disabled={!canEdit || !form.textos_publicos.banner_activo} onChange={(value) => updateNested("textos_publicos", "banner_cta_texto", value)} />
+                            <Field label="URL CTA banner" value={form.textos_publicos.banner_cta_url} placeholder="/promociones o https://…" disabled={!canEdit || !form.textos_publicos.banner_activo} onChange={(value) => updateNested("textos_publicos", "banner_cta_url", value)} />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <h5 className="text-sm font-bold uppercase tracking-wide opacity-60" style={{ color: "var(--brand-text)" }}>Contacto y redes</h5>
+                      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                        <Field label="Teléfono" type="tel" value={form.textos_publicos.contacto_telefono} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "contacto_telefono", value)} />
+                        <Field label="WhatsApp" type="tel" value={form.textos_publicos.contacto_whatsapp} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "contacto_whatsapp", value)} />
+                      </div>
+                      <Field label="Email" type="email" value={form.textos_publicos.contacto_email} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "contacto_email", value)} />
+                      <Field label="Dirección pública" value={form.textos_publicos.contacto_direccion} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "contacto_direccion", value)} />
+                      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                        <Field label="Instagram" type="url" value={form.textos_publicos.redes_instagram} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "redes_instagram", value)} />
+                        <Field label="Facebook" type="url" value={form.textos_publicos.redes_facebook} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "redes_facebook", value)} />
+                      </div>
+                      <Field label="Google Maps" type="url" value={form.textos_publicos.redes_maps} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "redes_maps", value)} />
+                    </div>
+                  </div>
+                </section>
+              )}
+
+          {activeLandingTab === "secciones" && (
+            <div id="landing-panel-secciones" role="tabpanel" aria-labelledby="landing-tab-secciones">
+              <div className="rounded-3xl border border-white/40 bg-white/75 p-5 shadow-sm">
               <div className="mb-5 flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                 <div>
                   <h3 className="text-lg font-bold" style={{ color: "var(--brand-text)" }}>Secciones de landing</h3>
@@ -1608,7 +1690,7 @@ export default function Configuracion() {
               </div>
 
               {activeSectionTab === "contenido" && (
-                <div id="section-panel-contenido" role="tabpanel" aria-labelledby="section-tab-contenido" tabIndex={0}>
+                <div id="section-panel-contenido" role="tabpanel" aria-labelledby="section-tab-contenido">
               <div className="mb-5 rounded-3xl border border-sky-100 bg-sky-50/70 p-4 sm:p-5">
                 <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                   <div>
@@ -1678,7 +1760,7 @@ export default function Configuracion() {
               )}
 
               {activeSectionTab === "orden" && (
-                <div id="section-panel-orden" role="tabpanel" aria-labelledby="section-tab-orden" tabIndex={0}>
+                <div id="section-panel-orden" role="tabpanel" aria-labelledby="section-tab-orden">
                   <div className="mb-5 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white/70 p-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <h4 className="font-bold text-slate-900">Orden de los bloques públicos</h4>
@@ -1696,7 +1778,7 @@ export default function Configuracion() {
               )}
 
               {activeSectionTab === "media" && (
-                <div id="section-panel-media" role="tabpanel" aria-labelledby="section-tab-media" tabIndex={0}>
+                <div id="section-panel-media" role="tabpanel" aria-labelledby="section-tab-media">
                   <div className="mb-5 rounded-2xl border border-sky-100 bg-sky-50/70 p-4">
                     <h4 className="font-bold text-slate-900">Media por sección</h4>
                     <p className="text-sm text-slate-600">Subí archivos o agregá URLs sin mezclar estos controles con el contenido. Las cargas existentes se mantienen y usan los mismos handlers.</p>
@@ -1707,52 +1789,54 @@ export default function Configuracion() {
               {["contenido", "orden", "media"].filter((id) => id !== activeSectionTab).map((id) => (
                 <div key={id} id={`section-panel-${id}`} role="tabpanel" aria-labelledby={`section-tab-${id}`} hidden />
               ))}
+              </div>
+            </div>
+          )}
+
+              {activeLandingTab === "visibilidad" && (
+                <section id="landing-panel-visibilidad" role="tabpanel" aria-labelledby="landing-tab-visibilidad" className="rounded-3xl border border-white/40 bg-white/75 p-5 shadow-sm">
+                  <div className="mb-5 flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                    <div>
+                      <h4 className="text-lg font-bold" style={{ color: "var(--brand-text)" }}>Qué partes se muestran</h4>
+                      <p className="text-sm opacity-60" style={{ color: "var(--brand-text)" }}>Activá únicamente los módulos que este negocio usa en su landing.</p>
+                    </div>
+                    <span className="w-fit rounded-full bg-violet-50 px-3 py-1 text-xs font-bold text-violet-700">Se guarda en MARCAS</span>
+                  </div>
+                  <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
+                    <Toggle label="Mostrar servicios" checked={form.secciones_visibles.mostrar_servicios} disabled={!canEdit} onChange={(value) => updateNested("secciones_visibles", "mostrar_servicios", value)} />
+                    <Toggle label="Mostrar productos" checked={form.secciones_visibles.mostrar_productos} disabled={!canEdit} onChange={(value) => updateNested("secciones_visibles", "mostrar_productos", value)} />
+                    <Toggle label="Mostrar sucursales/contacto físico" checked={form.secciones_visibles.mostrar_sucursales} disabled={!canEdit} onChange={(value) => updateNested("secciones_visibles", "mostrar_sucursales", value)} />
+                    <Toggle label="Mostrar cómo funciona" checked={form.secciones_visibles.mostrar_como_funciona} disabled={!canEdit} onChange={(value) => updateNested("secciones_visibles", "mostrar_como_funciona", value)} />
+                    <Toggle label="Mostrar ofertas" checked={form.secciones_visibles.mostrar_ofertas} disabled={!canEdit} onChange={(value) => updateNested("secciones_visibles", "mostrar_ofertas", value)} />
+                    <Toggle label="Mostrar testimonios" checked={form.secciones_visibles.mostrar_testimonios} disabled={!canEdit} onChange={(value) => updateNested("secciones_visibles", "mostrar_testimonios", value)} />
+                  </div>
+                </section>
+              )}
+              {landingTabs.filter(([id]) => id !== activeLandingTab).map(([id]) => (
+                <div key={id} id={`landing-panel-${id}`} role="tabpanel" aria-labelledby={`landing-tab-${id}`} hidden />
+              ))}
             </div>
           )}
 
           {activeTab === "seo" && (
-            <div className="rounded-3xl border border-white/40 bg-white/75 p-5 shadow-sm">
-              <h3 className="text-lg font-bold" style={{ color: "var(--brand-text)" }}>SEO, contenido público y contacto</h3>
-              <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-2">
-                <div className="space-y-3">
-                  <h4 className="text-sm font-bold uppercase tracking-wide opacity-60" style={{ color: "var(--brand-text)" }}>Hero y CTAs</h4>
-                  <Field label="Badge" value={form.textos_publicos.hero_badge} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "hero_badge", value)} />
-                  <Field label="Título hero" value={form.textos_publicos.hero_titulo} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "hero_titulo", value)} />
-                  <Field label="Subtítulo hero" value={form.textos_publicos.hero_subtitulo} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "hero_subtitulo", value)} />
-                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                    <Field label="CTA primario" value={form.textos_publicos.hero_cta_primario} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "hero_cta_primario", value)} />
-                    <Field label="URL CTA primario" value={form.textos_publicos.hero_cta_primario_url} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "hero_cta_primario_url", value)} />
-                    <Field label="CTA secundario" value={form.textos_publicos.hero_cta_secundario} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "hero_cta_secundario", value)} />
-                    <Field label="URL CTA secundario" value={form.textos_publicos.hero_cta_secundario_url} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "hero_cta_secundario_url", value)} />
-                  </div>
-                  <Toggle label="Banner activo" checked={form.textos_publicos.banner_activo} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "banner_activo", value)} />
-                  <Field label="Título banner" value={form.textos_publicos.banner_titulo} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "banner_titulo", value)} />
-                  <TextAreaField label="Mensaje banner" value={form.textos_publicos.banner_mensaje} disabled={!canEdit} rows={2} onChange={(value) => updateNested("textos_publicos", "banner_mensaje", value)} />
-                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                    <Field label="CTA banner" value={form.textos_publicos.banner_cta_texto} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "banner_cta_texto", value)} />
-                    <Field label="URL CTA banner" value={form.textos_publicos.banner_cta_url} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "banner_cta_url", value)} />
-                  </div>
+            <section className="rounded-3xl border border-white/40 bg-white/75 p-5 shadow-sm">
+              <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                <div>
+                  <h3 className="text-lg font-bold" style={{ color: "var(--brand-text)" }}>SEO y legal</h3>
+                  <p className="text-sm opacity-60" style={{ color: "var(--brand-text)" }}>Cómo se presenta tu landing en buscadores y el aviso visible al final del sitio.</p>
                 </div>
-                <div className="space-y-3">
-                  <h4 className="text-sm font-bold uppercase tracking-wide opacity-60" style={{ color: "var(--brand-text)" }}>SEO, contacto y redes</h4>
-                  <Field label="SEO title" value={form.seo_title} disabled={!canEdit} onChange={(value) => updateRoot("seo_title", value)} />
-                  <TextAreaField label="SEO description" value={form.seo_description} disabled={!canEdit} rows={2} onChange={(value) => updateRoot("seo_description", value)} />
-                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                    <Field label="Teléfono" value={form.textos_publicos.contacto_telefono} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "contacto_telefono", value)} />
-                    <Field label="WhatsApp" value={form.textos_publicos.contacto_whatsapp} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "contacto_whatsapp", value)} />
-                  </div>
-                  <Field label="Email" value={form.textos_publicos.contacto_email} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "contacto_email", value)} />
-                  <Field label="Dirección pública" value={form.textos_publicos.contacto_direccion} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "contacto_direccion", value)} />
-                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                    <Field label="Instagram" value={form.textos_publicos.redes_instagram} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "redes_instagram", value)} />
-                    <Field label="Facebook" value={form.textos_publicos.redes_facebook} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "redes_facebook", value)} />
-                  </div>
-                  <Field label="Google Maps" value={form.textos_publicos.redes_maps} disabled={!canEdit} onChange={(value) => updateNested("textos_publicos", "redes_maps", value)} />
-                  <TextAreaField label="Aviso legal" value={form.legal_aviso} disabled={!canEdit} rows={2} onChange={(value) => updateRoot("legal_aviso", value)} />
+                <span className="w-fit rounded-full bg-violet-50 px-3 py-1 text-xs font-bold text-violet-700">Se guarda en MARCAS</span>
+              </div>
+              <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-2">
+                <Field label="Título SEO" value={form.seo_title} disabled={!canEdit} onChange={(value) => updateRoot("seo_title", value)} />
+                <TextAreaField label="Descripción SEO" value={form.seo_description} disabled={!canEdit} rows={3} onChange={(value) => updateRoot("seo_description", value)} />
+                <div className="lg:col-span-2">
+                  <TextAreaField label="Aviso legal" value={form.legal_aviso} disabled={!canEdit} rows={3} onChange={(value) => updateRoot("legal_aviso", value)} />
                 </div>
               </div>
-            </div>
+            </section>
           )}
+
         </form>
       )}
 
@@ -1762,9 +1846,12 @@ export default function Configuracion() {
             <div className="mb-5 flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
               <div>
                 <h3 className="text-lg font-bold" style={{ color: "var(--brand-text)" }}>Configuración pública avanzada</h3>
-                <p className="text-sm opacity-60" style={{ color: "var(--brand-text)" }}>Editor controlado de CONFIGURACION_PUBLICA filtrado para landing y público.</p>
+                <p className="text-sm opacity-60" style={{ color: "var(--brand-text)" }}>Usá estos flags solo para reglas ya definidas en Airtable. Para textos, colores y secciones usá las pestañas anteriores.</p>
               </div>
-              <Badge active={configRows.length > 0}>{configRows.length} flags editables</Badge>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="w-fit rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">Se guarda en CONFIGURACION_PUBLICA</span>
+                <Badge active={configRows.length > 0}>{configRows.length} flags editables</Badge>
+              </div>
             </div>
             {renderConfigEditor()}
           </div>
