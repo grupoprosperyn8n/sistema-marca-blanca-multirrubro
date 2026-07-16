@@ -117,7 +117,7 @@ function GenericLandingSection({ section }) {
 
   return (
     <section
-      className={`relative mx-auto my-8 max-w-7xl overflow-hidden px-4 py-12 sm:my-10 sm:px-8 sm:py-16 ${sectionDeviceClass(section)}`}
+      className={`relative mx-auto max-w-7xl overflow-hidden px-4 py-12 sm:px-8 sm:py-16 ${sectionDeviceClass(section)}`}
       style={{ ...sectionBoxStyle(section), order: visualOrderValue(section.ORDEN_VISUAL, 500) }}
     >
       <div className="relative z-10">
@@ -404,7 +404,7 @@ export default function Home() {
         </div>
       </section>
 
-      <div className="relative z-10 flex flex-col">
+      <div className="relative z-10 flex flex-col gap-10 sm:gap-14 lg:gap-16">
       {/* Servicios destacados */}
       {showServices && (
         <section className="relative z-10 mx-auto max-w-7xl px-4 pb-20 sm:px-8" style={{ ...sectionBoxStyle(servicesSection), order: sectionOrder("HOME_SERVICIOS_DESTACADOS", 110) }}>
