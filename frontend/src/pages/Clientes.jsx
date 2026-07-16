@@ -8,12 +8,12 @@ import { canEditField, filterColumnsByAccess, useAuth } from "../context/AuthCon
 const API = import.meta.env.VITE_API_BASE_URL || "";
 
 const allColumns = [
-  { header: "Nombre", field: "NOMBRE_CLIENTE", fields: ["NOMBRE_CLIENTE"], render: (row) => (
+  { header: "Nombre", field: "NOMBRE_CLIENTE", fields: ["NOMBRE_CLIENTE"], mobilePriority: 1, render: (row) => (
     <span className="font-medium" style={{ color: 'var(--brand-text)' }}>{row.NOMBRE_CLIENTE || row.nombre || "—"}</span>
   )},
-  { header: "Email", field: "EMAIL", fields: ["EMAIL"] },
-  { header: "Telefono", field: "TELEFONO", fields: ["TELEFONO"], render: (row) => row.TELEFONO || row.telefono || "—" },
-  { header: "Estado", field: "ACTIVO", fields: ["ACTIVO"], render: (row) => (
+  { header: "Email", field: "EMAIL", fields: ["EMAIL"], mobilePriority: 2 },
+  { header: "Telefono", field: "TELEFONO", fields: ["TELEFONO"], mobilePriority: 3, render: (row) => row.TELEFONO || row.telefono || "—" },
+  { header: "Estado", field: "ACTIVO", fields: ["ACTIVO"], mobilePriority: 4, render: (row) => (
     <Badge variant={row.ACTIVO !== false ? 'success' : 'neutral'}>
       {row.ACTIVO !== false ? "ACTIVO" : "INACTIVO"}
     </Badge>
@@ -141,7 +141,7 @@ export default function Clientes() {
 
   return (
     <div>
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+      <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
         <h2 className="text-2xl font-bold" style={{ fontFamily: 'var(--font-heading, Manrope)', color: 'var(--brand-text)' }}>Clientes</h2>
         <ModuleActionBar
           moduleKey="clientes"

@@ -9,21 +9,21 @@ import { getPublicServiceImage } from "../utils/publicDataFilters";
 const API = import.meta.env.VITE_API_BASE_URL || "";
 
 const allColumns = [
-  { header: "Foto", field: "FOTO_SERVICIO", fields: ["FOTO_SERVICIO"], render: (row) => {
+  { header: "Foto", field: "FOTO_SERVICIO", fields: ["FOTO_SERVICIO"], mobilePriority: "hidden", render: (row) => {
     const image = getPublicServiceImage(row);
     return image?.url ? (
       <img src={image.url} alt={row.NOMBRE_SERVICIO || "Servicio"} className="h-10 w-14 rounded-lg object-cover" loading="lazy" />
     ) : "—";
   }},
-  { header: "Nombre", field: "NOMBRE_SERVICIO", fields: ["NOMBRE_SERVICIO"], render: (row) => (
+  { header: "Nombre", field: "NOMBRE_SERVICIO", fields: ["NOMBRE_SERVICIO"], mobilePriority: 1, render: (row) => (
     <span className="font-medium" style={{ color: 'var(--brand-text)' }}>{row.NOMBRE_SERVICIO || row.nombre || "—"}</span>
   )},
-  { header: "Categoria", field: "CATEGORIA_SERVICIO", fields: ["CATEGORIA_SERVICIO"] },
-  { header: "Precio", field: "PRECIO_BASE", fields: ["PRECIO_BASE"], render: (row) => (
+  { header: "Categoria", field: "CATEGORIA_SERVICIO", fields: ["CATEGORIA_SERVICIO"], mobilePriority: 4 },
+  { header: "Precio", field: "PRECIO_BASE", fields: ["PRECIO_BASE"], mobilePriority: 2, render: (row) => (
     <span className="font-bold" style={{ color: 'var(--brand-primary)' }}>${row.PRECIO_BASE ?? "—"}</span>
   )},
-  { header: "Duracion", field: "DURACION_MINUTOS", fields: ["DURACION_MINUTOS"], render: (row) => row.DURACION_MINUTOS ? `${row.DURACION_MINUTOS} min` : "—" },
-  { header: "Estado", field: "ESTADO_SERVICIO", fields: ["ESTADO_SERVICIO"], render: (row) => (
+  { header: "Duracion", field: "DURACION_MINUTOS", fields: ["DURACION_MINUTOS"], mobilePriority: 3, render: (row) => row.DURACION_MINUTOS ? `${row.DURACION_MINUTOS} min` : "—" },
+  { header: "Estado", field: "ESTADO_SERVICIO", fields: ["ESTADO_SERVICIO"], mobilePriority: 5, render: (row) => (
     <Badge variant={row.ESTADO_SERVICIO === 'ACTIVO' ? 'success' : 'neutral'}>
       {row.ESTADO_SERVICIO || "—"}
     </Badge>
@@ -160,7 +160,7 @@ export default function Servicios() {
 
   return (
     <div>
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+      <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
         <h2 className="text-2xl font-bold" style={{ fontFamily: 'var(--font-heading, Manrope)', color: 'var(--brand-text)' }}>Servicios</h2>
         <ModuleActionBar
           moduleKey="servicios"

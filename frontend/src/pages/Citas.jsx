@@ -8,18 +8,18 @@ import { canEditField, filterColumnsByAccess, useAuth } from "../context/AuthCon
 const API = import.meta.env.VITE_API_BASE_URL || "";
 
 const allColumns = [
-  { header: "Cliente", field: "NOMBRE_CLIENTE", fields: ["CLIENTE", "NOMBRE_CLIENTE"], render: (row) => (
+  { header: "Cliente", field: "NOMBRE_CLIENTE", fields: ["CLIENTE", "NOMBRE_CLIENTE"], mobilePriority: 1, render: (row) => (
     <span className="font-medium" style={{ color: "var(--brand-text)" }}>{row.NOMBRE_CLIENTE || "—"}</span>
   )},
-  { header: "Servicio", field: "NOMBRE_SERVICIO", fields: ["SERVICIO", "NOMBRE_SERVICIO"] },
-  { header: "Profesional", field: "NOMBRE_PROFESIONAL", fields: ["PROFESIONAL", "NOMBRE_PROFESIONAL"] },
-  { header: "Sucursal", field: "NOMBRE_SUCURSAL", fields: ["SUCURSAL_ATENCION", "NOMBRE_SUCURSAL"] },
-  { header: "Fecha", field: "FECHA_CITA", fields: ["FECHA_CITA"] },
-  { header: "Hora", field: "HORA_INICIO", fields: ["HORA_INICIO", "HORA_FIN"], render: (row) => (
+  { header: "Servicio", field: "NOMBRE_SERVICIO", fields: ["SERVICIO", "NOMBRE_SERVICIO"], mobilePriority: 4 },
+  { header: "Profesional", field: "NOMBRE_PROFESIONAL", fields: ["PROFESIONAL", "NOMBRE_PROFESIONAL"], mobilePriority: "hidden" },
+  { header: "Sucursal", field: "NOMBRE_SUCURSAL", fields: ["SUCURSAL_ATENCION", "NOMBRE_SUCURSAL"], mobilePriority: "hidden" },
+  { header: "Fecha", field: "FECHA_CITA", fields: ["FECHA_CITA"], mobilePriority: 2 },
+  { header: "Hora", field: "HORA_INICIO", fields: ["HORA_INICIO", "HORA_FIN"], mobilePriority: 3, render: (row) => (
     row.HORA_INICIO ? `${row.HORA_INICIO}${row.HORA_FIN ? ` – ${row.HORA_FIN}` : ""}` : "—"
   )},
-  { header: "Slot", field: "ESTADO_SLOT", fields: ["AGENDA_SLOT", "ESTADO_SLOT"], render: (row) => row.ESTADO_SLOT || "—" },
-  { header: "Estado", field: "ESTADO_CITA", fields: ["ESTADO_CITA"], render: (row) => {
+  { header: "Slot", field: "ESTADO_SLOT", fields: ["AGENDA_SLOT", "ESTADO_SLOT"], mobilePriority: "hidden", render: (row) => row.ESTADO_SLOT || "—" },
+  { header: "Estado", field: "ESTADO_CITA", fields: ["ESTADO_CITA"], mobilePriority: 5, render: (row) => {
     const variants = { CONFIRMADA: "success", REPROGRAMADA: "warning", PENDIENTE_CONFIRMACION: "warning", CANCELADA: "error", COMPLETADA: "success" };
     return <Badge variant={variants[row.ESTADO_CITA] || "neutral"}>{row.ESTADO_CITA || "—"}</Badge>;
   }},
@@ -45,6 +45,12 @@ function option(value, label) {
   return { value, label: label || value };
 }
 
+function slotOptionLabel(slot) {
+  const dateTime = [slot.FECHA_SLOT || "s/f", slot.HORA_INICIO || ""].filter(Boolean).join(" ");
+  const context = [slot.NOMBRE_SUCURSAL, slot.NOMBRE_PROFESIONAL].filter(Boolean).join(" · ");
+  return context ? `${dateTime} · ${context}` : dateTime;
+}
+
 export default function Citas() {
   const { access } = useAuth();
   const [citas, setCitas] = useState([]);
@@ -62,16 +68,21 @@ export default function Citas() {
 
   const slotOptions = slots.map((slot) => option(
     slot.id,
-    `${slot.FECHA_SLOT || "s/f"} ${slot.HORA_INICIO || ""}${slot.NOMBRE_SUCURSAL ? ` · ${slot.NOMBRE_SUCURSAL}` : ""}${slot.NOMBRE_PROFESIONAL ? ` · ${slot.NOMBRE_PROFESIONAL}` : ""}`,
+    slotOptionLabel(slot),
   ));
   if (selected?.AGENDA_SLOT_ID && !slotOptions.some((item) => item.value === selected.AGENDA_SLOT_ID)) {
-    slotOptions.unshift(option(selected.AGENDA_SLOT_ID, `${selected.FECHA_CITA || "Actual"} ${selected.HORA_INICIO || ""} · slot actual`));
+    slotOptions.unshift(option(selected.AGENDA_SLOT_ID, `${slotOptionLabel({
+      FECHA_SLOT: selected.FECHA_CITA || "Actual",
+      HORA_INICIO: selected.HORA_INICIO,
+      NOMBRE_SUCURSAL: selected.NOMBRE_SUCURSAL,
+      NOMBRE_PROFESIONAL: selected.NOMBRE_PROFESIONAL,
+    })} · slot actual`));
   }
 
   const editableFields = [
     { name: "CLIENTE", label: "Cliente", type: "select", options: clientes.map((c) => option(c.id, c.NOMBRE_CLIENTE || c.EMAIL || c.id)), disabled: !canEditField(access, "CITAS", "CLIENTE") || modalMode === "edit" },
     { name: "SERVICIO", label: "Servicio", type: "select", options: servicios.map((s) => option(s.id, s.NOMBRE_SERVICIO || s.id)), disabled: !canEditField(access, "CITAS", "SERVICIO") || modalMode === "edit" },
-    { name: "AGENDA_SLOT", label: modalMode === "edit" ? "Nuevo slot / reprogramar" : "Slot disponible", type: "select", options: slotOptions, disabled: !canEditField(access, "CITAS", "AGENDA_SLOT") },
+    { name: "AGENDA_SLOT", label: modalMode === "edit" ? "Nuevo slot / reprogramar" : "Slot disponible", type: "select", options: slotOptions, helper: modalMode === "edit" ? "El slot actual se conserva si no seleccionás otro." : "Elegí un slot disponible para reservar la cita.", disabled: !canEditField(access, "CITAS", "AGENDA_SLOT") },
     { name: "ESTADO_CITA", label: "Estado", type: "select", options: ["CONFIRMADA", "PENDIENTE_CONFIRMACION", "REPROGRAMADA"], disabled: !canEditField(access, "CITAS", "ESTADO_CITA") },
     { name: "OBSERVACIONES_CLIENTE", label: "Observaciones cliente", type: "textarea", disabled: !canEditField(access, "CITAS", "OBSERVACIONES_CLIENTE") },
     { name: "OBSERVACIONES_INTERNAS", label: "Observaciones internas", type: "textarea", disabled: !canEditField(access, "CITAS", "OBSERVACIONES_INTERNAS") },
@@ -198,7 +209,7 @@ export default function Citas() {
 
   return (
     <div>
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+      <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
         <h2 className="text-2xl font-bold" style={{ fontFamily: "var(--font-heading, Manrope)", color: "var(--brand-text)" }}>Citas</h2>
         <ModuleActionBar
           moduleKey="citas"
